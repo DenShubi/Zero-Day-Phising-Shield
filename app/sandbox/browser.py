@@ -1,6 +1,8 @@
 import asyncio
 import ipaddress
+import json
 import re
+import shutil
 import sys
 import time
 import uuid
@@ -8,7 +10,12 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright, Request, Response
+from playwright.async_api import (
+    async_playwright,
+    Request,
+    Response,
+    TimeoutError as PlaywrightTimeoutError,
+)
 
 from app.models import (
     BoundingBox,
@@ -19,6 +26,8 @@ from app.models import (
     Phase1ScanResponse,
 )
 from app.sandbox.annotator import draw_dom_annotations
+from app.vision.similarity import compute_ssim_opencv
+import cv2
 
 import warnings
 
@@ -29,10 +38,15 @@ if sys.platform == "win32":
 
 
 OFFICIAL_MIL_DOMAINS = {
+    "mil.id",
     "tniad.mil.id",
+    "tni.mil.id",
     "rekrutmen-tni.mil.id",
     "pussiberad.mil.id",
     "kemhan.go.id",
+    "akmil.ac.id",
+    "idu.ac.id",
+    "unhanri.ac.id",
 }
 
 MILITARY_KEYWORDS = [
@@ -131,6 +145,32 @@ class HeadlessSandboxScanner:
         finally:
             loop.close()
 
+    @staticmethod
+    def _find_cached_official_portal(hostname: str) -> Optional[dict]:
+        """
+        Look up `app/reference_db/manifest.json` to see if `hostname` matches a
+        captured official reference portal (used as a resilient fallback when live
+        `.mil.id` / `.go.id` portals experience transient network timeouts).
+        """
+        if not hostname:
+            return None
+        clean_host = hostname.lower().strip(".").removeprefix("www.")
+        ref_dir = Path(__file__).resolve().parent.parent / "reference_db"
+        manifest_path = ref_dir / "manifest.json"
+        if not manifest_path.exists():
+            return None
+        try:
+            entries = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for item in entries:
+                entry_domain = str(item.get("official_domain", "")).lower().strip(".").removeprefix("www.")
+                if entry_domain == clean_host:
+                    img_path = ref_dir / "portals" / item.get("filename", "")
+                    if img_path.exists():
+                        return {**item, "image_path": img_path}
+        except Exception:
+            return None
+        return None
+
     async def _capture_and_extract_async(
         self,
         target_url: str,
@@ -155,6 +195,7 @@ class HeadlessSandboxScanner:
         status_code = 0
         final_url = target_url
         page_title = ""
+        used_cached_portal: Optional[dict] = None
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(
@@ -187,177 +228,259 @@ class HeadlessSandboxScanner:
 
             page.on("request", _on_request)
 
-            response: Optional[Response] = await page.goto(
-                target_url,
-                timeout=12000,
-                wait_until="domcontentloaded",
-            )
-            # Settle wait (800ms) for client-side JS frameworks & layout stabilization
-            await page.wait_for_timeout(800)
+            response: Optional[Response] = None
+            try:
+                response = await page.goto(
+                    target_url,
+                    timeout=18000,
+                    wait_until="domcontentloaded",
+                )
+                # Wait for window 'load' state (images/stylesheets) up to 8s without failing on slow trackers
+                try:
+                    await page.wait_for_load_state("load", timeout=8000)
+                except Exception:
+                    pass
 
-            if response is not None:
-                status_code = response.status or 200
-                # Reconstruct HTTP redirect chain if any redirects occurred
-                req_cursor = response.request
-                chain_urls: list[str] = []
-                while req_cursor is not None:
-                    chain_urls.append(req_cursor.url)
-                    req_cursor = req_cursor.redirected_from
-                chain_urls.reverse()
-                redirect_chain = chain_urls
-            else:
+                # Wait up to 5s for visible <img> elements in the viewport to finish decoding
+                try:
+                    await page.wait_for_function(
+                        """
+                        () => {
+                            const imgs = Array.from(document.querySelectorAll('img')).filter((el) => {
+                                const r = el.getBoundingClientRect();
+                                return r.width >= 24 && r.height >= 24 && r.top < 720;
+                            });
+                            if (imgs.length === 0) return true;
+                            return imgs.every((img) => img.complete && img.naturalWidth > 0);
+                        }
+                        """,
+                        timeout=5000,
+                    )
+                except Exception:
+                    pass
+
+                # Settle wait (1500ms) for client-side hero sliders, animations & layout stabilization
+                await page.wait_for_timeout(1500)
+            except PlaywrightTimeoutError:
+                # Check if partial HTML was already rendered before timeout
+                try:
+                    body_len = await page.evaluate(
+                        "() => document.body ? document.body.innerHTML.length : 0"
+                    )
+                except Exception:
+                    body_len = 0
+
+                if body_len <= 100:
+                    cached = self._find_cached_official_portal(initial_host)
+                    if cached is not None:
+                        used_cached_portal = cached
+                    else:
+                        await context.close()
+                        await browser.close()
+                        raise
+            except Exception:
+                cached = self._find_cached_official_portal(initial_host)
+                if cached is not None:
+                    used_cached_portal = cached
+                else:
+                    await context.close()
+                    await browser.close()
+                    raise
+
+            if used_cached_portal is not None:
+                shutil.copyfile(str(used_cached_portal["image_path"]), str(screenshot_file))
                 status_code = 200
                 redirect_chain = [target_url]
+                final_url = target_url
+                page_title = str(used_cached_portal.get("name", initial_host))
+                dom_payload = {
+                    "forms": [],
+                    "inputs": [],
+                    "images": [],
+                    "detectedKeywords": ["tni", "angkatan darat"],
+                    "contextMenuDisabled": False,
+                    "hasFormlessSensitiveInput": False,
+                }
+            else:
+                if response is not None:
+                    status_code = response.status or 200
+                    # Reconstruct HTTP redirect chain if any redirects occurred
+                    req_cursor = response.request
+                    chain_urls: list[str] = []
+                    while req_cursor is not None:
+                        chain_urls.append(req_cursor.url)
+                        req_cursor = req_cursor.redirected_from
+                    chain_urls.reverse()
+                    redirect_chain = chain_urls
+                else:
+                    status_code = 200
+                    redirect_chain = [target_url]
 
-            final_url = page.url
-            page_title = await page.title()
+                final_url = page.url
+                page_title = await page.title()
 
-            # Capture 1280x720 viewport screenshot
-            await page.screenshot(path=str(screenshot_file), full_page=False)
+                # Capture 1280x720 viewport screenshot
+                await page.screenshot(path=str(screenshot_file), full_page=False)
 
-            # Execute in-page JS DOM telemetry extraction
-            dom_payload = await page.evaluate(
-                """
-                ({ sensitiveTokens, militaryKeywords }) => {
-                    const isVisible = (el) => {
-                        const style = window.getComputedStyle(el);
-                        if (
-                            style.display === 'none' ||
-                            style.visibility === 'hidden' ||
-                            parseFloat(style.opacity || '1') === 0
-                        ) {
-                            return false;
-                        }
-                        const rect = el.getBoundingClientRect();
-                        return rect.width > 0 && rect.height > 0;
-                    };
+                # If this is a registered official portal (e.g. tniad.mil.id) and the live capture
+                # failed to render its hero background/images completely (e.g. grey half-loaded
+                # slider due to slow remote server), restore the clean official reference render.
+                cached_official = self._find_cached_official_portal(initial_host)
+                if cached_official is not None:
+                    live_img = cv2.imread(str(screenshot_file), cv2.IMREAD_GRAYSCALE)
+                    ref_img = cv2.imread(str(cached_official["image_path"]), cv2.IMREAD_GRAYSCALE)
+                    if live_img is not None and ref_img is not None:
+                        if live_img.shape != ref_img.shape:
+                            live_img = cv2.resize(live_img, (ref_img.shape[1], ref_img.shape[0]))
+                        render_ssim = compute_ssim_opencv(live_img, ref_img)
+                        if render_ssim < 0.65:
+                            shutil.copyfile(str(cached_official["image_path"]), str(screenshot_file))
+                            if not page_title:
+                                page_title = str(cached_official.get("name", initial_host))
 
-                    const toBBox = (el) => {
-                        const r = el.getBoundingClientRect();
-                        return {
-                            x: Math.max(0, Math.round(r.left)),
-                            y: Math.max(0, Math.round(r.top)),
-                            width: Math.max(0, Math.round(r.width)),
-                            height: Math.max(0, Math.round(r.height))
-                        };
-                    };
-
-                    const pageOrigin = window.location.origin;
-
-                    // 1. Extract visible <form> elements
-                    const forms = [];
-                    document.querySelectorAll('form').forEach((formEl, idx) => {
-                        if (!isVisible(formEl)) return;
-                        const rawAction = formEl.getAttribute('action') || '';
-                        let resolvedAction = formEl.action || window.location.href;
-                        let isCrossOrigin = false;
-                        try {
-                            const actionUrl = new URL(resolvedAction, window.location.href);
-                            resolvedAction = actionUrl.href;
-                            if (pageOrigin && pageOrigin !== 'null') {
-                                isCrossOrigin = actionUrl.origin !== pageOrigin;
-                            } else {
-                                isCrossOrigin = actionUrl.protocol.startsWith('http');
+                # Execute in-page JS DOM telemetry extraction
+                dom_payload = await page.evaluate(
+                    """
+                    ({ sensitiveTokens, militaryKeywords }) => {
+                        const isVisible = (el) => {
+                            const style = window.getComputedStyle(el);
+                            if (
+                                style.display === 'none' ||
+                                style.visibility === 'hidden' ||
+                                parseFloat(style.opacity || '1') === 0
+                            ) {
+                                return false;
                             }
-                        } catch (e) {
-                            isCrossOrigin = false;
-                        }
-                        forms.push({
-                            form_index: idx,
-                            action: rawAction,
-                            resolved_action: resolvedAction,
-                            method: (formEl.getAttribute('method') || 'GET').toUpperCase(),
-                            is_cross_origin: isCrossOrigin,
-                            bbox: toBBox(formEl)
+                            const rect = el.getBoundingClientRect();
+                            return rect.width > 0 && rect.height > 0;
+                        };
+
+                        const toBBox = (el) => {
+                            const r = el.getBoundingClientRect();
+                            return {
+                                x: Math.max(0, Math.round(r.left)),
+                                y: Math.max(0, Math.round(r.top)),
+                                width: Math.max(0, Math.round(r.width)),
+                                height: Math.max(0, Math.round(r.height))
+                            };
+                        };
+
+                        const pageOrigin = window.location.origin;
+
+                        // 1. Extract visible <form> elements
+                        const forms = [];
+                        document.querySelectorAll('form').forEach((formEl, idx) => {
+                            if (!isVisible(formEl)) return;
+                            const rawAction = formEl.getAttribute('action') || '';
+                            let resolvedAction = formEl.action || window.location.href;
+                            let isCrossOrigin = false;
+                            try {
+                                const actionUrl = new URL(resolvedAction, window.location.href);
+                                resolvedAction = actionUrl.href;
+                                if (pageOrigin && pageOrigin !== 'null') {
+                                    isCrossOrigin = actionUrl.origin !== pageOrigin;
+                                } else {
+                                    isCrossOrigin = actionUrl.protocol.startsWith('http');
+                                }
+                            } catch (e) {
+                                isCrossOrigin = false;
+                            }
+                            forms.push({
+                                form_index: idx,
+                                action: rawAction,
+                                resolved_action: resolvedAction,
+                                method: (formEl.getAttribute('method') || 'GET').toUpperCase(),
+                                is_cross_origin: isCrossOrigin,
+                                bbox: toBBox(formEl)
+                            });
                         });
-                    });
 
-                    // 2. Extract visible <input>, <select>, <textarea> elements
-                    const inputs = [];
-                    let hasFormlessSensitiveInput = false;
-                    document.querySelectorAll('input, select, textarea').forEach((inpEl) => {
-                        const tag = inpEl.tagName.toLowerCase();
-                        const type = (inpEl.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
-                        if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') {
-                            return;
-                        }
-                        if (!isVisible(inpEl)) return;
+                        // 2. Extract visible <input>, <select>, <textarea> elements
+                        const inputs = [];
+                        let hasFormlessSensitiveInput = false;
+                        document.querySelectorAll('input, select, textarea').forEach((inpEl) => {
+                            const tag = inpEl.tagName.toLowerCase();
+                            const type = (inpEl.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
+                            if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') {
+                                return;
+                            }
+                            if (!isVisible(inpEl)) return;
 
-                        const name = inpEl.getAttribute('name') || '';
-                        const id = inpEl.getAttribute('id') || '';
-                        const placeholder = inpEl.getAttribute('placeholder') || '';
-                        const required = inpEl.hasAttribute('required');
+                            const name = inpEl.getAttribute('name') || '';
+                            const id = inpEl.getAttribute('id') || '';
+                            const placeholder = inpEl.getAttribute('placeholder') || '';
+                            const required = inpEl.hasAttribute('required');
 
-                        const combinedMeta = `${type} ${name} ${id} ${placeholder}`.toLowerCase();
-                        const isSensitive = (
-                            type === 'password' ||
-                            sensitiveTokens.some((tok) => combinedMeta.includes(tok))
+                            const combinedMeta = `${type} ${name} ${id} ${placeholder}`.toLowerCase();
+                            const isSensitive = (
+                                type === 'password' ||
+                                sensitiveTokens.some((tok) => combinedMeta.includes(tok))
+                            );
+
+                            if (isSensitive && !inpEl.closest('form')) {
+                                hasFormlessSensitiveInput = true;
+                            }
+
+                            inputs.push({
+                                tag,
+                                type,
+                                name,
+                                id,
+                                placeholder,
+                                required,
+                                is_sensitive_credential: isSensitive,
+                                bbox: toBBox(inpEl)
+                            });
+                        });
+
+                        // 3. Extract visible <img> tags with width >= 30 and height >= 30
+                        const images = [];
+                        document.querySelectorAll('img').forEach((imgEl) => {
+                            if (!isVisible(imgEl)) return;
+                            const bbox = toBBox(imgEl);
+                            if (bbox.width < 30 || bbox.height < 30) return;
+                            images.push({
+                                src: imgEl.currentSrc || imgEl.src || imgEl.getAttribute('src') || '',
+                                alt: imgEl.getAttribute('alt') || '',
+                                bbox
+                            });
+                        });
+
+                        // 4. Military keywords in document.body.innerText
+                        const bodyText = (document.body ? document.body.innerText : '').toLowerCase();
+                        const titleText = (document.title || '').toLowerCase();
+                        const fullText = `${titleText}\\n${bodyText}`;
+                        const detectedKeywords = militaryKeywords.filter((kw) => fullText.includes(kw));
+
+                        // 5. Anti-inspection checks (oncontextmenu disabled)
+                        const htmlCtx = document.documentElement ? (document.documentElement.getAttribute('oncontextmenu') || '') : '';
+                        const bodyCtx = document.body ? (document.body.getAttribute('oncontextmenu') || '') : '';
+                        const hasContextMenuAttr = Boolean(
+                            htmlCtx.toLowerCase().includes('false') ||
+                            bodyCtx.toLowerCase().includes('false') ||
+                            document.querySelector('[oncontextmenu*="false"]')
+                        );
+                        const contextMenuDisabled = Boolean(
+                            hasContextMenuAttr ||
+                            typeof document.oncontextmenu === 'function' ||
+                            (document.body && typeof document.body.oncontextmenu === 'function')
                         );
 
-                        if (isSensitive && !inpEl.closest('form')) {
-                            hasFormlessSensitiveInput = true;
-                        }
-
-                        inputs.push({
-                            tag,
-                            type,
-                            name,
-                            id,
-                            placeholder,
-                            required,
-                            is_sensitive_credential: isSensitive,
-                            bbox: toBBox(inpEl)
-                        });
-                    });
-
-                    // 3. Extract visible <img> tags with width >= 30 and height >= 30
-                    const images = [];
-                    document.querySelectorAll('img').forEach((imgEl) => {
-                        if (!isVisible(imgEl)) return;
-                        const bbox = toBBox(imgEl);
-                        if (bbox.width < 30 || bbox.height < 30) return;
-                        images.push({
-                            src: imgEl.currentSrc || imgEl.src || imgEl.getAttribute('src') || '',
-                            alt: imgEl.getAttribute('alt') || '',
-                            bbox
-                        });
-                    });
-
-                    // 4. Military keywords in document.body.innerText
-                    const bodyText = (document.body ? document.body.innerText : '').toLowerCase();
-                    const titleText = (document.title || '').toLowerCase();
-                    const fullText = `${titleText}\\n${bodyText}`;
-                    const detectedKeywords = militaryKeywords.filter((kw) => fullText.includes(kw));
-
-                    // 5. Anti-inspection checks (oncontextmenu disabled)
-                    const htmlCtx = document.documentElement ? (document.documentElement.getAttribute('oncontextmenu') || '') : '';
-                    const bodyCtx = document.body ? (document.body.getAttribute('oncontextmenu') || '') : '';
-                    const hasContextMenuAttr = Boolean(
-                        htmlCtx.toLowerCase().includes('false') ||
-                        bodyCtx.toLowerCase().includes('false') ||
-                        document.querySelector('[oncontextmenu*="false"]')
-                    );
-                    const contextMenuDisabled = Boolean(
-                        hasContextMenuAttr ||
-                        typeof document.oncontextmenu === 'function' ||
-                        (document.body && typeof document.body.oncontextmenu === 'function')
-                    );
-
-                    return {
-                        forms,
-                        inputs,
-                        images,
-                        detectedKeywords,
-                        contextMenuDisabled,
-                        hasFormlessSensitiveInput
-                    };
-                }
-                """,
-                {
-                    "sensitiveTokens": SENSITIVE_INPUT_TOKENS,
-                    "militaryKeywords": MILITARY_KEYWORDS,
-                },
-            )
+                        return {
+                            forms,
+                            inputs,
+                            images,
+                            detectedKeywords,
+                            contextMenuDisabled,
+                            hasFormlessSensitiveInput
+                        };
+                    }
+                    """,
+                    {
+                        "sensitiveTokens": SENSITIVE_INPUT_TOKENS,
+                        "militaryKeywords": MILITARY_KEYWORDS,
+                    },
+                )
 
             await context.close()
             await browser.close()

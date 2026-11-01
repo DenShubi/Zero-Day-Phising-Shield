@@ -1,0 +1,92 @@
+[
+  {
+    "id": "akmil_main",
+    "portal_name": "Portal Akademi Militer TNI AD (www.akmil.ac.id)",
+    "official_domain": "www.akmil.ac.id",
+    "title": "Akademi Militer | Center Of Excellence",
+    "forms": 2,
+    "inputs": 7,
+    "images": 37,
+    "screenshot": "app/reference_db/portals/akmil_main.png"
+  },
+  {
+    "id": "kemhan_main",
+    "portal_name": "Portal Kementerian Pertahanan RI (www.kemhan.go.id)",
+    "official_domain": "www.kemhan.go.id",
+    "title": "Kementerian Pertahanan Republik Indonesia",
+    "forms": 1,
+    "inputs": 2,
+    "images": 52,
+    "screenshot": "app/reference_db/portals/kemhan_main.png"
+  },
+  {
+    "id": "rekrutmen_ad_live",
+    "portal_name": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+    "official_domain": "ad.rekrutmen-tni.mil.id",
+    "title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+    "forms": 0,
+    "inputs": 0,
+    "images": 4,
+    "screenshot": "app/reference_db/portals/rekrutmen_ad_live.png"
+  },
+  {
+    "id": "rekrutmen_tni_pusat",
+    "portal_name": "Portal Rekrutmen Terpadu Mabes TNI (rekrutmen-tni.mil.id)",
+    "official_domain": "rekrutmen-tni.mil.id",
+    "title": "Bergabung dengan TNI \u2014 Panggilan untuk Mengabdi",
+    "forms": 0,
+    "inputs": 0,
+    "images": 3,
+    "screenshot": "app/reference_db/portals/rekrutmen_tni_pusat.png"
+  },
+  {
+    "id": "seskoad_main",
+    "portal_name": "Portal Seskoad TNI AD (seskoad.mil.id)",
+    "official_domain": "seskoad.mil.id",
+    "title": "Website Seskoad",
+    "forms": 1,
+    "inputs": 0,
+    "images": 1270,
+    "screenshot": "app/reference_db/portals/seskoad_main.png"
+  },
+  {
+    "id": "tni_main",
+    "portal_name": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+    "official_domain": "tni.mil.id",
+    "title": "Tentara Nasional Indonesia | Website Tentara Nasional Indonesia",
+    "forms": 0,
+    "inputs": 2,
+    "images": 66,
+    "screenshot": "app/reference_db/portals/tni_main.png"
+  },
+  {
+    "id": "tniad_main",
+    "portal_name": "Portal Utama TNI Angkatan Darat (tniad.mil.id)",
+    "official_domain": "tniad.mil.id",
+    "title": "TNI AD - TNI Angkatan Darat",
+    "forms": 1,
+    "inputs": 2,
+    "images": 39,
+    "screenshot": "app/reference_db/portals/tniad_main.png"
+  },
+  {
+    "id": "tniad_ppid",
+    "portal_name": "Portal PPID TNI Angkatan Darat (ppid.tniad.mil.id)",
+    "official_domain": "ppid.tniad.mil.id",
+    "title": "PPID TNI AD \u2014 Pejabat Pengelola Informasi dan Dokumentasi",
+    "forms": 1,
+    "inputs": 1,
+    "images": 3,
+    "screenshot": "app/reference_db/portals/tniad_ppid.png"
+  },
+  {
+    "id": "unhan_main",
+    "portal_name": "Portal Universitas Pertahanan RI (www.idu.ac.id)",
+    "official_domain": "www.idu.ac.id",
+    "title": "Beranda",
+    "forms": 2,
+    "inputs": 4,
+    "images": 31,
+    "screenshot": "app/reference_db/portals/unhan_main.png"
+  }
+]

@@ -79,3 +79,17 @@ class Phase1ScanResponse(BaseModel):
     risk_analysis: DomRiskAnalysis
     execution_time_sec: float
 
+
+class DetectedLogo(BaseModel):
+    brand_name: str = Field(..., description="Detected official military brand/emblem name")
+    confidence: float = Field(..., ge=0.0, le=100.0, description="Detection confidence percentage (0-100)")
+    bbox: BoundingBox = Field(..., description="Viewport bounding box of the detected logo")
+
+
+class Phase2ScanResponse(Phase1ScanResponse):
+    verdict: str = Field(..., description="Final threat verdict: SAFE, SUSPICIOUS, or CRITICAL_PHISHING")
+    total_risk_score: float = Field(..., ge=0.0, le=100.0, description="Weighted composite risk score (0-100)")
+    visual_similarity_score: float = Field(..., ge=0.0, le=100.0, description="SSIM + visual similarity score (0-100)")
+    impersonated_target: Optional[str] = Field(default=None, description="Matched official portal name if impersonated")
+    detected_logos: list[DetectedLogo] = Field(default_factory=list, description="Detected official logos with bounding boxes")
+

@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+storage/synthetic_yolo/
+storage/screenshots/demo_*.png
+storage/screenshots/test_api_*.png
+storage/annotated/demo_*.png
+storage/annotated/test_api_*.png
+.pytest_cache/
+
