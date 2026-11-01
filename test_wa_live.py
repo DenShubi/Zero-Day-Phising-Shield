@@ -24,14 +24,14 @@ async def main() -> None:
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", timeout=60.0) as client:
-        print(f"1. Menguji kirim balasan 'Pong' ke WA {target_phone} ...")
+        print(f"1. Menguji kirim Menu Panduan & Fitur ('help') ke WA {target_phone} ...")
         r1 = await client.post(
             "/webhook/wa",
-            json={"sender": target_phone, "message": "ping"},
+            json={"sender": target_phone, "message": "help"},
         )
-        print("Respons Webhook:", r1.json())
+        print("Status Menu Bantuan:", r1.json().get("status"))
 
-        print(f"\n2. Menguji simulasi prajurit lapor link phishing ke Bot -> Balasan WA ke {target_phone} + Masuk Supabase ...")
+        print(f"\n2. Menguji simulasi prajurit lapor link phishing ke Bot -> Balasan Forensik ke {target_phone} + Masuk Supabase ...")
         r2 = await client.post(
             "/webhook/wa",
             json={

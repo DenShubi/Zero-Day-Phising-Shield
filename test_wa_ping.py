@@ -19,16 +19,47 @@ async def main():
         print("GET /webhook/wa:", resp1.status_code, resp1.json())
         assert resp1.status_code == 200
 
-        # 2. Ping test (Simulasi webhook Fonnte kirim 'ping')
-        resp2 = await client.post(
+        # 2. Help menu test
+        resp_help = await client.post(
             "/webhook/wa",
-            json={"sender": "085179743602", "message": "ping"},
+            json={"sender": "", "message": "help"},
         )
-        print("POST /webhook/wa [ping]:", resp2.status_code, resp2.json())
-        assert resp2.status_code == 200
-        assert resp2.json().get("reply") == "Pong"
+        print("\n--- [1] MENU BANTUAN (help) ---")
+        print(resp_help.json().get("reply"))
+        assert resp_help.status_code == 200
+        assert "VISIKARTIKA SHIELD" in resp_help.json().get("reply", "")
 
-    print("\n[OK] PING -> PONG WEBHOOK TEST SUCCESSFUL!")
+        # 3. Official Portals list test
+        resp_portal = await client.post(
+            "/webhook/wa",
+            json={"sender": "", "message": "portal"},
+        )
+        print("\n--- [2] DAFTAR PORTAL RESMI (portal) ---")
+        print(resp_portal.json().get("reply"))
+        assert resp_portal.status_code == 200
+        assert "tniad.mil.id" in resp_portal.json().get("reply", "")
+
+        # 4. System Status test
+        resp_status = await client.post(
+            "/webhook/wa",
+            json={"sender": "", "message": "status"},
+        )
+        print("\n--- [3] STATUS OPERASIONAL (status) ---")
+        print(resp_status.json().get("reply"))
+        assert resp_status.status_code == 200
+        assert "STATUS OPERASIONAL" in resp_status.json().get("reply", "")
+
+        # 5. Emergency Protocol test
+        resp_darurat = await client.post(
+            "/webhook/wa",
+            json={"sender": "", "message": "darurat"},
+        )
+        print("\n--- [4] PROTOKOL DARURAT (darurat) ---")
+        print(resp_darurat.json().get("reply"))
+        assert resp_darurat.status_code == 200
+        assert "PROTOKOL DARURAT" in resp_darurat.json().get("reply", "")
+
+    print("\n[OK] PROFESSIONAL WHATSAPP BOT COMMANDS VERIFIED!")
 
 
 if __name__ == "__main__":
