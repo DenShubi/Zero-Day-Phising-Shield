@@ -1,5 +1,9 @@
 import asyncio
+from pathlib import Path
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import httpx
 from app.main import app
 
@@ -18,7 +22,7 @@ async def main():
         # 2. Ping test (Simulasi webhook Fonnte kirim 'ping')
         resp2 = await client.post(
             "/webhook/wa",
-            json={"sender": "08123456789", "message": "ping"},
+            json={"sender": "085179743602", "message": "ping"},
         )
         print("POST /webhook/wa [ping]:", resp2.status_code, resp2.json())
         assert resp2.status_code == 200

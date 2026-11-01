@@ -107,7 +107,8 @@ def _compare_crop_with_template(crop_bgr: np.ndarray, tpl: dict) -> float:
     return float((0.75 * structural_peak) + (0.25 * hist_score))
 
 
-def _bbox_iou(a: dict, b: dict) -> float:
+def _bbox_overlap(a: dict, b: dict) -> bool:
+    """Return True if two boxes overlap significantly (IoU > 0.35 or >60% contained)."""
     ax1, ay1 = a["x"], a["y"]
     ax2, ay2 = ax1 + a["width"], ay1 + a["height"]
     bx1, by1 = b["x"], b["y"]
@@ -118,11 +119,13 @@ def _bbox_iou(a: dict, b: dict) -> float:
     iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
     inter = float(iw * ih)
     if inter <= 0.0:
-        return 0.0
+        return False
     area_a = float(a["width"] * a["height"])
     area_b = float(b["width"] * b["height"])
     union = area_a + area_b - inter
-    return inter / union if union > 0.0 else 0.0
+    iou = inter / union if union > 0.0 else 0.0
+    containment = inter / min(area_a, area_b) if min(area_a, area_b) > 0.0 else 0.0
+    return iou > 0.35 or containment > 0.60
 
 
 def _sliding_window_banner_search(
@@ -282,7 +285,7 @@ def detect_and_annotate_logos(
 
     for cand in raw_candidates:
         c_box = cand["bbox"]
-        if any(_bbox_iou(c_box, existing) > 0.35 for existing in kept_boxes):
+        if any(_bbox_overlap(c_box, existing) for existing in kept_boxes):
             continue
         kept_boxes.append(c_box)
         conf_pct = round(min(0.99, cand["raw_score"]) * 100.0, 1)

@@ -1,13 +1,21 @@
 # Environment files with secrets
 .env
 .env*.local
+!.env.example
 
 # Python virtual environment & cache
 .venv/
 venv/
+env/
 __pycache__/
 *.py[cod]
 *.log
+.pytest_cache/
+
+# Generated runtime scan artifacts (keep reference_db tracked)
+storage/screenshots/*.png
+storage/annotated/*.png
+storage/synthetic_yolo/
 
 # Node & Next.js
 node_modules/

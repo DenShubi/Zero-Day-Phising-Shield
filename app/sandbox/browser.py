@@ -164,9 +164,14 @@ class HeadlessSandboxScanner:
             for item in entries:
                 entry_domain = str(item.get("official_domain", "")).lower().strip(".").removeprefix("www.")
                 if entry_domain == clean_host:
-                    img_path = ref_dir / "portals" / item.get("filename", "")
+                    img_name = Path(item.get("screenshot", f"{item.get('id', '')}.png")).name
+                    img_path = ref_dir / "portals" / img_name
                     if img_path.exists():
-                        return {**item, "image_path": img_path}
+                        return {
+                            **item,
+                            "name": item.get("title") or item.get("portal_name") or clean_host,
+                            "image_path": img_path,
+                        }
         except Exception:
             return None
         return None

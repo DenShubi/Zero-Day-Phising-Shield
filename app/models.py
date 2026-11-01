@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class BoundingBox(BaseModel):
@@ -52,13 +52,25 @@ class DomRiskAnalysis(BaseModel):
         ..., description="True if hostname matches official TNI AD / Kemhan whitelist"
     )
     forensic_reasons: list[str] = Field(
-        default_factory=list, description="Human-readable forensic indicators Explaining the risk score"
+        default_factory=list, description="Human-readable forensic indicators explaining the risk score"
     )
 
 
 class Phase1ScanRequest(BaseModel):
-    url: str = Field(..., description="Target URL to inspect inside the headless sandbox")
+    url: str = Field(
+        ...,
+        validation_alias=AliasChoices("url", "target_url"),
+        description="Target URL to inspect inside the headless sandbox",
+    )
     scan_id: Optional[str] = Field(default=None, description="Optional custom scan identifier")
+    reporter_source: str = Field(
+        default="WEB_SANDBOX",
+        description="Incident source channel: WEB_SANDBOX, WHATSAPP_BOT, or BROWSER_EXT",
+    )
+    reporter_unit: str = Field(
+        default="Simulasi Juri / Satuan Jajaran",
+        description="Reporting unit or operator label for SOC logging",
+    )
 
 
 class Phase1ScanResponse(BaseModel):
@@ -92,4 +104,15 @@ class Phase2ScanResponse(Phase1ScanResponse):
     visual_similarity_score: float = Field(..., ge=0.0, le=100.0, description="SSIM + visual similarity score (0-100)")
     impersonated_target: Optional[str] = Field(default=None, description="Matched official portal name if impersonated")
     detected_logos: list[DetectedLogo] = Field(default_factory=list, description="Detected official logos with bounding boxes")
-
+    captured_screenshot_url: Optional[str] = Field(
+        default=None, description="Public URL (Supabase Storage or local static) of raw viewport screenshot"
+    )
+    annotated_bbox_url: Optional[str] = Field(
+        default=None, description="Public URL (Supabase Storage or local static) of annotated bounding-box image"
+    )
+    supabase_synced: bool = Field(
+        default=False, description="True if scan incident was persisted to Supabase scan_incidents"
+    )
+    supabase_incident_id: Optional[str] = Field(
+        default=None, description="UUID of inserted row in Supabase scan_incidents"
+    )
