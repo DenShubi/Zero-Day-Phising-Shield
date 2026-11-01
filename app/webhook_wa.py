@@ -1,13 +1,21 @@
 import re
 import httpx
 from fastapi import APIRouter, Request
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from app.config import get_env
 from app.scanner_service import execute_phase2_scan
 
 router = APIRouter(prefix="/webhook/wa", tags=["WhatsApp Webhook"])
 
+<<<<<<< HEAD
 URL_REGEX = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+=======
+FONNTE_TOKEN = os.getenv("FONNTE_TOKEN", "")
+
+>>>>>>> df7b91382fa02419973e390fec2712a6be3db3f3
 
 
 async def send_whatsapp_message(target: str, message_text: str) -> bool:
