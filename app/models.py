@@ -98,6 +98,59 @@ class DetectedLogo(BaseModel):
     bbox: BoundingBox = Field(..., description="Viewport bounding box of the detected logo")
 
 
+class DecodedQRCode(BaseModel):
+    payload: str = Field(..., description="Decoded QR text or URL payload")
+    bbox: BoundingBox = Field(..., description="Bounding box of the QR code inside the image")
+
+
+class ImageScanRequest(BaseModel):
+    image_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("image_url", "url", "attachment"),
+        description="Remote or local URL/path of the screenshot or poster image to analyze",
+    )
+    image_base64: Optional[str] = Field(
+        default=None,
+        description="Optional base64-encoded PNG/JPG image payload",
+    )
+    caption: Optional[str] = Field(
+        default=None,
+        description="Optional message text or caption accompanying the image",
+    )
+    scan_id: Optional[str] = Field(default=None, description="Optional custom scan identifier")
+    reporter_source: str = Field(
+        default="WEB_SANDBOX",
+        description="Incident source channel: WEB_SANDBOX, WHATSAPP_BOT, or BROWSER_EXT",
+    )
+    reporter_unit: str = Field(
+        default="Simulasi Juri / Satuan Jajaran",
+        description="Reporting unit or operator label for SOC logging",
+    )
+
+
+class ImageScanResponse(BaseModel):
+    success: bool
+    scan_id: str
+    source_image: str
+    verdict: str = Field(..., description="Final threat verdict: SAFE, SUSPICIOUS, or CRITICAL_PHISHING")
+    total_risk_score: float = Field(..., ge=0.0, le=100.0)
+    visual_similarity_score: float = Field(..., ge=0.0, le=100.0)
+    dom_anomaly_score: float = Field(..., ge=0.0, le=100.0)
+    domain_telemetry_score: float = Field(..., ge=0.0, le=100.0)
+    impersonated_target: Optional[str] = None
+    detected_logos: list[DetectedLogo] = Field(default_factory=list)
+    decoded_qr_codes: list[DecodedQRCode] = Field(default_factory=list)
+    extracted_urls: list[str] = Field(default_factory=list)
+    forensic_reasons: list[str] = Field(default_factory=list)
+    screenshot_path: str
+    annotated_dom_path: str
+    captured_screenshot_url: Optional[str] = None
+    annotated_bbox_url: Optional[str] = None
+    supabase_synced: bool = False
+    supabase_incident_id: Optional[str] = None
+    execution_time_sec: float
+
+
 class Phase2ScanResponse(Phase1ScanResponse):
     verdict: str = Field(..., description="Final threat verdict: SAFE, SUSPICIOUS, or CRITICAL_PHISHING")
     total_risk_score: float = Field(..., ge=0.0, le=100.0, description="Weighted composite risk score (0-100)")

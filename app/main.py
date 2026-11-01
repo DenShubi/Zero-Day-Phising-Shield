@@ -1,15 +1,26 @@
 import asyncio
 import json
 import sys
+from typing import Optional
 import warnings
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR
-from app.models import Phase1ScanRequest, Phase1ScanResponse, Phase2ScanResponse
-from app.scanner_service import execute_phase1_scan, execute_phase2_scan
+from app.models import (
+    ImageScanRequest,
+    ImageScanResponse,
+    Phase1ScanRequest,
+    Phase1ScanResponse,
+    Phase2ScanResponse,
+)
+from app.scanner_service import (
+    execute_image_scan,
+    execute_phase1_scan,
+    execute_phase2_scan,
+)
 from app.supabase_client import SupabaseService
 from app.webhook_wa import router as wa_router
 
@@ -35,7 +46,7 @@ app = FastAPI(
         "Defensive Cybersecurity Sandbox Engine (Kategori: Penangkalan) "
         "for Kartika Cyber Hackathon 2026 (PUSSIBERAD TNI AD)."
     ),
-    version="1.2.0",
+    version="1.3.0",
 )
 
 app.add_middleware(
@@ -166,4 +177,58 @@ async def run_phase2_scan(payload: Phase1ScanRequest) -> Phase2ScanResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Phase 2 scan failed for '{target_url}': {type(exc).__name__}: {err_msg}",
+        ) from exc
+
+
+@app.post("/api/v1/scan-image", response_model=ImageScanResponse, tags=["Vision & Quishing Scanner"])
+async def run_image_scan(
+    request: Request,
+    file: Optional[UploadFile] = File(default=None),
+    image_url: Optional[str] = Form(default=None),
+    caption: Optional[str] = Form(default=None),
+    scan_id: Optional[str] = Form(default=None),
+    reporter_source: str = Form(default="WEB_SANDBOX"),
+    reporter_unit: str = Form(default="Simulasi Juri / Satuan Jajaran"),
+) -> ImageScanResponse:
+    """
+    Scan a screenshot or recruitment poster (Quishing QR code + Logo Impersonation + Visual Similarity).
+    Supports both `multipart/form-data` (`file` upload) and `application/json` (`ImageScanRequest`).
+    """
+    raw_bytes: Optional[bytes] = None
+    b64_str: Optional[str] = None
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        parsed_req = ImageScanRequest(**body)
+        image_url = parsed_req.image_url
+        b64_str = parsed_req.image_base64
+        caption = parsed_req.caption
+        scan_id = parsed_req.scan_id
+        reporter_source = parsed_req.reporter_source
+        reporter_unit = parsed_req.reporter_unit
+    elif file is not None:
+        raw_bytes = await file.read()
+
+    if not raw_bytes and not image_url and not b64_str:
+        raise HTTPException(
+            status_code=400,
+            detail="Harap unggah file gambar (`file`) atau berikan `image_url` / `image_base64`.",
+        )
+
+    try:
+        return await execute_image_scan(
+            image_bytes=raw_bytes,
+            image_url=image_url,
+            image_base64=b64_str,
+            caption=caption,
+            scan_id=scan_id,
+            reporter_source=reporter_source,
+            reporter_unit=reporter_unit,
+        )
+    except Exception as exc:
+        err_msg = str(exc) or repr(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image scan failed: {type(exc).__name__}: {err_msg}",
         ) from exc

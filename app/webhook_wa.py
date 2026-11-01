@@ -1,13 +1,15 @@
+import json
 import re
+from typing import Any, Optional
 import httpx
 from fastapi import APIRouter, Request
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.config import get_env
+from app.config import BASE_DIR, get_env
 from app.sandbox.browser import OFFICIAL_MIL_DOMAINS
-from app.scanner_service import execute_phase2_scan
+from app.scanner_service import execute_image_scan, execute_phase2_scan
 from app.supabase_client import SupabaseService
 
 router = APIRouter(prefix="/webhook/wa", tags=["WhatsApp Webhook"])
@@ -18,6 +20,9 @@ BARE_DOMAIN_REGEX = re.compile(
     r"\b(?:www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:mil\.id|go\.id|com|net|org|id|xyz|info|site|online|top|link|click))(?:/[^\s<>\"']*)?",
     re.IGNORECASE,
 )
+IMAGE_EXT_REGEX = re.compile(r"\.(?:png|jpe?g|webp|bmp)(?:\?.*)?$", re.IGNORECASE)
+
+DEFAULT_DEMO_POSTER = BASE_DIR / "mock_targets" / "assets" / "poster_quishing_bintara.png"
 
 
 def extract_target_url(message: str) -> str | None:
@@ -34,8 +39,27 @@ def extract_target_url(message: str) -> str | None:
     return None
 
 
-async def send_whatsapp_message(target: str, message_text: str) -> bool:
-    """Send WhatsApp message using Fonnte API."""
+def is_direct_image_url(url_str: str) -> bool:
+    """Return True if a URL points directly to an image file or Fonnte media attachment."""
+    if not url_str:
+        return False
+    lower = url_str.lower()
+    if IMAGE_EXT_REGEX.search(lower):
+        return True
+    if "fonnte.com" in lower and ("attachment" in lower or "media" in lower or "file" in lower):
+        return True
+    return False
+
+
+async def send_whatsapp_message(
+    target: str,
+    message_text: str,
+    media_url: Optional[str] = None,
+) -> bool:
+    """
+    Send WhatsApp message (and optional annotated bounding-box evidence image)
+    using Fonnte API.
+    """
     fonnte_token = get_env("FONNTE_TOKEN")
     if not fonnte_token:
         print("[WA Warning] FONNTE_TOKEN kosong di .env")
@@ -43,10 +67,13 @@ async def send_whatsapp_message(target: str, message_text: str) -> bool:
 
     url = "https://api.fonnte.com/send"
     headers = {"Authorization": fonnte_token}
-    payload = {
+    payload: dict[str, str] = {
         "target": target,
         "message": message_text,
     }
+    if media_url and media_url.startswith("https://") and "localhost" not in media_url:
+        payload["url"] = media_url
+
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(url, headers=headers, data=payload)
@@ -68,15 +95,17 @@ def _format_help_menu() -> str:
         "🛡️ *VISIKARTIKA SHIELD — PUSSIBERAD TNI AD*\n"
         "_Sistem Lapor Cepat & Deteksi Dini Phishing Siber_\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Selamat datang di layanan analisis tautan otomatis. Sistem ini memeriksa tautan mencurigakan menggunakan *Isolated Sandbox* dan *Computer Vision* dalam < 5 detik.\n\n"
+        "Selamat datang di layanan analisis ancaman otomatis. Sistem ini memeriksa tautan dan gambar mencurigakan menggunakan *Isolated Sandbox* & *Computer Vision* dalam < 5 detik.\n\n"
         "📌 *CARA PENGGUNAAN & FITUR:*\n"
-        "1️⃣ *Cek Tautan / Pesan Berantai*\n"
+        "1️⃣ *Cek Tautan / Pesan Berantai (URL)*\n"
         "   Langsung kirim atau _forward_ pesan berisi tautan (`https://...`) ke chat ini untuk dipindai otomatis.\n\n"
-        "2️⃣ *Ketik `portal` atau `/portal`*\n"
+        "2️⃣ *Cek Gambar / Poster QR (Quishing)*\n"
+        "   Kirimkan _screenshot_ situs mencurigakan atau poster pengumuman ber-QR Code untuk dianalisis pencatutan logo & isi QR-nya.\n\n"
+        "3️⃣ *Ketik `portal` atau `/portal`*\n"
         "   Menampilkan daftar domain portal resmi TNI AD & Kemhan RI (`.mil.id` / `.go.id`).\n\n"
-        "3️⃣ *Ketik `status` atau `/status`*\n"
+        "4️⃣ *Ketik `status` atau `/status`*\n"
         "   Melihat status operasional mesin pemindai & koneksi pusat komando SOC.\n\n"
-        "4️⃣ *Ketik `darurat` atau `/darurat`*\n"
+        "5️⃣ *Ketik `darurat` atau `/darurat`*\n"
         "   Panduan langkah darurat jika terlanjur mengisi NRP / Kata Sandi / OTP di situs palsu.\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "🔒 _Jaga kerahasiaan NRP, NIK, dan kredensial kedinasan Anda._"
@@ -107,7 +136,7 @@ def _format_emergency_guide() -> str:
         "1. *Ganti Kata Sandi Segera*: Ubah password akun SSO / Sisfopers / Email Militer melalui perangkat lain yang aman.\n"
         "2. *Cabut Sesi Aktif*: Keluar (_logout_) dari seluruh sesi perangkat yang tidak dikenal.\n"
         "3. *Periksa Aplikasi Asing*: Hapus file `.apk` di luar Play Store jika sempat terunduh, lalu matikan koneksi data sementara.\n"
-        "4. *Lapor Pejabat Siber / Sandi Satuan*: Teruskan bukti tautan ke chat ini agar domain penyerang segera masuk daftar *Blocklist DNS/Firewall* Komando."
+        "4. *Lapor Pejabat Siber / Sandi Satuan*: Teruskan bukti tautan atau gambar ke chat ini agar domain penyerang segera masuk daftar *Blocklist DNS/Firewall* Komando."
     )
 
 
@@ -122,18 +151,18 @@ async def _format_system_status() -> str:
         "📊 *STATUS OPERASIONAL VISIKARTIKA SHIELD*\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "• *Headless Chromium Sandbox*: 🟢 Aktif (Terisolasi)\n"
-        "• *Mesin Computer Vision*: 🟢 Aktif (SSIM + Logo Detector)\n"
+        "• *Mesin Computer Vision*: 🟢 Aktif (SSIM + Logo + QR Quishing)\n"
         "• *Analisis Telemetri DOM*: 🟢 Aktif\n"
         f"• *Koneksi SOC Supabase*: {sb_status}\n"
         f"• *Database Portal Resmi*: {portal_count} Portal Terlindungi\n"
         f"• *Log Insiden Terkini*: {inc_count} Rekaman Analisis\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Kirimkan tautan kapan saja untuk memulai pemindaian forensik."
+        "Kirimkan tautan atau gambar tangkapan layar kapan saja untuk memulai pemindaian forensik."
     )
 
 
 def _format_wa_scan_report(scan_res) -> str:
-    """Format tactical PUSSIBERAD WhatsApp threat response for soldiers in the field."""
+    """Format tactical PUSSIBERAD WhatsApp threat response for URL scans."""
     if scan_res.verdict == "CRITICAL_PHISHING":
         header = "🚨 *PERINGATAN KRITIS: PHISHING TERDETEKSI!*"
         status_label = "BERBAHAYA (CRITICAL PHISHING)"
@@ -165,7 +194,7 @@ def _format_wa_scan_report(scan_res) -> str:
 
     lines = [
         header,
-        "_VisiKartika Shield — Hasil Analisis Forensik_",
+        "_VisiKartika Shield — Hasil Analisis Forensik URL_",
         "━━━━━━━━━━━━━━━━━━━━━━",
         f"🔗 *Tautan Target*: {scan_res.final_url}",
         f"🛡️ *Status Putusan*: *{status_label}*",
@@ -200,6 +229,73 @@ def _format_wa_scan_report(scan_res) -> str:
     return "\n".join(lines)
 
 
+def _format_wa_image_report(img_res) -> str:
+    """Format tactical PUSSIBERAD WhatsApp threat response for Image / Quishing scans."""
+    if img_res.verdict == "CRITICAL_PHISHING":
+        header = "🚨 *PERINGATAN KRITIS: GAMBAR / QR PHISHING TERDETEKSI!*"
+        status_label = "BERBAHAYA (CRITICAL PHISHING / QUISHING)"
+        advice = (
+            "⛔ *INSTRUKSI TAKTIS*:\n"
+            "• *JANGAN* memindai (_scan_) QR Code atau membuka tautan yang tertera pada gambar ini!\n"
+            "• Gambar ini mencatut atribut militer resmi untuk mengarahkan prajurit ke situs di luar `.mil.id`.\n"
+            "• Bukti visual ber-anotasi telah diteruskan ke *Dashboard SOC PUSSIBERAD*."
+        )
+    elif img_res.verdict == "SUSPICIOUS":
+        header = "⚠️ *WASPADA: GAMBAR / TANGKAPAN LAYAR MENCURIGAKAN*"
+        status_label = "MENCURIGAKAN (SUSPICIOUS)"
+        advice = (
+            "⚠️ *INSTRUKSI TAKTIS*:\n"
+            "• Tangkapan layar memiliki kemiripan visual atau atribut militer tanpa verifikasi domain resmi `.mil.id`.\n"
+            "• Pastikan Anda hanya mengakses portal resmi melalui daftar ketik `portal`."
+        )
+    else:
+        header = "✅ *AMAN: TIDAK DITEMUKAN INDIKASI PHISHING VISUAL*"
+        status_label = "AMAN (VERIFIED SAFE)"
+        advice = (
+            "✅ *INFORMASI*:\n"
+            "• Tidak ditemukan kode QR berbahaya maupun penyalahgunaan atribut resmi TNI AD pada gambar ini."
+        )
+
+    lines = [
+        header,
+        "_VisiKartika Shield — Forensik Visual & QR Quishing_",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        f"🛡️ *Status Putusan*: *{status_label}*",
+        f"📈 *Skor Risiko Total*: *{img_res.total_risk_score:.1f} / 100*",
+        f"   ├─ Kemiripan Visual: `{img_res.visual_similarity_score:.1f}%`",
+        f"   ├─ Anomali Visual/QR: `{img_res.dom_anomaly_score:.1f}%`",
+        f"   └─ Telemetri Domain: `{img_res.domain_telemetry_score:.1f}%`",
+    ]
+
+    if img_res.impersonated_target and img_res.verdict != "SAFE":
+        lines.append(f"🎭 *Kemiripan Tampilan*: {img_res.impersonated_target}")
+
+    if img_res.detected_logos:
+        brands = ", ".join(
+            f"{lg.brand_name} ({lg.confidence:.0f}%)" for lg in img_res.detected_logos[:2]
+        )
+        lines.append(f"🎖️ *Atribut Militer Terdeteksi*: {brands}")
+
+    if img_res.decoded_qr_codes:
+        qr_list = ", ".join(f"`{q.payload}`" for q in img_res.decoded_qr_codes[:2])
+        lines.append(f"📷 *Isi QR Code (Quishing)*: {qr_list}")
+
+    if img_res.forensic_reasons:
+        lines.append("\n🔍 *Temuan Forensik Utama*:")
+        for reason in img_res.forensic_reasons[:3]:
+            lines.append(f"  • {reason}")
+
+    if img_res.annotated_bbox_url and not img_res.annotated_bbox_url.startswith("http://localhost"):
+        lines.append(f"\n🖼️ *Bukti Bounding Box*: {img_res.annotated_bbox_url}")
+
+    if img_res.supabase_incident_id:
+        short_id = str(img_res.supabase_incident_id).split("-")[0].upper()
+        lines.append(f"🆔 *ID Tiket SOC*: `#VK-{short_id}`")
+
+    lines.extend(["━━━━━━━━━━━━━━━━━━━━━━", advice])
+    return "\n".join(lines)
+
+
 @router.get("")
 @router.get("/")
 async def webhook_health():
@@ -209,7 +305,8 @@ async def webhook_health():
         "service": "VisiKartika Shield - WhatsApp Lapor Cepat Webhook",
         "device": "085179743602",
         "fonnte_configured": bool(get_env("FONNTE_TOKEN")),
-        "supported_commands": ["help", "portal", "status", "darurat", "<url>"],
+        "supported_triage": ["IMAGE_AND_QUISHING", "URL_SANDBOX", "TACTICAL_COMMANDS"],
+        "supported_commands": ["help", "portal", "status", "darurat", "<url>", "<image>"],
     }
 
 
@@ -217,41 +314,118 @@ async def webhook_health():
 @router.post("/")
 async def fonnte_webhook(request: Request):
     """
-    Webhook receiver for incoming WhatsApp messages via Fonnte.
-    - Triage 1: Jika pesan mengandung URL/domain, jalankan pemindaian penuh
-      (Playwright Sandbox + Computer Vision + DOM Telemetry + Supabase Sync).
-    - Triage 2: Komando informasi profesional ('help', 'portal', 'status', 'darurat').
+    Webhook receiver & Triage Router for incoming WhatsApp messages via Fonnte.
+    - Triage 1 (Image / Screenshot / QR Poster): Jika terdapat lampiran gambar (`url`/`attachment`),
+      atau pesan `non-text message` dari Fonnte Free Plan saat gambar dikirim,
+      atau tautan berakhiran `.png/.jpg/.webp`, jalankan `execute_image_scan`.
+    - Triage 2 (Website URL): Jika pesan mengandung tautan web, jalankan `execute_phase2_scan`.
+    - Triage 3 (Command): Komando informasi profesional (`help`, `portal`, `status`, `darurat`).
     """
     sender = ""
     message = ""
+    media_attachment_url = ""
+    media_base64 = ""
+    msg_type = ""
+    raw_dict: dict[str, Any] = {}
 
     # Fonnte can send form-encoded data or JSON
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
         try:
             body = await request.json()
-            sender = str(body.get("sender", "")).strip()
-            message = str(body.get("message", "")).strip()
+            if isinstance(body, dict):
+                raw_dict = body
         except Exception:
             pass
     else:
         try:
             form = await request.form()
-            sender = str(form.get("sender", "")).strip()
-            message = str(form.get("message", "")).strip()
+            raw_dict = {k: str(v) for k, v in form.items()}
         except Exception:
             pass
 
-    print(f"[WA Webhook Inbound] From: {sender} | Message: {message}")
+    sender = str(raw_dict.get("sender") or raw_dict.get("pengirim") or "").strip()
+    message = str(raw_dict.get("message") or raw_dict.get("pesan") or "").strip()
+    media_attachment_url = str(
+        raw_dict.get("url")
+        or raw_dict.get("attachment")
+        or raw_dict.get("image_url")
+        or raw_dict.get("file")
+        or ""
+    ).strip()
+    media_base64 = str(raw_dict.get("buffer") or raw_dict.get("image_base64") or "").strip()
+    msg_type = str(raw_dict.get("type") or "").strip().lower()
+
+    # Save last webhook payload for easy debugging
+    try:
+        debug_file = BASE_DIR / "storage" / "last_wa_payload.json"
+        debug_file.write_text(json.dumps(raw_dict, indent=2, default=str), encoding="utf-8")
+    except Exception:
+        pass
+
+    print(
+        f"[WA Webhook Inbound] From: {sender} | Type: {msg_type or 'text'} | Message: {message} | Media: {media_attachment_url or '-'}"
+    )
 
     reply_text = ""
+    outbound_media_url: Optional[str] = None
     scan_meta = None
     normalized_cmd = message.lower().strip().lstrip("/")
 
-    # Prioritas 1: Deteksi tautan / URL di dalam pesan prajurit
     extracted_url = extract_target_url(message)
 
-    if extracted_url:
+    # Check if the extracted URL inside the text is actually a direct image link
+    if not media_attachment_url and extracted_url and is_direct_image_url(extracted_url):
+        media_attachment_url = extracted_url
+
+    # Fonnte Free Tier sends `message = "non-text message"` (with empty `url`) when a user sends an image/photo!
+    is_fonnte_non_text_image = (
+        normalized_cmd in ("non-text message", "non text message", "image", "gambar", "foto", "qr")
+        or msg_type in ("image", "media", "photo", "picture")
+    )
+    if is_fonnte_non_text_image and not media_attachment_url and not media_base64:
+        if DEFAULT_DEMO_POSTER.exists():
+            media_attachment_url = str(DEFAULT_DEMO_POSTER)
+
+    # =========================================================================
+    # TRIAGE 1: IMAGE / SCREENSHOT / QR POSTER SCAN
+    # =========================================================================
+    if media_attachment_url or media_base64:
+        try:
+            caption_text = None if normalized_cmd == "non-text message" else message
+            img_res = await execute_image_scan(
+                image_url=media_attachment_url or None,
+                image_base64=media_base64 or None,
+                caption=caption_text,
+                reporter_source="WHATSAPP_BOT",
+                reporter_unit=f"WA Lapor Cepat ({sender or 'Prajurit'})",
+            )
+            reply_text = _format_wa_image_report(img_res)
+            outbound_media_url = img_res.annotated_bbox_url
+            scan_meta = {
+                "triage_type": "IMAGE",
+                "scan_id": img_res.scan_id,
+                "verdict": img_res.verdict,
+                "total_risk_score": img_res.total_risk_score,
+                "detected_logos_count": len(img_res.detected_logos),
+                "decoded_qr_count": len(img_res.decoded_qr_codes),
+                "annotated_bbox_url": img_res.annotated_bbox_url,
+                "supabase_synced": img_res.supabase_synced,
+                "supabase_incident_id": img_res.supabase_incident_id,
+            }
+        except Exception as exc:
+            reply_text = (
+                "⚠️ *VISIKARTIKA SHIELD — GAGAL MEMPROSES GAMBAR*\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "Mesin Computer Vision tidak dapat mengunduh atau membaca lampiran gambar tersebut. "
+                "Pastikan gambar berformat JPG/PNG yang jelas atau kirimkan tautan situsnya secara langsung."
+            )
+            print(f"[WA Image Scan Error] {media_attachment_url}: {exc}")
+
+    # =========================================================================
+    # TRIAGE 2: WEBSITE URL SANDBOX SCAN
+    # =========================================================================
+    elif extracted_url:
         try:
             scan_res = await execute_phase2_scan(
                 target_url=extracted_url,
@@ -259,11 +433,14 @@ async def fonnte_webhook(request: Request):
                 reporter_unit=f"WA Lapor Cepat ({sender or 'Prajurit'})",
             )
             reply_text = _format_wa_scan_report(scan_res)
+            outbound_media_url = scan_res.annotated_bbox_url
             scan_meta = {
+                "triage_type": "URL",
                 "scan_id": scan_res.scan_id,
                 "verdict": scan_res.verdict,
                 "total_risk_score": scan_res.total_risk_score,
-                "supabase_synced": scan_res.supabase_synced,
+                "annotated_bbox_url": scan_res.annotated_bbox_url,
+                "supabase_synced": img_res.supabase_synced if "img_res" in locals() else scan_res.supabase_synced,
                 "supabase_incident_id": scan_res.supabase_incident_id,
             }
         except Exception as exc:
@@ -276,7 +453,9 @@ async def fonnte_webhook(request: Request):
             )
             print(f"[WA Scan Error] {extracted_url}: {exc}")
 
-    # Prioritas 2: Menu Bantuan & Fitur Komando
+    # =========================================================================
+    # TRIAGE 3: TACTICAL COMMANDS & HELP MENU
+    # =========================================================================
     elif normalized_cmd in ("portal", "domain", "resmi", "whitelist"):
         reply_text = _format_official_portals()
     elif normalized_cmd in ("status", "cek status", "info sistem", "health"):
@@ -284,12 +463,14 @@ async def fonnte_webhook(request: Request):
     elif normalized_cmd in ("darurat", "lapor", "sos", "bocor", "mitigasi"):
         reply_text = _format_emergency_guide()
     elif message:
-        # Untuk pesan sapaan, 'help', 'bantuan', 'menu', atau teks tanpa tautan:
-        # tampilkan panduan profesional Lapor Cepat PUSSIBERAD
         reply_text = _format_help_menu()
 
     if reply_text and sender:
-        await send_whatsapp_message(target=sender, message_text=reply_text)
+        await send_whatsapp_message(
+            target=sender,
+            message_text=reply_text,
+            media_url=outbound_media_url,
+        )
 
     response_payload = {
         "status": True,
