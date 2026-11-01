@@ -1,14 +1,16 @@
-__pycache__/
-*.py[cod]
-*$py.class
+# Environment files with secrets
+.env
+.env*.local
+
+# Python virtual environment & cache
 .venv/
 venv/
-env/
-.env
-storage/synthetic_yolo/
-storage/screenshots/demo_*.png
-storage/screenshots/test_api_*.png
-storage/annotated/demo_*.png
-storage/annotated/test_api_*.png
-.pytest_cache/
+__pycache__/
+*.py[cod]
+*.log
 
+# Node & Next.js
+node_modules/
+.next/
+out/
+build/

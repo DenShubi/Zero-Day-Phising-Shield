@@ -63,6 +63,10 @@ app.mount(
 
 scanner = HeadlessSandboxScanner(base_storage_dir=STORAGE_DIR)
 
+# Person B: WhatsApp Webhook Router
+from app.webhook_wa import router as wa_router
+app.include_router(wa_router)
+
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

@@ -232,8 +232,8 @@ Berdasarkan **Sprint Gantt & Timeline Tracker** (**21 Workstreams** & **7 Sync M
 | Fase | Tanggal | Assignee | Workstream / Fokus Pengerjaan | Deliverable Utama | Status |
 | :---: | :---: | :---: | :--- | :--- | :---: |
 | **Phase 1** | 31 Okt – 02 Nov | **Zuan** | Setup Playwright headless capture, simpan screenshot, dan ekstrak tag DOM form/input beserta *bounding box* OpenCV. | Playwright capture script, DOM extractor & OpenCV annotator (`/api/v1/scan/phase1`) | ✅ **Done** |
-| **Phase 1** | 31 Okt – 02 Nov | **Denin** | Inisialisasi monorepo, setup database Supabase SQL, dan integrasi WhatsApp Gateway API. | Supabase DB schema & WA Gateway setup | 🔄 In Progress |
-| **Phase 1** | 31 Okt – 02 Nov | **Sync ★** | Uji konektivitas dasar: Webhook WA menerima pesan teks dan mengirim respon balik statis `"Pong"`. | Verified WA echo/Pong webhook integration | 🔄 In Progress |
+| **Phase 1** | 31 Okt – 02 Nov | **Denin** | Inisialisasi monorepo, setup database Supabase SQL, dan integrasi WhatsApp Gateway API. | Supabase DB schema & WA Gateway setup | ✅ **Done** |
+| **Phase 1** | 31 Okt – 02 Nov | **Sync ★** | Uji konektivitas dasar: Webhook WA menerima pesan teks dan mengirim respon balik statis `"Pong"`. | Verified WA echo/Pong webhook integration | ✅ **Done** |
 | **Phase 2** | 02 Nov – 04 Nov | **Zuan** | Bangun fungsi SSIM *visual similarity*, load template logo Kartika Eka Paksi, dan fungsi *auto-draw bounding box* merah pada logo. | SSIM similarity engine & logo bounding box detector | ⏳ Planned |
 | **Phase 2** | 02 Nov – 04 Nov | **Denin** | Bangun router triage pesan (URL vs Gambar), domain whitelist `.mil.id`, dan formula kalkulasi skor gabungan. | Triage router, `.mil.id` whitelist & score fusion engine | ⏳ Planned |
 | **Phase 2** | 02 Nov – 04 Nov | **Sync ★** | Uji kirim URL palsu via Postman ke FastAPI Person A; pastikan return JSON skor kemiripan dan screenshot ber-*bounding box*. | Postman test suite & JSON score validation | ⏳ Planned |
