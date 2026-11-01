@@ -23,6 +23,7 @@ from app.scanner_service import (
 )
 from app.supabase_client import SupabaseService
 from app.webhook_wa import router as wa_router
+from app.webhook_openwa import router as openwa_router
 
 if sys.platform == "win32":
     with warnings.catch_warnings():
@@ -78,8 +79,9 @@ app.mount(
     name="mock-targets",
 )
 
-# Person B: WhatsApp Lapor Cepat Webhook Router
+# Person B: WhatsApp Lapor Cepat Webhook Routers (Fonnte + OpenWA Baileys)
 app.include_router(wa_router)
+app.include_router(openwa_router)
 
 
 @app.get("/health", tags=["System"])
