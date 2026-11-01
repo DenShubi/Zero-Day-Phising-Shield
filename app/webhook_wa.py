@@ -1,10 +1,14 @@
 import os
 import httpx
 from fastapi import APIRouter, Request
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter(prefix="/webhook/wa", tags=["WhatsApp Webhook"])
 
-FONNTE_TOKEN = os.getenv("FONNTE_TOKEN", "Yov72mAWgvfp7wRymWbt")
+FONNTE_TOKEN = os.getenv("FONNTE_TOKEN", "")
+
 
 
 async def send_whatsapp_message(target: str, message_text: str) -> bool:
