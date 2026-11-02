@@ -1,18 +1,18 @@
 """
-VisiKartika Shield - Domain Whitelist & Lookalike Guard (Phase 2, Person B).
+VisiKartika Shield - Domain Whitelist & Lookalike Guard (Phase 2+).
 
 Single source of truth for:
   * the official TNI AD / TNI / Kemhan domain whitelist (`.mil.id` namespace),
   * host normalisation (case, trailing dot, port, `www.`, IDN/punycode),
-  * lookalike / typosquatting heuristics against official domains.
-
-Used by the sandbox DOM telemetry (`app/sandbox/browser.py`), the image/QR
-scanner (`app/scanner_service.py`) and the WhatsApp bot (`portal` command).
+  * lookalike / typosquatting heuristics against official domains,
+  * generic phishing infrastructure indicators (high-abuse TLDs, URL shorteners,
+    ephemeral tunnels, raw IPs, non-TLS) vs legitimate non-military domains.
 """
 
 from __future__ import annotations
 
 import ipaddress
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
@@ -21,9 +21,6 @@ from urllib.parse import urlparse
 # --------------------------------------------------------------------------- #
 # Whitelist
 # --------------------------------------------------------------------------- #
-# Any host equal to, or a sub-domain of, one of these entries is official.
-# `mil.id` itself is included because the whole `.mil.id` second-level zone is
-# restricted by PANDI to Indonesian military institutions.
 OFFICIAL_MIL_DOMAINS: frozenset[str] = frozenset(
     {
         "mil.id",
@@ -31,15 +28,23 @@ OFFICIAL_MIL_DOMAINS: frozenset[str] = frozenset(
         "tni.mil.id",
         "rekrutmen-tni.mil.id",
         "pussiberad.mil.id",
+        "seskoad.mil.id",
+        "kostrad.mil.id",
+        "kopassus.mil.id",
         "kemhan.go.id",
+        "bssn.go.id",
+        "lemhannas.go.id",
+        "bakamla.go.id",
+        "basarnas.go.id",
         "akmil.ac.id",
+        "poltekad.ac.id",
+        "aal.ac.id",
+        "aau.ac.id",
         "idu.ac.id",
         "unhanri.ac.id",
     }
 )
 
-# Brand labels attackers typically imitate (derived from the whitelist plus
-# well-known institution names). Used for typosquat distance checks.
 PROTECTED_BRAND_LABELS: frozenset[str] = frozenset(
     {
         "tniad",
@@ -57,29 +62,58 @@ PROTECTED_BRAND_LABELS: frozenset[str] = frozenset(
     }
 )
 
-# Military bait tokens that should never appear on a non-official host.
-MILITARY_BAIT_TOKENS: tuple[str, ...] = (
-    "tni",
-    "kartika",
-    "pussiber",
-    "bintara",
-    "tamtama",
-    "sisfopers",
-    "kemhan",
-    "mil-id",
-    "milid",
-    "rekrutmen",
-    "panpus",
-    "kodam",
-    "prajurit",
+# Military bait tokens (checked on label/token boundaries so 'family.com' or 'kartini.com' never false-match)
+MILITARY_BAIT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("tniad", re.compile(r"tniad", re.IGNORECASE)),
+    ("tni", re.compile(r"(?:^|[-_./0-9])tni(?:ad)?(?:$|[-_./0-9])", re.IGNORECASE)),
+    ("kartika", re.compile(r"kartika", re.IGNORECASE)),
+    ("pussiber", re.compile(r"pussiber", re.IGNORECASE)),
+    ("bintara", re.compile(r"bintara", re.IGNORECASE)),
+    ("tamtama", re.compile(r"tamtama", re.IGNORECASE)),
+    ("sisfopers", re.compile(r"sisfopers", re.IGNORECASE)),
+    ("kemhan", re.compile(r"kemhan", re.IGNORECASE)),
+    ("mil-id", re.compile(r"mil[-_]?id", re.IGNORECASE)),
+    ("rekrutmen", re.compile(r"rekrutmen", re.IGNORECASE)),
+    ("panpus", re.compile(r"panpus", re.IGNORECASE)),
+    ("kodam", re.compile(r"kodam", re.IGNORECASE)),
+    ("prajurit", re.compile(r"prajurit", re.IGNORECASE)),
+    ("akmil", re.compile(r"akmil", re.IGNORECASE)),
+    ("seskoad", re.compile(r"seskoad", re.IGNORECASE)),
 )
 
-# Visually confusable characters (digit/letter swaps commonly used in phishing).
+HIGH_ABUSE_TLDS: frozenset[str] = frozenset(
+    {
+        "xyz", "top", "click", "vip", "icu", "buzz", "monster", "link",
+        "online", "site", "live", "shop", "cc", "pw", "tk", "ml", "ga", "cf", "gq",
+    }
+)
+
+URL_SHORTENER_HOSTS: frozenset[str] = frozenset(
+    {
+        "bit.ly", "s.id", "tinyurl.com", "cutt.ly", "rb.gy",
+        "is.gd", "rebrand.ly", "shorturl.at", "t.co", "lnkd.in",
+    }
+)
+
+EPHEMERAL_TUNNEL_OR_FREE_HOSTS: tuple[str, ...] = (
+    "ngrok-free.app",
+    "ngrok.io",
+    "trycloudflare.com",
+    "lhr.life",
+    "loca.lt",
+    "000webhostapp.com",
+    "weebly.com",
+    "blogspot.com",
+    "pages.dev",
+    "vercel.app",
+    "netlify.app",
+    "web.app",
+    "firebaseapp.com",
+)
+
 _CONFUSABLES = str.maketrans(
     {
-        # digit / symbol swaps
         "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b", "@": "a",
-        # Cyrillic & Latin-extended homoglyphs seen in IDN phishing
         "а": "a", "е": "e", "о": "o", "і": "i", "ı": "i", "ӏ": "l", "р": "p", "с": "c",
         "у": "y", "х": "x", "ԁ": "d", "к": "k", "м": "m", "т": "t", "н": "h", "ո": "n",
     }
@@ -87,7 +121,6 @@ _CONFUSABLES = str.maketrans(
 
 
 def _fold_confusables(label: str) -> str:
-    """Map homoglyphs to ASCII and strip diacritics (e.g. 'tnïad' -> 'tniad')."""
     folded = label.translate(_CONFUSABLES)
     folded = unicodedata.normalize("NFKD", folded)
     return "".join(ch for ch in folded if not unicodedata.combining(ch))
@@ -95,18 +128,35 @@ def _fold_confusables(label: str) -> str:
 
 @dataclass
 class DomainAssessment:
-    """Result of assessing a single URL/host against the whitelist."""
+    """Result of assessing a single URL/host against the whitelist & threat heuristics."""
 
     host: str
     is_official: bool
     is_ip: bool = False
     is_punycode: bool = False
+    is_shortener: bool = False
+    is_free_or_tunnel_host: bool = False
+    is_high_abuse_tld: bool = False
     scheme: str = ""
     bait_tokens: list[str] = field(default_factory=list)
     lookalike_of: Optional[str] = None
-    lookalike_kind: Optional[str] = None  # 'embedded-official' | 'typosquat' | 'homoglyph' | 'fake-mil-tld'
+    lookalike_kind: Optional[str] = None
     risk_score: float = 0.0
     reasons: list[str] = field(default_factory=list)
+
+    @property
+    def has_phishing_indicators(self) -> bool:
+        """True if domain exhibits explicit threat signals beyond simply being non-.mil.id."""
+        return bool(
+            self.lookalike_of
+            or self.bait_tokens
+            or self.is_shortener
+            or self.is_free_or_tunnel_host
+            or self.is_high_abuse_tld
+            or self.is_punycode
+            or self.is_ip
+            or (self.scheme and self.scheme != "https")
+        )
 
     def as_dict(self) -> dict:
         return {
@@ -114,6 +164,9 @@ class DomainAssessment:
             "is_official": self.is_official,
             "is_ip": self.is_ip,
             "is_punycode": self.is_punycode,
+            "is_shortener": self.is_shortener,
+            "is_free_or_tunnel_host": self.is_free_or_tunnel_host,
+            "is_high_abuse_tld": self.is_high_abuse_tld,
             "scheme": self.scheme,
             "bait_tokens": list(self.bait_tokens),
             "lookalike_of": self.lookalike_of,
@@ -123,11 +176,7 @@ class DomainAssessment:
         }
 
 
-# --------------------------------------------------------------------------- #
-# Normalisation helpers
-# --------------------------------------------------------------------------- #
 def parse_url(url_or_host: str) -> tuple[str, str]:
-    """Return `(scheme, normalised_host)` for a URL or a bare host string."""
     raw = (url_or_host or "").strip()
     if not raw:
         return "", ""
@@ -137,12 +186,22 @@ def parse_url(url_or_host: str) -> tuple[str, str]:
 
 
 def normalize_host(hostname: str) -> str:
-    """Lower-case, strip trailing dot / `www.` / port and decode IDN punycode."""
     host = (hostname or "").strip().lower().rstrip(".")
     if ":" in host and not host.startswith("["):
         host = host.split(":", 1)[0]
     if host.startswith("www."):
         host = host[4:]
+    return host
+
+
+def registrable_domain(hostname: str) -> str:
+    """Approximate eTLD+1 (e.g. 'assets.github.com' -> 'github.com', 'ad.rekrutmen-tni.mil.id' -> 'rekrutmen-tni.mil.id')."""
+    host = normalize_host(hostname)
+    parts = host.split(".")
+    if len(parts) >= 3 and parts[-2] in {"co", "go", "ac", "or", "my", "web", "sch", "mil", "net", "biz"} and parts[-1] == "id":
+        return ".".join(parts[-3:])
+    if len(parts) >= 2:
+        return ".".join(parts[-2:])
     return host
 
 
@@ -164,18 +223,21 @@ def is_ip_address(hostname: str) -> bool:
 
 
 def is_official_domain(hostname_or_url: str) -> bool:
-    """True when the host equals or is a sub-domain of a whitelisted domain."""
     if not hostname_or_url:
         return False
     host = parse_url(hostname_or_url)[1]
     if not host or is_ip_address(host) or "xn--" in host:
-        # Punycode never matches: the whitelist is pure ASCII.
         return False
     return any(host == d or host.endswith("." + d) for d in OFFICIAL_MIL_DOMAINS)
 
 
+def find_bait_tokens(text_or_host: str) -> list[str]:
+    if not text_or_host:
+        return []
+    return [name for name, pat in MILITARY_BAIT_PATTERNS if pat.search(text_or_host)]
+
+
 def _levenshtein(a: str, b: str, max_dist: int = 3) -> int:
-    """Bounded Levenshtein distance (early exit once it exceeds `max_dist`)."""
     if abs(len(a) - len(b)) > max_dist:
         return max_dist + 1
     prev = list(range(len(b) + 1))
@@ -192,7 +254,6 @@ def _levenshtein(a: str, b: str, max_dist: int = 3) -> int:
 
 
 def _registrable_label(host: str) -> str:
-    """Best-effort 'brand' label: the label left of the public suffix."""
     parts = host.split(".")
     if len(parts) >= 3 and parts[-2] in {"co", "go", "ac", "or", "my", "web", "sch", "mil", "net", "biz"} and parts[-1] == "id":
         return parts[-3]
@@ -200,31 +261,24 @@ def _registrable_label(host: str) -> str:
 
 
 def find_lookalike(host: str) -> tuple[Optional[str], Optional[str]]:
-    """
-    Detect whether a NON-official host imitates an official one.
-    Returns `(imitated_domain_or_brand, kind)` or `(None, None)`.
-    """
     if not host or is_official_domain(host):
         return None, None
 
     decoded = _decode_idna(host)
 
-    # 1. Official domain embedded in an attacker host: tniad.mil.id.verify-login.com
     for official in sorted(OFFICIAL_MIL_DOMAINS, key=len, reverse=True):
         if official == "mil.id":
             continue
         if official in host or official.replace(".", "-") in host:
             return official, "embedded-official"
 
-    # 2. Fake military TLD imitations: tniad-mil.id, tniad.mil-id.com, tniad.milid.co
     if (
-        host.endswith("mil.id")  # e.g. evilmil.id / tniad-mil.id (not a real *.mil.id sub-domain)
-        or ".mil.id." in f".{host}"  # e.g. mil.id.co / portal.mil.id.example.com
+        host.endswith("mil.id")
+        or ".mil.id." in f".{host}"
         or any(tok in host for tok in ("mil-id", "milid"))
     ):
         return "mil.id", "fake-mil-tld"
 
-    # 3. Homoglyph / IDN: punycode host whose decoded form normalises to a brand
     label = _registrable_label(decoded)
     folded = _fold_confusables(label)
     if "xn--" in host or folded != label:
@@ -232,35 +286,29 @@ def find_lookalike(host: str) -> tuple[Optional[str], Optional[str]]:
             if folded == brand or (len(brand) >= 5 and brand in folded):
                 return brand, "homoglyph"
 
-    # 4. Typosquat: brand label within edit distance 1-2 (e.g. tnlad, tniadd, kemhann)
     for brand in PROTECTED_BRAND_LABELS:
         if len(brand) < 4:
-            continue  # 'tni' is too short for edit distance (too many false positives)
+            continue
         allowed = 2 if len(brand) >= 9 else 1
         dist = _levenshtein(folded, brand, max_dist=allowed)
         if 0 < dist <= allowed:
             return brand, "typosquat"
         if folded == brand:
-            # exact brand label on a non-official suffix, e.g. tniad.com / kemhan.xyz
             return brand, "typosquat"
 
     return None, None
 
 
-# --------------------------------------------------------------------------- #
-# Public API
-# --------------------------------------------------------------------------- #
-def assess_url(url_or_host: str) -> DomainAssessment:
+def assess_url(url_or_host: str, *, military_context: bool = True) -> DomainAssessment:
     """
     Assess a URL (or bare host) for domain-level phishing indicators.
-
-    Score (0-100) for a non-official host:
-      base 55 (outside whitelist) + 35 bait token / lookalike + 10 no HTTPS,
-      punycode and raw-IP hosts add further evidence. Official hosts score 0.
-    The scale intentionally matches the pre-existing QR/caption telemetry so
-    image-scan verdicts stay comparable.
+      - Official `.mil.id` / `.go.id` whitelist -> 0.0
+      - Non-official domain under default/military guard (`military_context=True`) -> 55.0 base
+      - Clean legitimate HTTPS non-military domain when `military_context=False` -> 15.0 base
+      - Lookalike / typosquat / bait / shortener / tunnel / high-abuse TLD / IP / HTTP -> 55.0 - 100.0
     """
-    scheme, host = parse_url(url_or_host)
+    raw = (url_or_host or "").strip()
+    scheme, host = parse_url(raw)
     assessment = DomainAssessment(host=host, is_official=False, scheme=scheme)
     if not host:
         return assessment
@@ -272,14 +320,22 @@ def assess_url(url_or_host: str) -> DomainAssessment:
 
     assessment.is_ip = is_ip_address(host)
     assessment.is_punycode = "xn--" in host
-    assessment.bait_tokens = [tok for tok in MILITARY_BAIT_TOKENS if tok in host]
+    assessment.is_shortener = host in URL_SHORTENER_HOSTS
+    assessment.is_free_or_tunnel_host = any(
+        host == d or host.endswith("." + d) for d in EPHEMERAL_TUNNEL_OR_FREE_HOSTS
+    )
+    tld = host.rsplit(".", 1)[-1] if "." in host else ""
+    assessment.is_high_abuse_tld = tld in HIGH_ABUSE_TLDS
+
+    # Check bait tokens in both hostname and URL path
+    assessment.bait_tokens = find_bait_tokens(raw.lower())
     assessment.lookalike_of, assessment.lookalike_kind = find_lookalike(host)
 
-    score = 55.0
-    assessment.reasons.append(f"Tautan mengarah ke domain eksternal non-militer: '{host}'")
+    # Base score: low (15) for clean general non-military HTTPS domains, high (55) if military context is claimed
+    score = 55.0 if military_context else 15.0
 
     if assessment.lookalike_of:
-        score += 35.0
+        score = max(score, 55.0) + 35.0
         kind_label = {
             "embedded-official": "menyisipkan nama domain resmi",
             "fake-mil-tld": "meniru akhiran .mil.id",
@@ -290,20 +346,32 @@ def assess_url(url_or_host: str) -> DomainAssessment:
             f"Domain '{host}' {kind_label} '{assessment.lookalike_of}' (indikasi penyamaran)"
         )
     elif assessment.bait_tokens:
-        score += 35.0
+        score = max(score, 55.0) + 35.0
         assessment.reasons.append(
-            f"Indikasi typosquatting / penyamaran nama institusi militer pada domain '{host}'"
+            f"Penggunaan kata kunci institusi militer ({', '.join(assessment.bait_tokens[:3])}) pada domain non-resmi '{host}'"
         )
 
+    if assessment.is_shortener:
+        score += 40.0
+        assessment.reasons.append(f"Tautan menggunakan penyingkat URL ('{host}') yang menyembunyikan domain tujuan asli")
+    if assessment.is_free_or_tunnel_host:
+        score += 35.0
+        assessment.reasons.append(f"Tautan menggunakan layanan hosting gratis / tunnel sementara ('{host}')")
+    if assessment.is_high_abuse_tld:
+        score += 30.0
+        assessment.reasons.append(f"Domain menggunakan ekstensi TLD berisiko tinggi ('.{tld}')")
     if assessment.is_punycode:
-        score += 10.0
+        score += 25.0
         assessment.reasons.append(f"Domain menggunakan IDN/punycode ('{_decode_idna(host)}')")
-    if assessment.is_ip:
-        score += 10.0
-        assessment.reasons.append(f"Tautan menggunakan alamat IP mentah ('{host}') tanpa nama domain terdaftar")
+    if assessment.is_ip or host in ("localhost", "127.0.0.1"):
+        score += 35.0
+        assessment.reasons.append(f"Tautan menggunakan alamat IP mentah / host lokal ('{host}')")
     if scheme and scheme != "https":
-        score += 10.0
-        assessment.reasons.append("Tautan tidak menggunakan enkripsi HTTPS standar")
+        score += 25.0
+        assessment.reasons.append(f"Tautan tidak menggunakan enkripsi HTTPS standar (skema '{scheme}://')")
+
+    if military_context and not assessment.reasons:
+        assessment.reasons.append(f"Konten bermuatan atribut militer mengarah ke domain eksternal non-.mil.id: '{host}'")
 
     assessment.risk_score = round(min(100.0, score), 2)
     return assessment

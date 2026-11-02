@@ -1,0 +1,122 @@
+[
+  {
+    "id": "phish_01_poster_calo_bintara",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_01_poster_calo_bintara.png"
+  },
+  {
+    "id": "phish_02_poster_calo_tamtama",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_02_poster_calo_tamtama.png"
+  },
+  {
+    "id": "phish_03_poster_calo_akmil",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_03_poster_calo_akmil.png"
+  },
+  {
+    "id": "phish_04_poster_sisfopers_apk",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_04_poster_sisfopers_apk.png"
+  },
+  {
+    "id": "phish_05_poster_kemhan_komcad",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_05_poster_kemhan_komcad.png"
+  },
+  {
+    "id": "phish_06_poster_kostrad_link",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_06_poster_kostrad_link.png"
+  },
+  {
+    "id": "phish_07_poster_kopassus_wa",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_07_poster_kopassus_wa.png"
+  },
+  {
+    "id": "phish_08_poster_unhan_beasiswa",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/phish_08_poster_unhan_beasiswa.png"
+  },
+  {
+    "id": "scam_09_undangan_nikah_apk",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_09_undangan_nikah_apk.png"
+  },
+  {
+    "id": "scam_10_kurir_paket_apk",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_10_kurir_paket_apk.png"
+  },
+  {
+    "id": "scam_11_blokir_rekening_otp",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_11_blokir_rekening_otp.png"
+  },
+  {
+    "id": "scam_12_dana_kaget_palsu",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_12_dana_kaget_palsu.png"
+  },
+  {
+    "id": "scam_13_pajak_coretax_apk",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_13_pajak_coretax_apk.png"
+  },
+  {
+    "id": "scam_14_tagihan_pln_apk",
+    "expected_verdict": "CRITICAL_PHISHING",
+    "file": "storage/dataset/posters_and_scams/scam_14_tagihan_pln_apk.png"
+  },
+  {
+    "id": "safe_15_poster_resmi_caba",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_15_poster_resmi_caba.png"
+  },
+  {
+    "id": "safe_16_poster_resmi_taruna",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_16_poster_resmi_taruna.png"
+  },
+  {
+    "id": "safe_17_poster_hut_tniad",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_17_poster_hut_tniad.png"
+  },
+  {
+    "id": "safe_18_poster_edukasi_siber",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_18_poster_edukasi_siber.png"
+  },
+  {
+    "id": "safe_19_poster_resmi_kemhan",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_19_poster_resmi_kemhan.png"
+  },
+  {
+    "id": "safe_20_poster_seminar_ui",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_20_poster_seminar_ui.png"
+  },
+  {
+    "id": "safe_21_poster_kuliah_umum_ugm",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_21_poster_kuliah_umum_ugm.png"
+  },
+  {
+    "id": "safe_22_poster_lomba_coding_itb",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_22_poster_lomba_coding_itb.png"
+  },
+  {
+    "id": "safe_23_poster_donor_darah",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_23_poster_donor_darah.png"
+  },
+  {
+    "id": "safe_24_poster_bazar_umkm",
+    "expected_verdict": "SAFE",
+    "file": "storage/dataset/posters_and_scams/safe_24_poster_bazar_umkm.png"
+  }
+]

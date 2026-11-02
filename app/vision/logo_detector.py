@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
@@ -14,16 +15,74 @@ COLOR_LOGO_CRIMSON = (36, 28, 237)  # High-visibility Red/Crimson for Logo Imper
 LOGO_LABELS = {
     "kartika": "TNI AD / Kartika Eka Paksi",
     "logo-tni-ad": "TNI Angkatan Darat (Kartika Eka Paksi)",
+    "insignia_tniad": "TNI Angkatan Darat (Kartika Eka Paksi)",
     "panpus-logo": "Panpus Penerimaan Prajurit TNI AD",
     "kemhan": "Kementerian Pertahanan RI",
     "logo-seskoad": "SESKOAD TNI Angkatan Darat",
     "rekrutmen-tni": "Portal Rekrutmen TNI",
     "kartika_eka_paksi_crest": "TNI AD / Kartika Eka Paksi",
     "pussiberad_emblem": "PUSSIBERAD TNI AD",
+    "garuda_pancasila": "Lambang Negara Garuda Pancasila",
+    "mabes_tni": "Markas Besar TNI",
+    "kostrad_tniad": "Kostrad TNI AD (Cakra)",
+    "kopassus_tniad": "Kopassus TNI AD",
+    "kodiklat_tniad": "Kodiklat TNI AD",
+    "puspomad_tniad": "Puspomad (Polisi Militer TNI AD)",
+    "akmil_magelang": "Akademi Militer (Akmil) TNI AD",
+    "kodam_jaya": "Kodam Jaya / Jayakarta",
+    "kodam_siliwangi": "Kodam III / Siliwangi",
+    "kodam_diponegoro": "Kodam IV / Diponegoro",
+    "kodam_brawijaya": "Kodam V / Brawijaya",
+    "kodam_bukit_barisan": "Kodam I / Bukit Barisan",
+    "kodam_sriwijaya": "Kodam II / Sriwijaya",
+    "kodam_mulawarman": "Kodam VI / Mulawarman",
+    "kodam_udayana": "Kodam IX / Udayana",
+    "kodam_hasanuddin": "Kodam XIV / Hasanuddin",
+    "kodam_cenderawasih": "Kodam XVII / Cenderawasih",
+    "kodam_patimura": "Kodam XV / Pattimura",
+    "kodam_tanjungpura": "Kodam XII / Tanjungpura",
+    "kodam_iskandar_muda": "Kodam Iskandar Muda",
+    "tni_al": "TNI Angkatan Laut (Jalesveva Jayamahe)",
+    "tni_au": "TNI Angkatan Udara (Swa Bhuwana Paksa)",
+    "unhan_ri": "Universitas Pertahanan RI (Unhan)",
+    "bssn_ri": "Badan Siber dan Sandi Negara (BSSN)",
+    "lemhannas_ri": "Lemhannas RI",
+    "basarnas_ri": "Basarnas RI",
+    "bakamla_ri": "Bakamla RI",
 }
 
+_LOGO_TEMPLATE_CACHE: dict[str, tuple[tuple[str, ...], list[dict]]] = {}
 
-def _load_logo_template(tpl_path: Path) -> Optional[dict]:
+
+def _get_cached_logo_templates(logos_dir: Path) -> list[dict]:
+    """Load and cache all `.png` logo templates (auto-invalidating if directory files change)."""
+    if not logos_dir.exists():
+        return []
+    png_files = sorted(logos_dir.glob("*.png"))
+    sig = tuple(f"{p.name}:{p.stat().st_size}" for p in png_files)
+    key = str(logos_dir.resolve())
+    cached = _LOGO_TEMPLATE_CACHE.get(key)
+    if cached is not None and cached[0] == sig:
+        return cached[1]
+
+    manifest_labels: dict[str, str] = {}
+    manifest_file = logos_dir.parent / "logos_manifest.json"
+    if manifest_file.exists():
+        try:
+            manifest_labels = json.loads(manifest_file.read_text(encoding="utf-8"))
+        except Exception:
+            manifest_labels = {}
+
+    loaded_list: list[dict] = []
+    for tpl_path in png_files:
+        loaded = _load_logo_template(tpl_path, extra_labels=manifest_labels)
+        if loaded is not None:
+            loaded_list.append(loaded)
+    _LOGO_TEMPLATE_CACHE[key] = (sig, loaded_list)
+    return loaded_list
+
+
+def _load_logo_template(tpl_path: Path, extra_labels: Optional[dict[str, str]] = None) -> Optional[dict]:
     """
     Load a reference logo PNG (supporting RGBA transparency) and precompute
     normalized RGB, grayscale, alpha mask, and HSV histogram for matching.
@@ -56,13 +115,33 @@ def _load_logo_template(tpl_path: Path) -> Optional[dict]:
     hist = cv2.calcHist([hsv], [0, 1], mask_u8, [24, 24], [0, 180, 0, 256])
     cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
 
+    brand = LOGO_LABELS.get(tpl_path.stem) or (extra_labels or {}).get(tpl_path.stem) or tpl_path.stem
     return {
         "stem": tpl_path.stem,
-        "brand": LOGO_LABELS.get(tpl_path.stem, tpl_path.stem),
+        "brand": brand,
         "bgr": bgr,
         "alpha": alpha,
         "hist": hist,
     }
+
+
+def _verify_patch_color_consistency(patch_bgr: np.ndarray, tpl: dict) -> float:
+    """
+    Verify HSV color histogram correlation over the template's foreground alpha
+    mask so random textured photos (e.g. non-TNI posters, product photos) do not
+    produce false-positive logo matches.
+    """
+    ph, pw = patch_bgr.shape[:2]
+    if ph < 12 or pw < 12:
+        return 0.0
+    tpl_alpha = cv2.resize(tpl["alpha"], (pw, ph), interpolation=cv2.INTER_LINEAR)
+    mask_u8 = (tpl_alpha > 0.18).astype(np.uint8) * 255
+    if int(np.count_nonzero(mask_u8)) < 25:
+        return 0.5
+    patch_hsv = cv2.cvtColor(patch_bgr, cv2.COLOR_BGR2HSV)
+    patch_hist = cv2.calcHist([patch_hsv], [0, 1], mask_u8, [24, 24], [0, 180, 0, 256])
+    cv2.normalize(patch_hist, patch_hist, 0, 1, cv2.NORM_MINMAX)
+    return max(0.0, float(cv2.compareHist(patch_hist, tpl["hist"], cv2.HISTCMP_CORREL)))
 
 
 def _compare_crop_with_template(crop_bgr: np.ndarray, tpl: dict) -> float:
@@ -97,12 +176,7 @@ def _compare_crop_with_template(crop_bgr: np.ndarray, tpl: dict) -> float:
     res = cv2.matchTemplate(crop_gray, comp_gray, cv2.TM_CCOEFF_NORMED)
     ncc_score = max(0.0, float(res[0, 0]))
 
-    crop_hsv = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2HSV)
-    mask_u8 = (tpl_alpha > 0.15).astype(np.uint8) * 255
-    crop_hist = cv2.calcHist([crop_hsv], [0, 1], mask_u8, [24, 24], [0, 180, 0, 256])
-    cv2.normalize(crop_hist, crop_hist, 0, 1, cv2.NORM_MINMAX)
-    hist_score = max(0.0, float(cv2.compareHist(crop_hist, tpl["hist"], cv2.HISTCMP_CORREL)))
-
+    hist_score = _verify_patch_color_consistency(crop_bgr, tpl)
     structural_peak = max(ssim_score, ncc_score)
     return float((0.75 * structural_peak) + (0.25 * hist_score))
 
@@ -129,7 +203,7 @@ def _bbox_overlap(a: dict, b: dict) -> bool:
 
 
 _COARSE_FACTOR = 0.5   # coarse pass runs on a half-resolution grayscale ROI (~12x cheaper)
-_COARSE_TOP_K = 3      # number of coarse (scale, variant, location) hypotheses refined per template
+_COARSE_TOP_K = 4      # number of coarse (scale, variant, location) hypotheses refined per template
 _REFINE_PAD = 6        # +/- pixel search window around each hypothesis at full resolution
 
 
@@ -142,17 +216,10 @@ def _coarse_to_fine_search(
     img_w: int,
 ) -> tuple[float, Optional[dict]]:
     """
-    Fast equivalent of the exhaustive multi-scale search.
-
-    1. Coarse pass: match every (scale, variant) on a half-resolution grayscale
-       ROI and keep the top-K hypotheses.
-    2. Fine pass: re-score each hypothesis with the ORIGINAL full-resolution
-       colour TM_CCOEFF_NORMED metric inside a small window around the location,
-       so the returned score keeps exactly the same meaning/thresholds as the
-       exhaustive search (it can only be <= the exhaustive best).
+    Fast coarse-to-fine multi-scale search across `roi`.
     """
     roi_h, roi_w = roi.shape[:2]
-    hypotheses: list[tuple[float, int, int, int, int, int]] = []  # (coarse_score, h, w, variant_idx, x, y)
+    hypotheses: list[tuple[float, int, int, int, int, int]] = []
 
     for target_h in scales:
         target_w = max(20, int(round(target_h * aspect)))
@@ -203,25 +270,45 @@ def _sliding_window_banner_search(
     templates: Sequence[dict],
     min_score: float = 0.72,
     exhaustive: bool = False,
+    full_page: bool = False,
 ) -> list[dict]:
     """
-    Multi-scale sliding-window template search across the top header/banner
-    area (y: 0..360) so logos baked directly into wide background images or CSS
-    banners (e.g., kemhan.go.id, tniad.mil.id, tni.mil.id) are detected even
-    when there is no standalone `<img>` tag for the emblem.
+    Multi-scale sliding-window template search:
+      - On live DOM pages (`full_page=False`): scans top header/hero region (`y: 0..440`).
+      - On uploaded posters/screenshots (`full_page=True`): normalizes large canvases
+        to `<=1280px` and scans the FULL image height (`y: 0..H`) across light, dark,
+        header, and military-green backgrounds so emblems placed in the center or
+        footer of a poster are reliably detected, while filtering false positives
+        on unrelated photos via HSV color consistency verification.
     """
-    img_h, img_w = raw_img.shape[:2]
-    roi_h = min(img_h, 440)
-    roi = raw_img[:roi_h, :]
+    orig_h, orig_w = raw_img.shape[:2]
+    work_scale = 1.0
+    work_img = raw_img
+    if max(orig_h, orig_w) > 1280:
+        work_scale = 1280.0 / float(max(orig_h, orig_w))
+        work_img = cv2.resize(
+            raw_img,
+            (max(64, int(round(orig_w * work_scale))), max(64, int(round(orig_h * work_scale)))),
+            interpolation=cv2.INTER_AREA,
+        )
+
+    img_h, img_w = work_img.shape[:2]
+    roi_h = img_h if full_page else min(img_h, 440)
+    roi = work_img[:roi_h, :]
     roi_coarse_gray = cv2.cvtColor(
         cv2.resize(roi, None, fx=_COARSE_FACTOR, fy=_COARSE_FACTOR, interpolation=cv2.INTER_AREA),
         cv2.COLOR_BGR2GRAY,
     )
 
     scales = [28, 30, 34, 38, 48, 58, 60, 72, 90, 115, 145, 185, 222, 226]
+    if full_page:
+        scales.extend([260, 300])
+
     candidates: list[dict] = []
     header_bg = roi[min(25, roi_h - 1), min(80, img_w - 1)].astype(np.float32)
     mil_green_bg = np.array([10.0, 55.0, 15.0], dtype=np.float32)
+    white_bg = np.array([248.0, 248.0, 248.0], dtype=np.float32)
+    dark_bg = np.array([24.0, 28.0, 36.0], dtype=np.float32)
 
     for tpl in templates:
         base_bgr = tpl["bgr"]
@@ -229,14 +316,14 @@ def _sliding_window_banner_search(
         th0, tw0 = base_bgr.shape[:2]
         aspect = float(tw0) / float(th0)
 
-        # Build both raw BGR and background-composited BGR for transparent lockups/crests
         variants = [base_bgr]
         if float(base_alpha.mean()) < 0.85:
             a3 = base_alpha[:, :, None]
-            comp_header = np.clip(a3 * base_bgr + (1.0 - a3) * header_bg, 0, 255).astype(np.uint8)
-            comp_green = np.clip(a3 * base_bgr + (1.0 - a3) * mil_green_bg, 0, 255).astype(np.uint8)
-            variants.append(comp_header)
-            variants.append(comp_green)
+            variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * header_bg, 0, 255).astype(np.uint8))
+            variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * mil_green_bg, 0, 255).astype(np.uint8))
+            if full_page:
+                variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * white_bg, 0, 255).astype(np.uint8))
+                variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * dark_bg, 0, 255).astype(np.uint8))
 
         best_tpl_score = 0.0
         best_tpl_box: Optional[dict] = None
@@ -246,13 +333,11 @@ def _sliding_window_banner_search(
                 target_w = max(20, int(round(target_h * aspect)))
                 if target_h >= roi_h or target_w >= img_w:
                     continue
-
                 for var_bgr in variants:
                     t_bgr = cv2.resize(var_bgr, (target_w, target_h), interpolation=cv2.INTER_AREA)
                     res = cv2.matchTemplate(roi, t_bgr, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
                     score = float(max_val)
-
                     if score > best_tpl_score:
                         best_tpl_score = score
                         best_tpl_box = {
@@ -267,6 +352,26 @@ def _sliding_window_banner_search(
             )
 
         if best_tpl_box is not None and best_tpl_score >= min_score:
+            # Verify foreground color consistency to reject false texture matches on non-TNI photos
+            bx, by, bw, bh = (
+                best_tpl_box["x"],
+                best_tpl_box["y"],
+                best_tpl_box["width"],
+                best_tpl_box["height"],
+            )
+            patch = roi[by : by + bh, bx : bx + bw]
+            color_corr = _verify_patch_color_consistency(patch, tpl)
+            if best_tpl_score < 0.85 and color_corr < 0.25:
+                continue
+
+            if work_scale != 1.0:
+                best_tpl_box = {
+                    "x": max(0, min(orig_w - 1, int(round(bx / work_scale)))),
+                    "y": max(0, min(orig_h - 1, int(round(by / work_scale)))),
+                    "width": max(16, int(round(bw / work_scale))),
+                    "height": max(16, int(round(bh / work_scale))),
+                }
+
             candidates.append(
                 {
                     "brand_name": tpl["brand"],
@@ -283,12 +388,13 @@ def detect_and_annotate_logos(
     annotated_path: Union[str, Path],
     dom_images: Sequence[ImageElement],
     logos_dir: Optional[Union[str, Path]] = None,
-    threshold: float = 0.62,
+    threshold: float = 0.65,
+    full_page_scan: Optional[bool] = None,
 ) -> list[dict]:
     """
-    Detect impersonated TNI AD / Kartika Eka Paksi / Panpus / Kemhan logos
+    Detect impersonated TNI AD / Kartika Eka Paksi / Panpus / Kemhan / Seskoad logos
     from `app/reference_db/logos/*.png` (via both DOM `<img>` crops and
-    multi-scale sliding-window search over header/background banners) and draw
+    multi-scale sliding-window search over banners or full-page posters) and draw
     red bounding boxes on `annotated_path`.
     """
     if logos_dir is None:
@@ -303,12 +409,7 @@ def detect_and_annotate_logos(
     if ann_img is None:
         ann_img = raw_img.copy()
 
-    templates: list[dict] = []
-    if logos_dir.exists():
-        for tpl_path in sorted(logos_dir.glob("*.png")):
-            loaded = _load_logo_template(tpl_path)
-            if loaded is not None:
-                templates.append(loaded)
+    templates = _get_cached_logo_templates(logos_dir)
 
     raw_candidates: list[dict] = []
     img_h, img_w = raw_img.shape[:2]
@@ -354,11 +455,17 @@ def detect_and_annotate_logos(
                 }
             )
 
-    # Pass 2: Multi-scale sliding-window search across header/background banners
-    banner_candidates = _sliding_window_banner_search(raw_img, templates, min_score=0.72)
+    # Pass 2: Multi-scale sliding-window search (full canvas for posters/screenshots, header/hero for DOM pages)
+    use_full_page = (len(dom_images) == 0) if full_page_scan is None else bool(full_page_scan)
+    banner_candidates = _sliding_window_banner_search(
+        raw_img,
+        templates,
+        min_score=0.72,
+        full_page=use_full_page,
+    )
     raw_candidates.extend(banner_candidates)
 
-    # Sort candidates by score descending and apply Non-Maximum Suppression (IoU > 0.35)
+    # Sort candidates by score descending and apply Non-Maximum Suppression
     raw_candidates.sort(key=lambda c: c["raw_score"], reverse=True)
     detected_logos: list[dict] = []
     kept_boxes: list[dict] = []

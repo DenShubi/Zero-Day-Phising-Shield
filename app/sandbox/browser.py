@@ -42,17 +42,22 @@ if sys.platform == "win32":
 # here for backward compatibility with modules importing it from the sandbox.
 OFFICIAL_MIL_DOMAINS = domain_guard.OFFICIAL_MIL_DOMAINS
 
+# Institutional military keywords matched with word boundaries so general
+# Indonesian commerce words (e.g. "harga satuan") do not trigger false military context.
 MILITARY_KEYWORDS = [
     "tni",
+    "tniad",
     "angkatan darat",
     "pussiberad",
-    "kartika",
+    "kartika eka paksi",
     "bintara",
     "tamtama",
     "sisfopers",
     "nrp",
     "kodam",
-    "satuan",
+    "prajurit",
+    "kemhan",
+    "rekrutmen tni",
 ]
 
 SENSITIVE_INPUT_TOKENS = [
@@ -66,7 +71,23 @@ SENSITIVE_INPUT_TOKENS = [
     "email",
 ]
 
-MILITARY_ID_TOKENS = ["nrp", "nik", "sisfopers", "prajurit"]
+MILITARY_ID_REGEX = re.compile(r"\b(?:nrp|sisfopers|prajurit)\b", re.IGNORECASE)
+
+# Known credential exfiltration relay / webhook endpoints (distinct from benign static CDNs)
+EXFILTRATION_HOST_PATTERNS: tuple[str, ...] = (
+    "api.telegram.org",
+    "telegram.org",
+    "discord.com",
+    "discordapp.com",
+    "webhook.site",
+    "pipedream.net",
+    "requestbin",
+    "script.google.com",
+    "ngrok-free.app",
+    "ngrok.io",
+    "trycloudflare.com",
+    "exfil",
+)
 
 
 class HeadlessSandboxScanner:
@@ -393,7 +414,7 @@ class HeadlessSandboxScanner:
                         document.querySelectorAll('input, select, textarea').forEach((inpEl) => {
                             const tag = inpEl.tagName.toLowerCase();
                             const type = (inpEl.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
-                            if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') {
+                            if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset' || type === 'search') {
                                 return;
                             }
                             if (!isVisible(inpEl)) return;
@@ -438,11 +459,14 @@ class HeadlessSandboxScanner:
                             });
                         });
 
-                        // 4. Military keywords in document.body.innerText
+                        // 4. Military keywords in document.body.innerText (word-boundary matched)
                         const bodyText = (document.body ? document.body.innerText : '').toLowerCase();
                         const titleText = (document.title || '').toLowerCase();
                         const fullText = `${titleText}\\n${bodyText}`;
-                        const detectedKeywords = militaryKeywords.filter((kw) => fullText.includes(kw));
+                        const detectedKeywords = militaryKeywords.filter((kw) => {
+                            const escaped = kw.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+                            return new RegExp(`\\\\b${escaped}\\\\b`, 'i').test(fullText);
+                        });
 
                         // 5. Anti-inspection checks (oncontextmenu disabled)
                         const htmlCtx = document.documentElement ? (document.documentElement.getAttribute('oncontextmenu') || '') : '';
@@ -552,46 +576,84 @@ class HeadlessSandboxScanner:
         dom_score = 0.0
         domain_score = 0.0
 
-        # 1. Active password input (+40)
-        has_password_input = any(inp.type == "password" for inp in inputs)
-        if has_password_input and not is_official:
-            dom_score += 40.0
-            forensic_reasons.append(
-                "Active password input field (<input type='password'>) detected on unauthorized domain (+40 DOM Risk)"
-            )
-
-        # 2. Military credential input like NRP/NIK (+25)
-        has_mil_cred_input = any(
-            any(
-                tok in f"{inp.name} {inp.id} {inp.placeholder}".lower()
-                for tok in MILITARY_ID_TOKENS
+        # Military-specific identity fields (NRP / Sisfopers / Prajurit, or NIK alongside military context)
+        has_mil_id_token = any(
+            bool(MILITARY_ID_REGEX.search(f"{inp.name} {inp.id} {inp.placeholder}"))
+            or (
+                bool(detected_keywords)
+                and bool(re.search(r"\bnik\b", f"{inp.name} {inp.id} {inp.placeholder}", re.IGNORECASE))
             )
             for inp in inputs
         )
-        if has_mil_cred_input and not is_official:
+        has_military_context = bool(detected_keywords or has_mil_id_token)
+
+        # Assess domain telemetry with awareness of whether the page claims military identity
+        dom_assessment = domain_guard.assess_url(final_url, military_context=has_military_context)
+
+        # Distinguish genuine cross-site form exfiltration from same-brand subdomains (e.g. auth.example.com -> example.com)
+        page_reg_domain = domain_guard.registrable_domain(hostname) if hostname else ""
+        cross_site_forms: list[FormElement] = []
+        for f in forms:
+            if not f.is_cross_origin:
+                continue
+            act_host = (urlparse(f.resolved_action).hostname or "").lower()
+            act_reg = domain_guard.registrable_domain(act_host) if act_host else ""
+            if not page_reg_domain or act_reg != page_reg_domain:
+                cross_site_forms.append(f)
+
+        # Only flag known exfiltration relays / webhook collectors (never benign static CDNs like fonts.googleapis.com)
+        suspicious_exfil_hosts = [
+            d
+            for d in external_domains
+            if any(pat in d for pat in EXFILTRATION_HOST_PATTERNS)
+        ]
+
+        has_suspicious_infra = bool(
+            scheme != "https"
+            or self._is_ip_address(hostname)
+            or hostname in ("localhost", "127.0.0.1", "")
+            or dom_assessment.has_phishing_indicators
+            or cross_site_forms
+            or suspicious_exfil_hosts
+            or context_menu_disabled
+        )
+
+        # 1. Active password input
+        has_password_input = any(inp.type == "password" for inp in inputs)
+        if has_password_input and not is_official:
+            if has_military_context or has_suspicious_infra:
+                dom_score += 40.0
+                forensic_reasons.append(
+                    "Active password input field (<input type='password'>) detected on unauthorized/suspicious domain (+40 DOM Risk)"
+                )
+            else:
+                # Legitimate general HTTPS website login (non-military, clean domain, same-site form)
+                dom_score += 10.0
+
+        # 2. Military credential input like NRP/NIK (+25)
+        if has_mil_id_token and not is_official:
             dom_score += 25.0
             forensic_reasons.append(
                 "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)"
             )
 
-        # 3. Cross-origin form action or external API exfiltration (+35)
-        cross_origin_forms = [f for f in forms if f.is_cross_origin]
-        suspicious_exfil_hosts = [
-            d for d in external_domains if "telegram" in d or "exfil" in d or not self._is_official_domain(d)
-        ]
-        if cross_origin_forms or (suspicious_exfil_hosts and not is_official):
+        # 3. Cross-site form action or known exfiltration relay (+35)
+        if cross_site_forms or (suspicious_exfil_hosts and not is_official):
             dom_score += 35.0
-            exfil_targets = [f.resolved_action for f in cross_origin_forms] or suspicious_exfil_hosts
+            exfil_targets = [f.resolved_action for f in cross_site_forms] or suspicious_exfil_hosts
             forensic_reasons.append(
                 f"Cross-origin credential exfiltration endpoint detected: {', '.join(exfil_targets[:2])} (+35 DOM Risk)"
             )
 
-        # 4. Form-less input harvesting (+30)
+        # 4. Form-less input harvesting
         if has_formless_sensitive and not is_official:
-            dom_score += 30.0
-            forensic_reasons.append(
-                "Form-less sensitive input fields detected (potential AJAX/Fetch credential harvesting) (+30 DOM Risk)"
-            )
+            if has_military_context or has_suspicious_infra:
+                dom_score += 30.0
+                forensic_reasons.append(
+                    "Form-less sensitive input fields detected (potential AJAX/Fetch credential harvesting) (+30 DOM Risk)"
+                )
+            else:
+                dom_score += 5.0
 
         # 5. Military keywords on non-.mil.id domain (+20)
         if detected_keywords and not is_official:
@@ -609,40 +671,25 @@ class HeadlessSandboxScanner:
 
         # Domain Telemetry Scoring (0-100)
         if not is_official:
-            # Bait military keywords in hostname or URL path
-            bait_tokens = ["tni", "bintara", "tamtama", "pussiberad", "rekrutmen", "mil", "kartika", "sisfopers"]
-            matched_bait = [tok for tok in bait_tokens if tok in url_lower]
-            if matched_bait:
-                domain_score += 45.0
-                forensic_reasons.append(
-                    f"Deceptive military bait tokens in URL/hostname: {', '.join(matched_bait)}"
-                )
-
-            # Lookalike / typosquat / homoglyph imitation of an official domain (Phase 2)
-            lookalike_of, lookalike_kind = domain_guard.find_lookalike(hostname)
-            if lookalike_of:
+            if hostname:
+                domain_score = dom_assessment.risk_score
+                forensic_reasons.extend(dom_assessment.reasons)
+            else:
+                # Local file:// sandbox inspection (e.g. offline phishing HTML samples)
+                matched_bait = domain_guard.find_bait_tokens(url_lower)
+                if matched_bait:
+                    domain_score += 45.0
+                    forensic_reasons.append(
+                        f"Deceptive military bait tokens in URL/path: {', '.join(matched_bait)}"
+                    )
+                if scheme != "https":
+                    domain_score += 30.0
+                    forensic_reasons.append(
+                        f"Transport layer lacks official TLS certificate (scheme='{scheme}://')"
+                    )
                 domain_score += 25.0
                 forensic_reasons.append(
-                    f"Lookalike domain ({lookalike_kind}) imitating official '{lookalike_of}' (+25 Domain Risk)"
-                )
-
-            # Non-HTTPS scheme
-            if scheme != "https":
-                domain_score += 30.0
-                forensic_reasons.append(
-                    f"Transport layer lacks official TLS certificate (scheme='{scheme}://')"
-                )
-
-            # IP-based host or local/unverified host
-            if self._is_ip_address(hostname) or hostname in ("localhost", "127.0.0.1", ""):
-                domain_score += 25.0
-                forensic_reasons.append(
-                    f"Target served from raw IP or non-registered hostname ('{hostname or 'local-file'}')"
-                )
-            elif not hostname.endswith(".mil.id") and not hostname.endswith(".go.id"):
-                domain_score += 25.0
-                forensic_reasons.append(
-                    f"Hostname '{hostname}' is outside official .mil.id / .go.id namespace"
+                    "Target served from non-registered local/ephemeral source ('local-file')"
                 )
 
         dom_anomaly_score = round(min(100.0, max(0.0, dom_score)), 2)
@@ -650,7 +697,9 @@ class HeadlessSandboxScanner:
 
         has_sensitive_inputs = any(inp.is_sensitive_credential for inp in inputs)
         has_credential_harvesting = bool(
-            has_sensitive_inputs and (not is_official or bool(cross_origin_forms))
+            has_sensitive_inputs
+            and not is_official
+            and (has_military_context or has_suspicious_infra or bool(cross_site_forms))
         )
 
         return DomRiskAnalysis(
@@ -660,4 +709,3 @@ class HeadlessSandboxScanner:
             is_official_mil_domain=is_official,
             forensic_reasons=forensic_reasons,
         )
-
