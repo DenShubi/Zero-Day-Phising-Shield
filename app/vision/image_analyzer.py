@@ -5,17 +5,21 @@ Handles non-DOM visual inputs (recruitment posters, flyers, mobile/desktop brows
 screenshots, general non-military images) by combining:
   1. Geometry & UI Layout Classification (`POSTER_FLYER`, `MOBILE_SCREENSHOT`, `WEB_SCREENSHOT`)
   2. OpenCV Visual Input-Field / Login-Form Box Detection (for static screenshots)
-  3. Cross-Platform OCR Text Extraction (Windows native `Windows.Media.Ocr` + Linux `tesseract` CLI)
+  3. Cross-Platform OCR Text Extraction (Persistent Warm Windows `Windows.Media.Ocr` worker + Linux `tesseract` CLI)
   4. Semantic Scam / Calo / Brand-Impersonation vs Safe Non-Military Context Analysis
 """
 
 from __future__ import annotations
 
+import atexit
+import base64
 import os
+import queue
 import re
 import shutil
 import subprocess
 import sys
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -78,6 +82,15 @@ PERSONAL_CONTACT_RE = re.compile(
 # Common file extensions that look like domains in OCR noise but are not domains
 _IGNORED_DOMAIN_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf", ".apk", ".exe", ".zip")
 
+# OCR glyph-noise repair for stylized uppercase '.MIL.ID' read as '.HIL.ID' / '.NIL.ID'
+_OCR_MIL_GLYPH_FIX_RE = re.compile(r"\b([a-z0-9-]+)\.(?:hil|nil)\.id\b", re.IGNORECASE)
+# OCR '@' misread as 'a'/'q' on institutional email footers (e.g. 'humas@bnpt.go.id' -> 'humasabnpt.go.id')
+_OCR_EMAIL_AT_MISREAD_RE = re.compile(
+    r"^(?:https?://)?(?:humas|info|admin|kontak|ppid|puspen|dispen|pengaduan|redaksi|sekretariat|panitia)[aq]"
+    r"((?:[a-z0-9-]+\.)+(?:mil\.id|go\.id|ac\.id))$",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class ImageSemanticAnalysis:
@@ -116,7 +129,6 @@ def classify_image_layout(img_bgr: np.ndarray) -> tuple[str, float, bool]:
     h, w = img_bgr.shape[:2]
     ar = round(float(w) / float(max(1, h)), 3)
 
-    # Check if top 8% of image has a flat horizontal browser/mobile status bar
     top_h = max(16, min(90, int(h * 0.08)))
     top_strip = cv2.cvtColor(img_bgr[:top_h, :], cv2.COLOR_BGR2GRAY)
     row_std = float(np.mean(np.std(top_strip.astype(np.float32), axis=1)))
@@ -124,7 +136,6 @@ def classify_image_layout(img_bgr: np.ndarray) -> tuple[str, float, bool]:
     horiz_line_score = float(np.max(np.mean(edges_top > 0, axis=1))) if edges_top.size else 0.0
     has_browser_chrome = horiz_line_score > 0.35 and row_std < 55.0
 
-    # Check global color saturation to distinguish vivid graphic posters from flat web UIs
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
     mean_sat = float(np.mean(hsv[:, :, 1]))
 
@@ -162,7 +173,6 @@ def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
 
     for cnt in contours:
         x, y, bw, bh = cv2.boundingRect(cnt)
-        # Skip top browser bar & bottom taskbar
         if y < int(h * 0.08) or (y + bh) > int(h * 0.95):
             continue
         if not (min_w <= bw <= max_w and min_h <= bh <= max_h):
@@ -181,14 +191,12 @@ def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
         if cnt_area / max(1.0, rect_area) < 0.72:
             continue
 
-        # Input fields typically have a relatively uniform interior fill
         interior = gray[y + 4 : y + bh - 4, x + 6 : x + bw - 6]
         if interior.size == 0 or float(np.std(interior)) > 42.0:
             continue
 
         raw_boxes.append({"x": int(x), "y": int(y), "width": int(bw), "height": int(bh)})
 
-    # Deduplicate overlapping contours
     raw_boxes.sort(key=lambda b: (b["y"], b["x"]))
     deduped: list[dict[str, int]] = []
     for box in raw_boxes:
@@ -199,7 +207,6 @@ def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
             continue
         deduped.append(box)
 
-    # Genuine login forms usually have vertically aligned fields with similar widths (or 1 clear field)
     if len(deduped) >= 2:
         aligned: list[dict[str, int]] = []
         for i, b1 in enumerate(deduped):
@@ -218,12 +225,146 @@ def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
     return deduped[:3]
 
 
-def _extract_ocr_windows_native(image_path: Path) -> str:
+class _PersistentWinOcrEngine:
     """
-    Use Windows 10/11 built-in `Windows.Media.Ocr.OcrEngine` via PowerShell.
-    Passes file path strictly through an environment variable (`VK_OCR_IMAGE_PATH`)
-    so special characters in filenames are never interpolated into shell syntax.
+    Persistent PowerShell WinRT OCR worker (`Windows.Media.Ocr.OcrEngine`) that
+    avoids the ~800ms .NET/PowerShell cold-start cost on every image scan, cutting
+    per-image OCR latency down to ~60-95ms after initial warm-up.
     """
+
+    _PS_SERVER_SCRIPT = (
+        "$ErrorActionPreference = 'Stop'; "
+        "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; "
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+        "Add-Type -AssemblyName System.Runtime.WindowsRuntime; "
+        "$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { "
+        "$_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and "
+        "$_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]; "
+        "Function Await($WinRtTask, $ResultType) { "
+        "$asTask = $asTaskGeneric.MakeGenericMethod($ResultType); "
+        "$netTask = $asTask.Invoke($null, @($WinRtTask)); "
+        "if (-not $netTask.Wait(3200)) { throw 'OCR timeout' }; $netTask.Result }; "
+        "$null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType=WindowsRuntime]; "
+        "$null = [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType=WindowsRuntime]; "
+        "$engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages(); "
+        "[Console]::Out.WriteLine('READY'); [Console]::Out.Flush(); "
+        "while ($true) { "
+        "  $line = [Console]::In.ReadLine(); "
+        "  if ($null -eq $line -or $line -eq '__EXIT__') { break }; "
+        "  $fs = $null; "
+        "  try { "
+        "    $fs = [System.IO.File]::OpenRead($line.Trim()); "
+        "    $stream = [System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($fs); "
+        "    $decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder]); "
+        "    $bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap]); "
+        "    $res = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult]); "
+        "    $b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([string]$res.Text)); "
+        "    [Console]::Out.WriteLine('OK:' + $b64); "
+        "  } catch { [Console]::Out.WriteLine('ERR:' + $_.Exception.Message) } "
+        "  finally { if ($null -ne $fs) { $fs.Dispose() } }; "
+        "  [Console]::Out.Flush(); "
+        "}"
+    )
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._proc: Optional[subprocess.Popen[str]] = None
+        self._out_q: queue.Queue[str] = queue.Queue()
+        self._disabled = False
+
+    def _reader_loop(self, proc: subprocess.Popen[str]) -> None:
+        try:
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                self._out_q.put(line.rstrip("\r\n"))
+        except Exception:
+            pass
+
+    def _ensure_started(self) -> bool:
+        if self._disabled:
+            return False
+        if self._proc is not None and self._proc.poll() is None:
+            return True
+
+        self._shutdown_unlocked()
+        while not self._out_q.empty():
+            try:
+                self._out_q.get_nowait()
+            except queue.Empty:
+                break
+
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        try:
+            proc = subprocess.Popen(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", self._PS_SERVER_SCRIPT],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="ignore",
+                bufsize=1,
+                creationflags=creationflags,
+            )
+            t = threading.Thread(target=self._reader_loop, args=(proc,), daemon=True)
+            t.start()
+            ready_line = self._out_q.get(timeout=4.0)
+            if ready_line.strip() == "READY":
+                self._proc = proc
+                return True
+        except Exception:
+            self._disabled = True
+        self._shutdown_unlocked()
+        return False
+
+    def recognize(self, image_path: Path) -> Optional[str]:
+        with self._lock:
+            if not self._ensure_started() or self._proc is None or self._proc.stdin is None:
+                return None
+            try:
+                self._proc.stdin.write(str(image_path.resolve()) + "\n")
+                self._proc.stdin.flush()
+                reply = self._out_q.get(timeout=3.8)
+                if reply.startswith("OK:"):
+                    b64 = reply[3:]
+                    return base64.b64decode(b64).decode("utf-8", errors="ignore").strip() if b64 else ""
+                return ""
+            except Exception:
+                self._shutdown_unlocked()
+                return None
+
+    def _shutdown_unlocked(self) -> None:
+        proc = self._proc
+        self._proc = None
+        if proc is None:
+            return
+        try:
+            if proc.stdin:
+                proc.stdin.write("__EXIT__\n")
+                proc.stdin.flush()
+                proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            proc.terminate()
+            proc.wait(timeout=0.5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def shutdown(self) -> None:
+        with self._lock:
+            self._shutdown_unlocked()
+
+
+_WIN_OCR_WORKER = _PersistentWinOcrEngine()
+atexit.register(_WIN_OCR_WORKER.shutdown)
+
+
+def _extract_ocr_windows_oneshot(image_path: Path) -> str:
+    """Fallback one-shot PowerShell WinRT OCR if persistent worker is unavailable."""
     ps_script = (
         "$ErrorActionPreference = 'Stop'; "
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
@@ -256,7 +397,7 @@ def _extract_ocr_windows_native(image_path: Path) -> str:
         text=True,
         encoding="utf-8",
         errors="ignore",
-        timeout=5.0,
+        timeout=4.5,
     )
     if proc.returncode == 0:
         return (proc.stdout or "").strip()
@@ -270,46 +411,183 @@ def _extract_ocr_tesseract_cli(image_path: Path) -> str:
         return ""
     proc = subprocess.run(
         [tesseract_bin, str(image_path.resolve()), "stdout", "--psm", "6"],
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="ignore",
-        timeout=6.0,
+        timeout=5.0,
     )
     if proc.returncode == 0:
         return (proc.stdout or "").strip()
     return ""
 
 
+class _LazyEasyOcrEngine:
+    """
+    Lazy-loaded Deep Learning `EasyOCR` (`easyocr.Reader(['id', 'en'])`) adapter for
+    Phase 4 poster/quishing OCR. Never imported at startup unless explicitly requested
+    (`VK_OCR_BACKEND=easyocr`) or needed as fallback when native WinRT / Tesseract OCR
+    is unavailable, keeping cold-start memory and warm `< 100ms` latency intact.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._reader: object = None
+        self._unavailable = False
+
+    @staticmethod
+    def is_installed() -> bool:
+        import importlib.util
+
+        return importlib.util.find_spec("easyocr") is not None
+
+    def _get_reader(self) -> object:
+        if self._unavailable:
+            return None
+        if self._reader is not None:
+            return self._reader
+        with self._lock:
+            if self._reader is not None:
+                return self._reader
+            if self._unavailable:
+                return None
+            try:
+                import easyocr  # type: ignore
+
+                use_gpu = os.environ.get("VK_EASYOCR_GPU", "").strip().lower() in ("1", "true", "yes")
+                self._reader = easyocr.Reader(["id", "en"], gpu=use_gpu, verbose=False)
+                return self._reader
+            except Exception:
+                self._unavailable = True
+                return None
+
+    def recognize(self, image_path: Path) -> str:
+        reader = self._get_reader()
+        if reader is None:
+            return ""
+        try:
+            lines = reader.readtext(str(image_path.resolve()), detail=0, paragraph=True)  # type: ignore[attr-defined]
+            if isinstance(lines, list):
+                return "\n".join(str(item).strip() for item in lines if str(item).strip()).strip()
+            return ""
+        except Exception:
+            return ""
+
+
+_EASY_OCR_WORKER = _LazyEasyOcrEngine()
+
+
+def get_vision_capabilities() -> dict[str, object]:
+    """Return active QR & OCR multimodal capabilities for `/health` and diagnostics."""
+    from app.vision.ocr_quishing import is_pyzbar_available, is_pyzbar_installed
+
+    has_tesseract = shutil.which("tesseract") is not None
+    has_easyocr = _LazyEasyOcrEngine.is_installed()
+    forced_backend = os.environ.get("VK_OCR_BACKEND", "").strip().lower()
+
+    if forced_backend == "easyocr" and has_easyocr:
+        primary_ocr = "easyocr"
+    elif sys.platform == "win32" and not _WIN_OCR_WORKER._disabled:
+        primary_ocr = "windows_media_ocr_persistent"
+    elif has_tesseract:
+        primary_ocr = "tesseract_cli"
+    elif has_easyocr:
+        primary_ocr = "easyocr"
+    else:
+        primary_ocr = "none"
+
+    return {
+        "qr_decoders": {
+            "opencv_qrcode_multipass": True,
+            "pyzbar_installed": is_pyzbar_installed(),
+            "pyzbar_native_lib_ready": is_pyzbar_available(),
+        },
+        "ocr_engines": {
+            "primary": primary_ocr,
+            "winrt_ocr_available": sys.platform == "win32" and not _WIN_OCR_WORKER._disabled,
+            "tesseract_available": has_tesseract,
+            "easyocr_installed": has_easyocr,
+        },
+    }
+
+
 def extract_ocr_text(image_path: Union[str, Path]) -> str:
-    """Best-effort fast OCR across Windows (`Windows.Media.Ocr`) and Linux (`tesseract`)."""
+    """
+    Best-effort fast OCR across Windows (`Windows.Media.Ocr` persistent worker),
+    Linux (`tesseract` CLI), and Deep Learning `EasyOCR` (`easyocr.Reader(['id', 'en'])`).
+    """
+    if os.environ.get("VK_DISABLE_OCR", "").lower() in ("1", "true", "yes"):
+        return ""
     p = Path(image_path)
     if not p.exists():
         return ""
     try:
+        forced_backend = os.environ.get("VK_OCR_BACKEND", "").strip().lower()
+        if forced_backend == "easyocr":
+            return _EASY_OCR_WORKER.recognize(p)
+
         if sys.platform == "win32":
-            txt = _extract_ocr_windows_native(p)
-            if txt:
-                return txt
-        return _extract_ocr_tesseract_cli(p)
+            worker_txt = _WIN_OCR_WORKER.recognize(p)
+            if worker_txt is not None:
+                if worker_txt or os.environ.get("VK_EASYOCR_FALLBACK", "").strip().lower() not in ("1", "true"):
+                    return worker_txt
+                if _LazyEasyOcrEngine.is_installed():
+                    return _EASY_OCR_WORKER.recognize(p)
+                return worker_txt
+            if not _WIN_OCR_WORKER._disabled:
+                txt = _extract_ocr_windows_oneshot(p)
+                if txt:
+                    return txt
+
+        tess_txt = _extract_ocr_tesseract_cli(p)
+        if tess_txt or shutil.which("tesseract") is not None:
+            if tess_txt or os.environ.get("VK_EASYOCR_FALLBACK", "").strip().lower() not in ("1", "true"):
+                return tess_txt
+        if _LazyEasyOcrEngine.is_installed():
+            return _EASY_OCR_WORKER.recognize(p)
+        return ""
     except Exception:
         return ""
+
+
+def _repair_ocr_domain_token(token: str) -> str:
+    """
+    Correct well-known optical glyph confusions strictly inside OCR-extracted bare
+    domains (never applied to typed URLs or QR payloads):
+      1. Stylized uppercase `.MIL.ID` misread as non-existent `.HIL.ID` / `.NIL.ID`
+         (plus `REKRUTHEN` -> `rekrutmen`).
+      2. Institutional email `@` misread as `a`/`q` (`humas@bnpt.go.id` -> `humasabnpt.go.id`).
+    """
+    m_email = _OCR_EMAIL_AT_MISREAD_RE.match(token)
+    if m_email:
+        scheme_prefix = "https://" if "://" in token else ""
+        return f"{scheme_prefix}{m_email.group(1).lower()}"
+
+    if _OCR_MIL_GLYPH_FIX_RE.search(token):
+        fixed = re.sub(r"\.(?:hil|nil)\.id\b", ".mil.id", token, flags=re.IGNORECASE)
+        fixed = re.sub(r"rekruthen", "rekrutmen", fixed, flags=re.IGNORECASE)
+        return fixed
+
+    return token
 
 
 def _extract_urls_from_ocr(text: str) -> list[str]:
     if not text:
         return []
     found: list[str] = []
+    # Strip actual email addresses (`user@domain.tld`) before bare-domain scanning
+    scrubbed_text = re.sub(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", " ", text, flags=re.IGNORECASE)
 
-    for m in OCR_FULL_URL_RE.findall(text):
-        cleaned = m.rstrip(".,);]*_!?'\"")
+    for m in OCR_FULL_URL_RE.findall(scrubbed_text):
+        cleaned = _repair_ocr_domain_token(m.rstrip(".,);]*_!'\""))
         if cleaned.lower().endswith(_IGNORED_DOMAIN_SUFFIXES):
             continue
         if cleaned not in found:
             found.append(cleaned)
 
-    for m in OCR_BARE_DOMAIN_RE.findall(text):
-        cleaned = m.rstrip(".,);]*_!?'\"")
+    for m in OCR_BARE_DOMAIN_RE.findall(scrubbed_text):
+        cleaned = _repair_ocr_domain_token(m.rstrip(".,);]*_!'\""))
         if cleaned.lower().endswith(_IGNORED_DOMAIN_SUFFIXES):
             continue
         normalized = cleaned if "://" in cleaned else f"https://{cleaned}"
@@ -381,4 +659,3 @@ def analyze_image_semantics(
             cv2.imwrite(str(annotated_path), ann_img)
 
     return analysis
-

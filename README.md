@@ -215,6 +215,27 @@ Uji webhook tanpa mengirim WhatsApp: `POST /webhook/openwa?sync=true&dry_run=tru
 
 ---
 
+## 5c. Phase 3 & Phase 4 (Zuan) — Audit Akurasi/Latensi & Scanner Poster/QR (`/api/v1/scan-image`)
+
+- **Laporan Audit Phase 3 (`docs/PHASE3_BENCHMARK_REPORT.md`)**:
+  - **Akurasi Deteksi Multi-Slice**: **100.00% (`95/95` sampel)** — `TP=20, TN=75, FP=0, FN=0`, `ROC-AUC = 1.0000`
+  - **Latensi Warm Playwright URL Scan**: **`P50 = 1.510s` / `P95 = 2.232s`** (`100%` lulus SLA `< 5.0s`)
+  - **Latensi Multimodal Poster/Image Scan (`/api/v1/scan-image`)**: **`P50 = 1.592s` / `P95 = 1.873s`**
+  - **Endpoint Telemetri**: `GET /api/v1/benchmark/phase3`
+- **Multimodal Quishing & Poster Scanner (`Phase 4 — Zuan`)**:
+  - **QR Quishing Decoder (`app/vision/ocr_quishing.py`)**: Hybrid OpenCV `QRCodeDetector` multi-pass + `PyZbar` (`libzbar0`).
+  - **Poster & Screenshot OCR (`app/vision/image_analyzer.py`)**: Persistent Windows `Windows.Media.Ocr` (`~94ms`), Linux `tesseract-ocr` (`ind+eng`), serta *lazy-loaded* Deep Learning `EasyOCR` (`easyocr.Reader(['id', 'en'])`, opsional via `requirements-easyocr.txt` / `VK_OCR_BACKEND=easyocr`).
+
+```powershell
+# Menjalankan benchmark penuh Phase 3 (95 sampel + uji konkuren 4x)
+python scripts/benchmark_phase3.py
+
+# Menjalankan verifikasi Phase 4 Zuan (/api/v1/scan-image QR Quishing & Poster OCR)
+python scripts/verify_phase4.py
+```
+
+---
+
 ## 6. Skema Database Supabase (PostgreSQL + Realtime)
 
 Jalankan *query* SQL berikut pada **Supabase SQL Editor** untuk mengaktifkan penyimpanan insiden dan pembaruan *real-time* ke Dashboard SOC:
@@ -276,10 +297,10 @@ Berdasarkan **Sprint Gantt & Timeline Tracker** (**21 Workstreams** & **7 Sync M
 | **Phase 2** | 02 Nov – 04 Nov | **Zuan** | Bangun fungsi SSIM *visual similarity*, load template logo Kartika Eka Paksi, dan fungsi *auto-draw bounding box* merah pada logo. | SSIM similarity engine & logo bounding box detector (coarse-to-fine, ~0.6 s/gambar) | ✅ **Done** |
 | **Phase 2** | 02 Nov – 04 Nov | **Denin** | Bangun router triage pesan (URL vs Gambar), domain whitelist `.mil.id`, dan formula kalkulasi skor gabungan. | `app/wa_triage.py`, `app/domain_guard.py`, `app/scoring.py` + migrasi Fonnte → OpenWA | ✅ **Done** |
 | **Phase 2** | 02 Nov – 04 Nov | **Sync ★** | Uji kirim URL palsu via Postman ke FastAPI Person A; pastikan return JSON skor kemiripan dan screenshot ber-*bounding box*. | `postman/VisiKartika_Phase2.postman_collection.json` (37 assertion) + `pytest tests/` | ✅ **Done** |
-| **Phase 3** | 05 Nov | **Zuan** | Evaluasi akurasi deteksi dan latensi capture Playwright (< 5 detik). | Accuracy benchmarking & latency audit report | ⏳ Planned |
+| **Phase 3** | 05 Nov | **Zuan** | Evaluasi akurasi deteksi dan latensi capture Playwright (< 5 detik). | `docs/PHASE3_BENCHMARK_REPORT.md` (100% acc, P50 1.51s) | ✅ **Done** |
 | **Phase 3** | 05 Nov | **Denin** | Rapikan layout Dashboard Next.js untuk monitoring insiden *real-time*. | Refined Next.js SOC incident monitoring UI | ⏳ Planned |
 | **Phase 3** | 05 Nov | **Sync ★** | Ikuti **Webinar Pembekalan 2 Panitia Bersama**: sesuaikan fitur dengan arahan/kisi-kisi juri. | Briefing #2 alignment with jury criteria | ⏳ Planned |
-| **Phase 4** | 06 Nov – 08 Nov | **Zuan** | Tambahkan `PyZbar` & `EasyOCR` untuk scan QR code / poster phishing pada endpoint `/api/v1/scan-image`. | PyZbar & EasyOCR scanner (`/api/v1/scan-image`) | ⏳ Planned |
+| **Phase 4** | 06 Nov – 08 Nov | **Zuan** | Tambahkan `PyZbar` & `EasyOCR` untuk scan QR code / poster phishing pada endpoint `/api/v1/scan-image`. | Hybrid OpenCV/PyZbar + WinRT/Tesseract/EasyOCR (`/api/v1/scan-image`) | ✅ **Done** |
 | **Phase 4** | 06 Nov – 08 Nov | **Denin** | Sambungkan endpoint FastAPI Person A ke webhook WhatsApp dan masukkan 5 halaman *mock phishing* legal ke `/public/mock-targets/`. | FastAPI-WA hook & 5 legal mock phishing targets | ⏳ Planned |
 | **Phase 4** | 06 Nov – 08 Nov | **Sync ★** | Tes alur penuh: Kirim screenshot poster phishing ber-QR ke nomor WhatsApp $\rightarrow$ Bot membalas analisis lengkap dalam < 5 detik. | End-to-end QR phishing scan in < 5s response | ⏳ Planned |
 | **Phase 5** | 09 Nov – 11 Nov | **Zuan** | Optimasi resource container Docker (PyTorch CPU/GPU minimal footprint), pastikan dependensi Chromium terisolasi. | Docker PyTorch CPU/GPU minimal container image | ⏳ Planned |

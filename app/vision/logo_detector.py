@@ -29,6 +29,8 @@ LOGO_LABELS = {
     "kodiklat_tniad": "Kodiklat TNI AD",
     "puspomad_tniad": "Puspomad (Polisi Militer TNI AD)",
     "akmil_magelang": "Akademi Militer (Akmil) TNI AD",
+    "pusterad_tniad": "Pusterad TNI AD",
+    "secapaad_tniad": "Secapa TNI AD",
     "kodam_jaya": "Kodam Jaya / Jayakarta",
     "kodam_siliwangi": "Kodam III / Siliwangi",
     "kodam_diponegoro": "Kodam IV / Diponegoro",
@@ -39,9 +41,12 @@ LOGO_LABELS = {
     "kodam_udayana": "Kodam IX / Udayana",
     "kodam_hasanuddin": "Kodam XIV / Hasanuddin",
     "kodam_cenderawasih": "Kodam XVII / Cenderawasih",
+    "kodam_pattimura": "Kodam XV / Pattimura",
     "kodam_patimura": "Kodam XV / Pattimura",
     "kodam_tanjungpura": "Kodam XII / Tanjungpura",
     "kodam_iskandar_muda": "Kodam Iskandar Muda",
+    "kodam_merdeka": "Kodam XIII / Merdeka",
+    "kodam_kasuari": "Kodam XVIII / Kasuari",
     "tni_al": "TNI Angkatan Laut (Jalesveva Jayamahe)",
     "tni_au": "TNI Angkatan Udara (Swa Bhuwana Paksa)",
     "unhan_ri": "Universitas Pertahanan RI (Unhan)",
@@ -51,11 +56,17 @@ LOGO_LABELS = {
     "bakamla_ri": "Bakamla RI",
 }
 
+_COARSE_FACTOR = 0.35
+_COARSE_TOP_K = 2
+_REFINE_PAD = 8
+_SCALES_BANNER: tuple[int, ...] = (28, 36, 46, 60, 78, 102, 134, 175, 224)
+_SCALES_FULL: tuple[int, ...] = (28, 36, 46, 60, 78, 102, 134, 175, 224, 280)
+
 _LOGO_TEMPLATE_CACHE: dict[str, tuple[tuple[str, ...], list[dict]]] = {}
 
 
 def _get_cached_logo_templates(logos_dir: Path) -> list[dict]:
-    """Load and cache all `.png` logo templates (auto-invalidating if directory files change)."""
+    """Load and cache all `.png` logo templates + pre-built coarse pyramids (auto-invalidating if files change)."""
     if not logos_dir.exists():
         return []
     png_files = sorted(logos_dir.glob("*.png"))
@@ -66,12 +77,14 @@ def _get_cached_logo_templates(logos_dir: Path) -> list[dict]:
         return cached[1]
 
     manifest_labels: dict[str, str] = {}
-    manifest_file = logos_dir.parent / "logos_manifest.json"
-    if manifest_file.exists():
-        try:
-            manifest_labels = json.loads(manifest_file.read_text(encoding="utf-8"))
-        except Exception:
-            manifest_labels = {}
+    for candidate_manifest in (logos_dir / "logos_manifest.json", logos_dir.parent / "logos_manifest.json"):
+        if candidate_manifest.exists():
+            try:
+                data = json.loads(candidate_manifest.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    manifest_labels.update({str(k): str(v) for k, v in data.items()})
+            except Exception:
+                pass
 
     loaded_list: list[dict] = []
     for tpl_path in png_files:
@@ -82,16 +95,21 @@ def _get_cached_logo_templates(logos_dir: Path) -> list[dict]:
     return loaded_list
 
 
+def _composite_bgr(bgr: np.ndarray, alpha: np.ndarray, bg_color: np.ndarray) -> np.ndarray:
+    a3 = alpha[:, :, None]
+    return np.clip(a3 * bgr + (1.0 - a3) * bg_color, 0, 255).astype(np.uint8)
+
+
 def _load_logo_template(tpl_path: Path, extra_labels: Optional[dict[str, str]] = None) -> Optional[dict]:
     """
     Load a reference logo PNG (supporting RGBA transparency) and precompute
-    normalized RGB, grayscale, alpha mask, and HSV histogram for matching.
+    normalized RGB, alpha mask, HSV histogram, and coarse multi-scale grayscale
+    pyramids so per-image template search avoids runtime resize/cvtColor overhead.
     """
     raw = cv2.imread(str(tpl_path), cv2.IMREAD_UNCHANGED)
     if raw is None:
         return None
 
-    # Downscale very high-res logos (e.g. 3000x3000 kemhan.png) while preserving aspect ratio
     orig_h, orig_w = raw.shape[:2]
     max_dim = max(orig_h, orig_w)
     if max_dim > 240:
@@ -115,6 +133,32 @@ def _load_logo_template(tpl_path: Path, extra_labels: Optional[dict[str, str]] =
     hist = cv2.calcHist([hsv], [0, 1], mask_u8, [24, 24], [0, 180, 0, 256])
     cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
 
+    th0, tw0 = bgr.shape[:2]
+    aspect = float(tw0) / float(max(1, th0))
+    is_transparent = float(alpha.mean()) < 0.85
+
+    if is_transparent:
+        light_bgr = _composite_bgr(bgr, alpha, np.array([244.0, 244.0, 244.0], dtype=np.float32))
+        dark_bgr = _composite_bgr(bgr, alpha, np.array([20.0, 38.0, 20.0], dtype=np.float32))
+        base_variants_gray = [
+            cv2.cvtColor(light_bgr, cv2.COLOR_BGR2GRAY),
+            cv2.cvtColor(dark_bgr, cv2.COLOR_BGR2GRAY),
+        ]
+    else:
+        base_variants_gray = [cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)]
+
+    # Pre-build coarse grayscale pyramid across all scales ONCE at cache load time
+    coarse_pyramid: dict[int, tuple[int, list[np.ndarray]]] = {}
+    for target_h in _SCALES_FULL:
+        target_w = max(20, int(round(target_h * aspect)))
+        ch = max(8, int(round(target_h * _COARSE_FACTOR)))
+        cw = max(8, int(round(target_w * _COARSE_FACTOR)))
+        scaled_grays = [
+            cv2.resize(vg, (cw, ch), interpolation=cv2.INTER_AREA)
+            for vg in base_variants_gray
+        ]
+        coarse_pyramid[target_h] = (target_w, scaled_grays)
+
     brand = LOGO_LABELS.get(tpl_path.stem) or (extra_labels or {}).get(tpl_path.stem) or tpl_path.stem
     return {
         "stem": tpl_path.stem,
@@ -122,14 +166,16 @@ def _load_logo_template(tpl_path: Path, extra_labels: Optional[dict[str, str]] =
         "bgr": bgr,
         "alpha": alpha,
         "hist": hist,
+        "aspect": aspect,
+        "is_transparent": is_transparent,
+        "coarse_pyramid": coarse_pyramid,
     }
 
 
 def _verify_patch_color_consistency(patch_bgr: np.ndarray, tpl: dict) -> float:
     """
     Verify HSV color histogram correlation over the template's foreground alpha
-    mask so random textured photos (e.g. non-TNI posters, product photos) do not
-    produce false-positive logo matches.
+    mask so random textured photos do not produce false-positive logo matches.
     """
     ph, pw = patch_bgr.shape[:2]
     if ph < 12 or pw < 12:
@@ -144,38 +190,43 @@ def _verify_patch_color_consistency(patch_bgr: np.ndarray, tpl: dict) -> float:
     return max(0.0, float(cv2.compareHist(patch_hist, tpl["hist"], cv2.HISTCMP_CORREL)))
 
 
+def _estimate_border_bg(patch_bgr: np.ndarray) -> np.ndarray:
+    ph, pw = patch_bgr.shape[:2]
+    corners = np.array(
+        [
+            patch_bgr[0, 0],
+            patch_bgr[0, max(0, pw - 1)],
+            patch_bgr[max(0, ph - 1), 0],
+            patch_bgr[max(0, ph - 1), max(0, pw - 1)],
+        ],
+        dtype=np.float32,
+    )
+    return np.median(corners, axis=0)
+
+
 def _compare_crop_with_template(crop_bgr: np.ndarray, tpl: dict) -> float:
     """
     Compare a cropped DOM `<img>` region against an official logo template,
-    compositing transparent RGBA templates onto the crop's border background
-    color so transparent PNGs match cleanly against dark or light pages.
+    compositing transparent RGBA templates onto the crop's border background.
     """
     h, w = crop_bgr.shape[:2]
     tpl_bgr = cv2.resize(tpl["bgr"], (w, h), interpolation=cv2.INTER_AREA)
-    tpl_alpha = cv2.resize(tpl["alpha"], (w, h), interpolation=cv2.INTER_LINEAR)
-
-    # Estimate background color from the 4 corners of the crop
-    corners = np.array(
-        [crop_bgr[0, 0], crop_bgr[0, w - 1], crop_bgr[h - 1, 0], crop_bgr[h - 1, w - 1]],
-        dtype=np.float32,
-    )
-    bg_color = np.median(corners, axis=0)
-
-    composited = np.zeros_like(crop_bgr, dtype=np.uint8)
-    for c in range(3):
-        composited[:, :, c] = np.clip(
-            tpl_alpha * tpl_bgr[:, :, c] + (1.0 - tpl_alpha) * bg_color[c],
-            0,
-            255,
-        ).astype(np.uint8)
+    if tpl["is_transparent"]:
+        tpl_alpha = cv2.resize(tpl["alpha"], (w, h), interpolation=cv2.INTER_LINEAR)
+        bg_color = _estimate_border_bg(crop_bgr)
+        composited = _composite_bgr(tpl_bgr, tpl_alpha, bg_color)
+    else:
+        composited = tpl_bgr
 
     crop_gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
     comp_gray = cv2.cvtColor(composited, cv2.COLOR_BGR2GRAY)
 
-    ssim_score = max(0.0, compute_ssim_opencv(crop_gray, comp_gray))
     res = cv2.matchTemplate(crop_gray, comp_gray, cv2.TM_CCOEFF_NORMED)
     ncc_score = max(0.0, float(res[0, 0]))
+    if ncc_score < 0.42:
+        return ncc_score * 0.75
 
+    ssim_score = max(0.0, compute_ssim_opencv(crop_gray, comp_gray))
     hist_score = _verify_patch_color_consistency(crop_bgr, tpl)
     structural_peak = max(ssim_score, ncc_score)
     return float((0.75 * structural_peak) + (0.25 * hist_score))
@@ -202,66 +253,87 @@ def _bbox_overlap(a: dict, b: dict) -> bool:
     return iou > 0.35 or containment > 0.60
 
 
-_COARSE_FACTOR = 0.5   # coarse pass runs on a half-resolution grayscale ROI (~12x cheaper)
-_COARSE_TOP_K = 4      # number of coarse (scale, variant, location) hypotheses refined per template
-_REFINE_PAD = 6        # +/- pixel search window around each hypothesis at full resolution
-
-
 def _coarse_to_fine_search(
     roi: np.ndarray,
     roi_coarse_gray: np.ndarray,
-    variants: Sequence[np.ndarray],
+    tpl: dict,
     scales: Sequence[int],
-    aspect: float,
     img_w: int,
 ) -> tuple[float, Optional[dict]]:
     """
-    Fast coarse-to-fine multi-scale search across `roi`.
+    Fast pre-cached coarse-to-fine multi-scale search across `roi`.
+    Coarse pass uses pre-resized grayscale templates (zero resize/cvtColor per scan),
+    and full-resolution refinement adapts dynamically to the local background color.
     """
     roi_h, roi_w = roi.shape[:2]
-    hypotheses: list[tuple[float, int, int, int, int, int]] = []
+    rc_h, rc_w = roi_coarse_gray.shape[:2]
+    pyramid: dict[int, tuple[int, list[np.ndarray]]] = tpl["coarse_pyramid"]
+    hypotheses: list[tuple[float, int, int, int, int]] = []
 
     for target_h in scales:
-        target_w = max(20, int(round(target_h * aspect)))
+        entry = pyramid.get(target_h)
+        if entry is None:
+            continue
+        target_w, scaled_grays = entry
         if target_h >= roi_h or target_w >= img_w:
             continue
-        ch = max(8, int(round(target_h * _COARSE_FACTOR)))
-        cw = max(8, int(round(target_w * _COARSE_FACTOR)))
-        if ch >= roi_coarse_gray.shape[0] or cw >= roi_coarse_gray.shape[1]:
+        t0 = scaled_grays[0]
+        if t0.shape[0] >= rc_h or t0.shape[1] >= rc_w:
             continue
-        for v_idx, var_bgr in enumerate(variants):
-            t_gray = cv2.cvtColor(
-                cv2.resize(var_bgr, (cw, ch), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY
-            )
+        for t_gray in scaled_grays:
             res = cv2.matchTemplate(roi_coarse_gray, t_gray, cv2.TM_CCOEFF_NORMED)
             _, max_val, _, max_loc = cv2.minMaxLoc(res)
-            x = int(round(max_loc[0] / _COARSE_FACTOR))
-            y = int(round(max_loc[1] / _COARSE_FACTOR))
-            hypotheses.append((float(max_val), target_h, target_w, v_idx, x, y))
+            if max_val >= 0.48:
+                x = int(round(max_loc[0] / _COARSE_FACTOR))
+                y = int(round(max_loc[1] / _COARSE_FACTOR))
+                hypotheses.append((float(max_val), target_h, target_w, x, y))
+
+    if not hypotheses:
+        return 0.0, None
 
     hypotheses.sort(key=lambda hyp: hyp[0], reverse=True)
 
     best_score = 0.0
     best_box: Optional[dict] = None
-    for _, target_h, target_w, v_idx, x, y in hypotheses[:_COARSE_TOP_K]:
-        x0 = max(0, x - _REFINE_PAD)
-        y0 = max(0, y - _REFINE_PAD)
-        x1 = min(roi_w, x + target_w + _REFINE_PAD)
-        y1 = min(roi_h, y + target_h + _REFINE_PAD)
-        window = roi[y0:y1, x0:x1]
-        if window.shape[0] < target_h or window.shape[1] < target_w:
-            continue
-        t_bgr = cv2.resize(variants[v_idx], (target_w, target_h), interpolation=cv2.INTER_AREA)
-        res = cv2.matchTemplate(window, t_bgr, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(res)
-        if float(max_val) > best_score:
-            best_score = float(max_val)
-            best_box = {
-                "x": int(x0 + max_loc[0]),
-                "y": int(y0 + max_loc[1]),
-                "width": int(target_w),
-                "height": int(target_h),
-            }
+    aspect = tpl["aspect"]
+    base_bgr = tpl["bgr"]
+    base_alpha = tpl["alpha"]
+    is_trans = tpl["is_transparent"]
+
+    for _, base_h, _, x, y in hypotheses[:_COARSE_TOP_K]:
+        # Refine across micro-scales (0.92x, 1.0x, 1.08x) around the coarse peak
+        for micro in (0.92, 1.0, 1.08):
+            th = max(20, int(round(base_h * micro)))
+            tw = max(20, int(round(th * aspect)))
+            if th >= roi_h or tw >= roi_w:
+                continue
+            x0 = max(0, x - _REFINE_PAD)
+            y0 = max(0, y - _REFINE_PAD)
+            x1 = min(roi_w, x + tw + _REFINE_PAD)
+            y1 = min(roi_h, y + th + _REFINE_PAD)
+            window = roi[y0:y1, x0:x1]
+            if window.shape[0] < th or window.shape[1] < tw:
+                continue
+
+            t_bgr = cv2.resize(base_bgr, (tw, th), interpolation=cv2.INTER_AREA)
+            if is_trans:
+                t_alpha = cv2.resize(base_alpha, (tw, th), interpolation=cv2.INTER_LINEAR)
+                local_bg = _estimate_border_bg(window)
+                t_comp = _composite_bgr(t_bgr, t_alpha, local_bg)
+            else:
+                t_comp = t_bgr
+
+            res = cv2.matchTemplate(window, t_comp, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(res)
+            if float(max_val) > best_score:
+                best_score = float(max_val)
+                best_box = {
+                    "x": int(x0 + max_loc[0]),
+                    "y": int(y0 + max_loc[1]),
+                    "width": int(tw),
+                    "height": int(th),
+                }
+
     return best_score, best_box
 
 
@@ -273,13 +345,7 @@ def _sliding_window_banner_search(
     full_page: bool = False,
 ) -> list[dict]:
     """
-    Multi-scale sliding-window template search:
-      - On live DOM pages (`full_page=False`): scans top header/hero region (`y: 0..440`).
-      - On uploaded posters/screenshots (`full_page=True`): normalizes large canvases
-        to `<=1280px` and scans the FULL image height (`y: 0..H`) across light, dark,
-        header, and military-green backgrounds so emblems placed in the center or
-        footer of a poster are reliably detected, while filtering false positives
-        on unrelated photos via HSV color consistency verification.
+    Multi-scale sliding-window template search across banner/hero or full poster canvas.
     """
     orig_h, orig_w = raw_img.shape[:2]
     work_scale = 1.0
@@ -300,59 +366,15 @@ def _sliding_window_banner_search(
         cv2.COLOR_BGR2GRAY,
     )
 
-    scales = [28, 30, 34, 38, 48, 58, 60, 72, 90, 115, 145, 185, 222, 226]
-    if full_page:
-        scales.extend([260, 300])
-
+    scales = _SCALES_FULL if full_page else _SCALES_BANNER
     candidates: list[dict] = []
-    header_bg = roi[min(25, roi_h - 1), min(80, img_w - 1)].astype(np.float32)
-    mil_green_bg = np.array([10.0, 55.0, 15.0], dtype=np.float32)
-    white_bg = np.array([248.0, 248.0, 248.0], dtype=np.float32)
-    dark_bg = np.array([24.0, 28.0, 36.0], dtype=np.float32)
 
     for tpl in templates:
-        base_bgr = tpl["bgr"]
-        base_alpha = tpl["alpha"]
-        th0, tw0 = base_bgr.shape[:2]
-        aspect = float(tw0) / float(th0)
-
-        variants = [base_bgr]
-        if float(base_alpha.mean()) < 0.85:
-            a3 = base_alpha[:, :, None]
-            variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * header_bg, 0, 255).astype(np.uint8))
-            variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * mil_green_bg, 0, 255).astype(np.uint8))
-            if full_page:
-                variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * white_bg, 0, 255).astype(np.uint8))
-                variants.append(np.clip(a3 * base_bgr + (1.0 - a3) * dark_bg, 0, 255).astype(np.uint8))
-
-        best_tpl_score = 0.0
-        best_tpl_box: Optional[dict] = None
-
-        if exhaustive:
-            for target_h in scales:
-                target_w = max(20, int(round(target_h * aspect)))
-                if target_h >= roi_h or target_w >= img_w:
-                    continue
-                for var_bgr in variants:
-                    t_bgr = cv2.resize(var_bgr, (target_w, target_h), interpolation=cv2.INTER_AREA)
-                    res = cv2.matchTemplate(roi, t_bgr, cv2.TM_CCOEFF_NORMED)
-                    _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                    score = float(max_val)
-                    if score > best_tpl_score:
-                        best_tpl_score = score
-                        best_tpl_box = {
-                            "x": int(max_loc[0]),
-                            "y": int(max_loc[1]),
-                            "width": int(target_w),
-                            "height": int(target_h),
-                        }
-        else:
-            best_tpl_score, best_tpl_box = _coarse_to_fine_search(
-                roi, roi_coarse_gray, variants, scales, aspect, img_w
-            )
+        best_tpl_score, best_tpl_box = _coarse_to_fine_search(
+            roi, roi_coarse_gray, tpl, scales, img_w
+        )
 
         if best_tpl_box is not None and best_tpl_score >= min_score:
-            # Verify foreground color consistency to reject false texture matches on non-TNI photos
             bx, by, bw, bh = (
                 best_tpl_box["x"],
                 best_tpl_box["y"],
@@ -392,10 +414,8 @@ def detect_and_annotate_logos(
     full_page_scan: Optional[bool] = None,
 ) -> list[dict]:
     """
-    Detect impersonated TNI AD / Kartika Eka Paksi / Panpus / Kemhan / Seskoad logos
-    from `app/reference_db/logos/*.png` (via both DOM `<img>` crops and
-    multi-scale sliding-window search over banners or full-page posters) and draw
-    red bounding boxes on `annotated_path`.
+    Detect impersonated TNI AD / Kartika Eka Paksi / Panpus / Kemhan / Kotama logos
+    from `app/reference_db/logos/*.png` and draw red bounding boxes on `annotated_path`.
     """
     if logos_dir is None:
         logos_dir = Path(__file__).resolve().parent.parent / "reference_db" / "logos"
@@ -403,7 +423,7 @@ def detect_and_annotate_logos(
         logos_dir = Path(logos_dir)
 
     raw_img = cv2.imread(str(screenshot_path))
-    ann_img = cv2.imread(str(annotated_path))
+    ann_img = cv2.imread(str(annotated_path)) if Path(annotated_path).exists() else None
     if raw_img is None:
         return []
     if ann_img is None:
@@ -414,7 +434,9 @@ def detect_and_annotate_logos(
     raw_candidates: list[dict] = []
     img_h, img_w = raw_img.shape[:2]
 
-    # Pass 1: Inspect standalone logo-proportioned DOM <img> bounding boxes
+    # Pass 1: Inspect deduplicated logo-proportioned DOM <img> bounding boxes (capped at top 24 header/logo candidates)
+    seen_dom_boxes: set[tuple[int, int, int, int]] = set()
+    filtered_dom_imgs: list[tuple[int, ImageElement, int, int, int, int]] = []
     for dom_img in dom_images:
         b = dom_img.bbox
         x1 = max(0, min(b.x, img_w - 1))
@@ -425,13 +447,20 @@ def detect_and_annotate_logos(
         h = y2 - y1
         if w < 24 or h < 24:
             continue
-
-        # Skip full-width hero/background <img> elements here; Pass 2 slides across them
         aspect = float(w) / float(h)
         if w > 550 or h > 380 or aspect < 0.45 or aspect > 5.0:
             continue
+        key_box = (x1, y1, w, h)
+        if key_box in seen_dom_boxes:
+            continue
+        seen_dom_boxes.add(key_box)
+        meta_hint = f"{dom_img.alt or ''} {dom_img.src or ''}".lower()
+        priority = 0 if any(k in meta_hint for k in ("logo", "lambang", "crest", "tni", "kemhan", "panpus")) else (1 if y1 < 360 else 2)
+        filtered_dom_imgs.append((priority, dom_img, x1, y1, w, h))
 
-        crop_bgr = raw_img[y1:y2, x1:x2]
+    filtered_dom_imgs.sort(key=lambda item: (item[0], item[3]))
+    for _, dom_img, x1, y1, w, h in filtered_dom_imgs[:24]:
+        crop_bgr = raw_img[y1 : y1 + h, x1 : x1 + w]
 
         best_conf = 0.0
         best_brand = "TNI AD / Kartika Eka Paksi"

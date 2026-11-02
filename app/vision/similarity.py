@@ -6,17 +6,19 @@ from typing import Optional, Union
 import cv2
 import numpy as np
 
+_SIM_W = 320
+_SIM_H = 180
+_C1 = float((0.01 * 255) ** 2)
+_C2 = float((0.03 * 255) ** 2)
+
 
 def compute_ssim_map_opencv(img1_gray: np.ndarray, img2_gray: np.ndarray) -> np.ndarray:
     """
     Compute per-pixel Structural Similarity Index (SSIM) map between two
-    grayscale images of identical shape (Wang et al., 2004).
+    grayscale images of identical shape (Wang et al., 2004) using float32.
     """
-    c1 = (0.01 * 255) ** 2
-    c2 = (0.03 * 255) ** 2
-
-    i1 = img1_gray.astype(np.float64)
-    i2 = img2_gray.astype(np.float64)
+    i1 = img1_gray.astype(np.float32)
+    i2 = img2_gray.astype(np.float32)
 
     mu1 = cv2.GaussianBlur(i1, (11, 11), 1.5)
     mu2 = cv2.GaussianBlur(i2, (11, 11), 1.5)
@@ -29,8 +31,8 @@ def compute_ssim_map_opencv(img1_gray: np.ndarray, img2_gray: np.ndarray) -> np.
     sigma2_sq = cv2.GaussianBlur(i2 * i2, (11, 11), 1.5) - mu2_sq
     sigma12 = cv2.GaussianBlur(i1 * i2, (11, 11), 1.5) - mu1_mu2
 
-    numerator = (2.0 * mu1_mu2 + c1) * (2.0 * sigma12 + c2)
-    denominator = (mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2)
+    numerator = (2.0 * mu1_mu2 + _C1) * (2.0 * sigma12 + _C2)
+    denominator = (mu1_sq + mu2_sq + _C1) * (sigma1_sq + sigma2_sq + _C2)
 
     return numerator / denominator
 
@@ -38,6 +40,29 @@ def compute_ssim_map_opencv(img1_gray: np.ndarray, img2_gray: np.ndarray) -> np.
 def compute_ssim_opencv(img1_gray: np.ndarray, img2_gray: np.ndarray) -> float:
     """Mean Structural Similarity Index (SSIM) across the full image."""
     return float(np.mean(compute_ssim_map_opencv(img1_gray, img2_gray)))
+
+
+def _precompute_ssim_stats(gray_u8: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Precompute `(img_f32, mu, mu_sq, sigma_sq)` so pairwise SSIM only needs 1 blur."""
+    img_f = gray_u8.astype(np.float32)
+    mu = cv2.GaussianBlur(img_f, (11, 11), 1.5)
+    mu_sq = mu * mu
+    sigma_sq = cv2.GaussianBlur(img_f * img_f, (11, 11), 1.5) - mu_sq
+    return img_f, mu, mu_sq, sigma_sq
+
+
+def _fast_ssim_map_from_stats(
+    s1: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    s2: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+) -> np.ndarray:
+    """Compute exact SSIM map using precomputed per-image Gaussian statistics (1 blur instead of 5)."""
+    i1, mu1, mu1_sq, sigma1_sq = s1
+    i2, mu2, mu2_sq, sigma2_sq = s2
+    mu1_mu2 = mu1 * mu2
+    sigma12 = cv2.GaussianBlur(i1 * i2, (11, 11), 1.5) - mu1_mu2
+    numerator = (2.0 * mu1_mu2 + _C1) * (2.0 * sigma12 + _C2)
+    denominator = (mu1_sq + mu2_sq + _C1) * (sigma1_sq + sigma2_sq + _C2)
+    return numerator / denominator
 
 
 def _edge_magnitude(gray: np.ndarray) -> np.ndarray:
@@ -55,7 +80,7 @@ def _nonwhite_hsv_hist(bgr_small: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     hsv = cv2.cvtColor(bgr_small, cv2.COLOR_BGR2HSV)
     active_color_mask = ((hsv[:, :, 1] > 22) | (hsv[:, :, 2] < 225)).astype(np.uint8) * 255
-    if int(np.count_nonzero(active_color_mask)) < 200:
+    if int(np.count_nonzero(active_color_mask)) < 80:
         active_color_mask = None  # fallback if image is nearly solid white
     hist = cv2.calcHist([hsv], [0, 1], active_color_mask, [30, 32], [0, 180, 0, 256])
     cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
@@ -66,7 +91,7 @@ _PORTAL_REF_CACHE: dict[str, tuple[tuple[str, ...], list[dict]]] = {}
 
 
 def _get_cached_portal_refs(reference_portals_dir: Path) -> list[dict]:
-    """Precompute and cache 640x360 grayscale, Sobel edges, HSV histograms & metadata for all reference portals."""
+    """Precompute and cache 320x180 SSIM statistics, Sobel edges, HSV histograms & metadata for all reference portals."""
     if not reference_portals_dir.exists():
         return []
     png_files = sorted(reference_portals_dir.glob("*.png"))
@@ -81,18 +106,21 @@ def _get_cached_portal_refs(reference_portals_dir: Path) -> list[dict]:
         ref_bgr = cv2.imread(str(ref_png))
         if ref_bgr is None:
             continue
-        ref_small = cv2.resize(ref_bgr, (640, 360), interpolation=cv2.INTER_AREA)
+        ref_small = cv2.resize(ref_bgr, (_SIM_W, _SIM_H), interpolation=cv2.INTER_AREA)
         ref_gray = cv2.cvtColor(ref_small, cv2.COLOR_BGR2GRAY)
         ref_edge = _edge_magnitude(ref_gray)
         ref_hist, ref_hsv = _nonwhite_hsv_hist(ref_small)
         ref_active = (ref_edge > 14) | (ref_hsv[:, :, 1] > 24) | (ref_hsv[:, :, 2] < 225)
+        ref_edge_active = ref_edge > 14
 
         portal_name = ref_png.stem
+        official_domain = ""
         meta_json = ref_png.with_suffix(".json")
         if meta_json.exists():
             try:
                 meta = json.loads(meta_json.read_text(encoding="utf-8"))
                 portal_name = meta.get("portal_name", ref_png.stem)
+                official_domain = str(meta.get("official_domain", ""))
             except Exception:
                 portal_name = ref_png.stem
 
@@ -100,10 +128,12 @@ def _get_cached_portal_refs(reference_portals_dir: Path) -> list[dict]:
             {
                 "id": ref_png.stem,
                 "portal_name": portal_name,
-                "gray": ref_gray,
-                "edge": ref_edge,
+                "official_domain": official_domain,
+                "gray_stats": _precompute_ssim_stats(ref_gray),
+                "edge_stats": _precompute_ssim_stats(ref_edge),
                 "hist": ref_hist,
                 "active": ref_active,
+                "edge_active": ref_edge_active,
             }
         )
 
@@ -146,38 +176,36 @@ def compute_visual_similarity(
     ar_diff = abs(math.log(max(0.2, cap_ar) / ref_ar))
     ar_factor = 1.0 if ar_diff <= 0.25 else max(0.50, 1.0 - 0.55 * (ar_diff - 0.25))
 
-    cap_small = cv2.resize(captured_bgr, (640, 360), interpolation=cv2.INTER_AREA)
+    cap_small = cv2.resize(captured_bgr, (_SIM_W, _SIM_H), interpolation=cv2.INTER_AREA)
     cap_gray = cv2.cvtColor(cap_small, cv2.COLOR_BGR2GRAY)
     cap_edge = _edge_magnitude(cap_gray)
     cap_hist, cap_hsv = _nonwhite_hsv_hist(cap_small)
     cap_active = (cap_edge > 14) | (cap_hsv[:, :, 1] > 24) | (cap_hsv[:, :, 2] < 225)
+    cap_edge_active = cap_edge > 14
+
+    cap_gray_stats = _precompute_ssim_stats(cap_gray)
+    cap_edge_stats = _precompute_ssim_stats(cap_edge)
 
     best_score = 0.0
     best_portal_name: Optional[str] = None
     best_ref_id: Optional[str] = None
 
     for ref in _get_cached_portal_refs(reference_portals_dir):
-        ref_gray = ref["gray"]
-        ref_edge = ref["edge"]
-        ref_hist = ref["hist"]
-        ref_active = ref["active"]
-
-        # Evaluate SSIM over the union of active UI/graphic regions so empty white space doesn't inflate score
-        union_active = cap_active | ref_active
-        ssim_map = compute_ssim_map_opencv(cap_gray, ref_gray)
-        if int(np.count_nonzero(union_active)) >= 500:
+        union_active = cap_active | ref["active"]
+        ssim_map = _fast_ssim_map_from_stats(cap_gray_stats, ref["gray_stats"])
+        if int(np.count_nonzero(union_active)) >= 125:
             active_lum_ssim = max(0.0, float(np.mean(ssim_map[union_active])))
         else:
             active_lum_ssim = max(0.0, float(np.mean(ssim_map)))
 
-        edge_ssim_map = compute_ssim_map_opencv(cap_edge, ref_edge)
-        edge_union = (cap_edge > 14) | (ref_edge > 14)
-        if int(np.count_nonzero(edge_union)) >= 250:
+        edge_ssim_map = _fast_ssim_map_from_stats(cap_edge_stats, ref["edge_stats"])
+        edge_union = cap_edge_active | ref["edge_active"]
+        if int(np.count_nonzero(edge_union)) >= 65:
             edge_ssim = max(0.0, float(np.mean(edge_ssim_map[edge_union])))
         else:
             edge_ssim = max(0.0, float(np.mean(edge_ssim_map)))
 
-        hist_corr = max(0.0, float(cv2.compareHist(cap_hist, ref_hist, cv2.HISTCMP_CORREL)))
+        hist_corr = max(0.0, float(cv2.compareHist(cap_hist, ref["hist"], cv2.HISTCMP_CORREL)))
 
         # Blend: 45% active luminance structure + 30% UI edge structure + 25% non-white color palette
         raw_sim = ((0.45 * active_lum_ssim) + (0.30 * edge_ssim) + (0.25 * hist_corr)) * 100.0

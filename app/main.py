@@ -24,6 +24,7 @@ from app.scanner_service import (
     execute_phase2_scan,
 )
 from app.supabase_client import SupabaseService
+from app.vision.image_analyzer import get_vision_capabilities
 from app.webhook_wa import router as wa_router
 from app.webhook_openwa import router as openwa_router
 
@@ -93,6 +94,7 @@ async def health_check() -> dict[str, object]:
         "service": "visikartika-shield-engine",
         "platform": sys.platform,
         "supabase_configured": SupabaseService.is_configured(),
+        "vision_capabilities": get_vision_capabilities(),
     }
 
 
@@ -285,3 +287,18 @@ async def run_image_scan(
             status_code=500,
             detail=f"Image scan failed: {type(exc).__name__}: {err_msg}",
         ) from exc
+
+
+@app.get("/api/v1/benchmark/phase3", tags=["Phase 3 - Accuracy & Latency Audit"])
+async def get_phase3_benchmark_metrics(include_samples: bool = Query(default=False)) -> dict[str, object]:
+    """Return latest Phase 3 accuracy & Playwright capture latency audit telemetry."""
+    results_file = STORAGE_DIR / "phase3_benchmark_results.json"
+    if not results_file.exists():
+        return {
+            "available": False,
+            "message": "Jalankan `python scripts/benchmark_phase3.py` untuk menghasilkan laporan telemetri Phase 3.",
+        }
+    data = json.loads(results_file.read_text(encoding="utf-8"))
+    if not include_samples and isinstance(data, dict):
+        data = {k: v for k, v in data.items() if k != "samples"}
+    return {"available": True, **data}

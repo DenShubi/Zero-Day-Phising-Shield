@@ -1,0 +1,7 @@
+# Optional Deep-Learning EasyOCR CPU-only stack (Phase 4/5 minimal footprint)
+# Install via: pip install -r requirements-easyocr.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
+easyocr>=1.7.1
+

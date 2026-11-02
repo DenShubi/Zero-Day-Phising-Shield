@@ -90,6 +90,10 @@ class Phase1ScanResponse(BaseModel):
     external_domains_contacted: list[str]
     risk_analysis: DomRiskAnalysis
     execution_time_sec: float
+    latency_breakdown_ms: dict[str, float] = Field(
+        default_factory=dict,
+        description="Stage-by-stage execution latency in milliseconds (Phase 3 telemetry)",
+    )
 
 
 class DetectedLogo(BaseModel):
@@ -101,6 +105,7 @@ class DetectedLogo(BaseModel):
 class DecodedQRCode(BaseModel):
     payload: str = Field(..., description="Decoded QR text or URL payload")
     bbox: BoundingBox = Field(..., description="Bounding box of the QR code inside the image")
+    decoder: str = Field(default="opencv", description="QR decoder engine used (opencv or pyzbar)")
 
 
 class ImageScanRequest(BaseModel):
@@ -166,6 +171,10 @@ class ImageScanResponse(BaseModel):
         default_factory=list, description="Deterministic risk-fusion override rules applied (app/scoring.py)"
     )
     execution_time_sec: float
+    latency_breakdown_ms: dict[str, float] = Field(
+        default_factory=dict,
+        description="Stage-by-stage execution latency in milliseconds (Phase 3 telemetry)",
+    )
 
 
 class Phase2ScanResponse(Phase1ScanResponse):
