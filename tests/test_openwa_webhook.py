@@ -211,6 +211,14 @@ def test_duplicate_delivery_processed_once():
     assert r2.json()["skipped"] == "duplicate_delivery" and len(CALLS) == 1
 
 
+def test_same_message_from_two_webhooks_answered_once():
+    """Two registered webhooks => two deliveries (different idempotency keys), one message id."""
+    ev = _event({"body": "halo"}, msg_id="TWOHOOKS1")
+    _post(ev, headers={"X-OpenWA-Idempotency-Key": "msg_x_TWOHOOKS1_webhookA"})
+    r2 = _post(ev, headers={"X-OpenWA-Idempotency-Key": "msg_x_TWOHOOKS1_webhookB"})
+    assert r2.json()["skipped"] == "duplicate_delivery" and len(CALLS) == 1
+
+
 def test_background_mode_acknowledges_then_replies():
     r = _post(_event({"body": "status"}), params="")
     assert r.json()["queued"] is True and r.json()["triage_hint"] == "COMMAND"
