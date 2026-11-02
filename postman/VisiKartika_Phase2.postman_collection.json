@@ -1,0 +1,706 @@
+{
+  "info": {
+    "name": "VisiKartika Shield — Phase 2 Sync (Triage, Whitelist, Score Fusion)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Milestone Sync Phase 2: kirim URL palsu ke FastAPI, pastikan JSON skor kemiripan + screenshot ber-bounding box. Jalankan backend: uvicorn app.main:app --port 8000. Untuk folder 4 (OpenWA live), gateway harus jalan & sesi WhatsApp aktif."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "openwaSessionId",
+      "value": "isi-session-id-openwa"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Sistem",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"healthy\", () => pm.expect(j.status).to.eql(\"healthy\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar mock target",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/mock-targets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mock-targets"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ada >= 3 mock target\", () => pm.expect(j.total_targets).to.be.at.least(3));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Whitelist .mil.id & Triage",
+      "item": [
+        {
+          "name": "Domain resmi → official",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/domain/check?url=https://ad.rekrutmen-tni.mil.id/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "domain",
+                "check"
+              ],
+              "query": [
+                {
+                  "key": "url",
+                  "value": "https://ad.rekrutmen-tni.mil.id/login"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"official\", () => { pm.expect(j.is_official).to.be.true; pm.expect(j.risk_score).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Typosquat → lookalike",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/domain/check?url=https://tniad-mil.id/sso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "domain",
+                "check"
+              ],
+              "query": [
+                {
+                  "key": "url",
+                  "value": "https://tniad-mil.id/sso"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"lookalike terdeteksi\", () => { pm.expect(j.is_official).to.be.false; pm.expect(j.lookalike_kind).to.eql(\"fake-mil-tld\"); pm.expect(j.risk_score).to.be.at.least(90); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Domain ditempel → embedded-official",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/domain/check?url=https://tniad.mil.id.verify-login.com",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "domain",
+                "check"
+              ],
+              "query": [
+                {
+                  "key": "url",
+                  "value": "https://tniad.mil.id.verify-login.com"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"embedded\", () => pm.expect(j.lookalike_kind).to.eql(\"embedded-official\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Triage: pesan berisi URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/triage/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "triage",
+                "preview"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Izin cek link ini https://rekrutmen-bintara-tniad.com/daftar\",\n  \"has_image\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"lane URL\", () => pm.expect(j.triage).to.eql(\"URL\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Triage: gambar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/triage/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "triage",
+                "preview"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"poster dari grup\",\n  \"has_image\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"lane IMAGE\", () => pm.expect(j.triage).to.eql(\"IMAGE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Triage: SSRF ditolak",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/triage/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "triage",
+                "preview"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"http://localhost:2785/api/sessions\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ditolak\", () => pm.expect(j.allowed).to.be.false);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Scan URL palsu (Sync milestone)",
+      "item": [
+        {
+          "name": "Scan rekrutmen_bintara_phish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scan-url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scan-url"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{baseUrl}}/mock-targets/rekrutmen_bintara_phish.html\",\n  \"scan_id\": \"postman_bintara\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"verdict CRITICAL_PHISHING\", () => pm.expect(j.verdict).to.eql(\"CRITICAL_PHISHING\"));",
+                  "pm.test(\"skor kemiripan visual ada\", () => pm.expect(j.visual_similarity_score).to.be.within(0,100));",
+                  "pm.test(\"rumus 45/30/25 konsisten\", () => { const w = +(0.45*j.visual_similarity_score + 0.30*j.risk_analysis.dom_anomaly_score + 0.25*j.risk_analysis.domain_telemetry_score).toFixed(2); pm.expect(j.total_risk_score).to.be.at.least(w - 0.01); });",
+                  "pm.test(\"logo militer ber-bounding box\", () => { pm.expect(j.detected_logos.length).to.be.above(0); pm.expect(j.detected_logos[0].bbox).to.have.keys(\"x\",\"y\",\"width\",\"height\"); });",
+                  "pm.test(\"screenshot ber-anotasi tersedia\", () => pm.expect(j.annotated_bbox_url).to.be.a(\"string\").and.not.empty);",
+                  "pm.environment.set(\"annotatedUrl\", j.annotated_bbox_url);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Scan sso_sisfopers_phish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scan-url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scan-url"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{baseUrl}}/mock-targets/sso_sisfopers_phish.html\",\n  \"scan_id\": \"postman_sso\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"CRITICAL\", () => pm.expect(j.verdict).to.eql(\"CRITICAL_PHISHING\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Scan kemhan_auth_phish (Identity-Domain Mismatch)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scan-url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scan-url"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{baseUrl}}/mock-targets/kemhan_auth_phish.html\",\n  \"scan_id\": \"postman_kemhan\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"CRITICAL\", () => pm.expect(j.verdict).to.eql(\"CRITICAL_PHISHING\"));",
+                  "pm.test(\"rule override tercatat\", () => pm.expect(j.applied_rules.join(\" \")).to.include(\"IDENTITY_DOMAIN_MISMATCH\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Scan poster Quishing (gambar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scan-image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scan-image"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"mock_targets/assets/poster_quishing_bintara.png\",\n  \"scan_id\": \"postman_poster\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"QR terbaca\", () => pm.expect(j.decoded_qr_codes.length).to.eql(1));",
+                  "pm.test(\"CRITICAL\", () => pm.expect(j.verdict).to.eql(\"CRITICAL_PHISHING\"));",
+                  "pm.test(\"< 5 detik\", () => pm.expect(j.execution_time_sec).to.be.below(5));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Simulasi webhook OpenWA (tanpa kirim WA)",
+      "item": [
+        {
+          "name": "Pesan teks 'portal'",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhook/openwa?sync=true&dry_run=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook",
+                "openwa"
+              ],
+              "query": [
+                {
+                  "key": "sync",
+                  "value": "true"
+                },
+                {
+                  "key": "dry_run",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message.received\",\n  \"sessionId\": \"{{openwaSessionId}}\",\n  \"data\": {\n    \"id\": \"POSTMAN1\",\n    \"from\": \"6281234567890@c.us\",\n    \"chatId\": \"6281234567890@c.us\",\n    \"fromMe\": false,\n    \"isGroup\": false,\n    \"kind\": \"individual\",\n    \"type\": \"chat\",\n    \"contact\": {\n      \"pushName\": \"Serda Postman\"\n    },\n    \"body\": \"portal\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"COMMAND\", () => pm.expect(j.triage).to.eql(\"COMMAND\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pesan URL mock phishing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhook/openwa?sync=true&dry_run=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook",
+                "openwa"
+              ],
+              "query": [
+                {
+                  "key": "sync",
+                  "value": "true"
+                },
+                {
+                  "key": "dry_run",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message.received\",\n  \"sessionId\": \"{{openwaSessionId}}\",\n  \"data\": {\n    \"id\": \"POSTMAN2\",\n    \"from\": \"6281234567890@c.us\",\n    \"chatId\": \"6281234567890@c.us\",\n    \"fromMe\": false,\n    \"isGroup\": false,\n    \"kind\": \"individual\",\n    \"type\": \"chat\",\n    \"contact\": {\n      \"pushName\": \"Serda Postman\"\n    },\n    \"body\": \"Izin komandan, cek {{baseUrl}}/mock-targets/rekrutmen_bintara_phish.html\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"URL → CRITICAL\", () => { pm.expect(j.triage).to.eql(\"URL\"); pm.expect(j.scan.verdict).to.eql(\"CRITICAL_PHISHING\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Event non-pesan diabaikan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhook/openwa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook",
+                "openwa"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message.ack\",\n  \"sessionId\": \"{{openwaSessionId}}\",\n  \"data\": {\n    \"id\": \"x\",\n    \"status\": \"read\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"skipped\", () => pm.expect(j.skipped).to.include(\"message.ack\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -22,3 +22,12 @@ node_modules/
 .next/
 out/
 build/
+
+# Runtime debug dumps (may contain phone numbers) & WhatsApp gateway state
+storage/last_wa_payload.json
+storage/*.json
+openwa-gateway/data/
+openwa-gateway/.env
+**/__pycache__/
+
+openwa-gateway/

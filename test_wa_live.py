@@ -16,11 +16,14 @@ async def main() -> None:
     if len(sys.argv) < 2:
         print("Gunakan nomor WA pribadi Anda sebagai penerima balasan bot:")
         print("  python test_wa_live.py 08xxxxxxxxxx")
-        print("\nCatatan: Jangan gunakan 085179743602 karena itu adalah nomor Bot Fonnte sendiri.")
+        print("\nCatatan: jangan gunakan nomor bot itu sendiri sebagai penerima.")
+        print("Skrip ini memakai gateway lama (Fonnte). Untuk OpenWA lihat docs/TESTING_WHATSAPP.md.")
         return
 
     target_phone = sys.argv[1].strip()
-    phish_uri = (BASE_DIR / "mock_targets" / "rekrutmen_bintara_phish.html").resolve().as_uri()
+    # file:// targets are refused by the SSRF guard; use the backend's own mock page
+    # (start uvicorn on :8000 first so the sandbox can open it).
+    phish_uri = "http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html"
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", timeout=60.0) as client:

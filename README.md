@@ -60,7 +60,7 @@ flowchart LR
 
 | Lapisan Sistem | Teknologi yang Digunakan | Fungsi Spesifik dalam Pipeline |
 | :--- | :--- | :--- |
-| **1. Kanal Pelaporan Prajurit (Edge Input)** | **WhatsApp Gateway API** (Baileys / WWebJS / Fonnte) & **Chrome Extension (Manifest V3)** | Menerima *forward* tautan mencurigakan, poster pengumuman, atau tangkapan layar langsung dari ponsel prajurit tanpa instalasi aplikasi tambahan. |
+| **1. Kanal Pelaporan Prajurit (Edge Input)** | **OpenWA Gateway (Baileys)** — menggantikan Fonnte & **Chrome Extension (Manifest V3)** | Menerima *forward* tautan mencurigakan, poster pengumuman, atau tangkapan layar langsung dari ponsel prajurit tanpa instalasi aplikasi tambahan. |
 | **2. Sandbox & Ekstraksi Aman** | **Playwright** (Headless Chromium dalam **Docker Container** non-root `pwuser`) | Mengunjungi URL target di lingkungan terisolasi (`1280x720`, `accept_downloads=False`), menangkap *screenshot*, mengekstrak koordinat DOM, dan melacak *redirect chain* / domain eksternal. |
 | **3. Mesin Deteksi Visual (Computer Vision)** | **PyTorch**, **OpenCV**, **YOLOv8 / ViT / CLIP**, **Scikit-Image (SSIM)**, **EasyOCR & PyZbar** | • **Deteksi Logo & Identitas:** Mengenali pencatutan lambang Kartika Eka Paksi & PUSSIBERAD beserta *bounding box*.<br>• **Visual Layout Similarity:** Menghitung kemiripan tata letak terhadap *database* tampilan resmi `.mil.id`.<br>• **OCR & Quishing Scanner:** Membaca teks dan QR code berbahaya pada poster rekrutmen palsu. |
 | **4. Analisis DOM & Telemetri Domain** | **DOM Heuristic Extractor**, **URL/Host Telemetry**, **TLS/SSL & Whitelist `.mil.id`** | • **DOM Telemetry:** Mendeteksi `<form action="...">` lintas-origin, input NRP/NIK/Password, *form-less AJAX harvesting*, dan anti-inspeksi (`oncontextmenu`).<br>• **Heuristik Domain:** Mendeteksi *typosquatting* kata kunci militer di luar namespace resmi `.mil.id` / `.go.id`. |
@@ -176,6 +176,45 @@ docker run --rm -p 8000:8000 visikartika-backend:phase1
 
 ---
 
+## 5b. Phase 2 — Triage Router, Whitelist `.mil.id`, Score Fusion & OpenWA
+
+### Modul baru (Person B)
+| File | Fungsi |
+| :--- | :--- |
+| `app/domain_guard.py` | Satu-satunya sumber whitelist resmi (`OFFICIAL_MIL_DOMAINS`) + deteksi *lookalike*: domain resmi yang ditempel (`tniad.mil.id.verify-login.com`), akhiran `.mil.id` palsu (`tniad-mil.id`), *typosquat* (`tnlad.com`), *homoglyph*/IDN (`tnïad.com`). |
+| `app/scoring.py` | Rumus 45% Visual + 30% DOM + 25% Domain, ambang verdict (70/40), dan aturan override (*Identity-Domain Mismatch* ≥ 92, *Quishing* ≥ 90, *Visual Impersonation* ≥ 78). Aturan yang terpakai dikembalikan di field `applied_rules`. |
+| `app/wa_triage.py` | Router triage lintas-gateway: **IMAGE** → `scan-image`, **URL** → `scan-url`, **COMMAND** (`portal`/`status`/`darurat`), **HELP**. Menolak `file://`, path lokal & alamat jaringan privat dari chat (kecuali `/mock-targets/` demo). |
+| `app/webhook_openwa.py` | Webhook OpenWA `message.received`: balas 200 seketika lalu scan di *background* (mencegah retry ganda), dedupe `X-OpenWA-Idempotency-Key`, unduh media besar via API OpenWA, kirim **laporan teks + gambar bukti ber-bounding box (base64)** ke chat, verifikasi HMAC opsional. |
+| `app/webhook_wa.py` | Fonnte (legacy) — tetap berfungsi, memakai triage yang sama. |
+
+Endpoint bantu: `GET /api/v1/domain/check?url=...` dan `POST /api/v1/triage/preview`.
+
+### Menjalankan OpenWA + Backend
+```powershell
+# Terminal 1 — gateway WhatsApp (folder openwa-gateway, port 2785)
+cd openwa-gateway; npm run start:prod   # (dist/ sudah ter-build; pakai `npm start` untuk build ulang)
+# Buka dashboard http://localhost:2785, buat/aktifkan sesi, scan QR dengan WhatsApp bot,
+# lalu daftarkan webhook sesi ke http://localhost:8000/webhook/openwa (event: message.received).
+
+# Terminal 2 — backend engine
+.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000
+```
+Isi `.env` (lihat `.env.example`): `OPENWA_API_URL`, `OPENWA_API_KEY`, `OPENWA_SESSION_ID`, `OPENWA_WEBHOOK_SECRET` (opsional `OPENWA_ALLOW_GROUPS`, `OPENWA_SEND_EVIDENCE`).
+
+📱 **Panduan uji chat ke nomor bot + troubleshooting: [`docs/TESTING_WHATSAPP.md`](docs/TESTING_WHATSAPP.md)**
+
+🔒 **Keamanan (`app/security.py`)**: webhook hanya menerima request dari localhost kecuali disertai HMAC secret / token; scan API menolak `file://`, path lokal di luar folder project, dan alamat jaringan privat (SSRF); CORS dibatasi `CORS_ORIGINS`; nomor HP dimasking di log. Secret tidak boleh ditulis di kode — semua lewat `.env`.
+
+### Pengujian Phase 2
+```powershell
+.\.venv\Scripts\python.exe -m pip install pytest
+.\.venv\Scripts\python.exe -m pytest tests -q        # 82 test: whitelist, skor, triage, webhook OpenWA (fake gateway), keamanan
+newman run postman\VisiKartika_Phase2.postman_collection.json   # atau Import ke Postman
+```
+Uji webhook tanpa mengirim WhatsApp: `POST /webhook/openwa?sync=true&dry_run=true`.
+
+---
+
 ## 6. Skema Database Supabase (PostgreSQL + Realtime)
 
 Jalankan *query* SQL berikut pada **Supabase SQL Editor** untuk mengaktifkan penyimpanan insiden dan pembaruan *real-time* ke Dashboard SOC:
@@ -234,9 +273,9 @@ Berdasarkan **Sprint Gantt & Timeline Tracker** (**21 Workstreams** & **7 Sync M
 | **Phase 1** | 31 Okt – 02 Nov | **Zuan** | Setup Playwright headless capture, simpan screenshot, dan ekstrak tag DOM form/input beserta *bounding box* OpenCV. | Playwright capture script, DOM extractor & OpenCV annotator (`/api/v1/scan/phase1`) | ✅ **Done** |
 | **Phase 1** | 31 Okt – 02 Nov | **Denin** | Inisialisasi monorepo, setup database Supabase SQL, dan integrasi WhatsApp Gateway API. | Supabase DB schema & WA Gateway setup | ✅ **Done** |
 | **Phase 1** | 31 Okt – 02 Nov | **Sync ★** | Uji konektivitas dasar: Webhook WA menerima pesan teks dan mengirim respon balik statis `"Pong"`. | Verified WA echo/Pong webhook integration | ✅ **Done** |
-| **Phase 2** | 02 Nov – 04 Nov | **Zuan** | Bangun fungsi SSIM *visual similarity*, load template logo Kartika Eka Paksi, dan fungsi *auto-draw bounding box* merah pada logo. | SSIM similarity engine & logo bounding box detector | ⏳ Planned |
-| **Phase 2** | 02 Nov – 04 Nov | **Denin** | Bangun router triage pesan (URL vs Gambar), domain whitelist `.mil.id`, dan formula kalkulasi skor gabungan. | Triage router, `.mil.id` whitelist & score fusion engine | ⏳ Planned |
-| **Phase 2** | 02 Nov – 04 Nov | **Sync ★** | Uji kirim URL palsu via Postman ke FastAPI Person A; pastikan return JSON skor kemiripan dan screenshot ber-*bounding box*. | Postman test suite & JSON score validation | ⏳ Planned |
+| **Phase 2** | 02 Nov – 04 Nov | **Zuan** | Bangun fungsi SSIM *visual similarity*, load template logo Kartika Eka Paksi, dan fungsi *auto-draw bounding box* merah pada logo. | SSIM similarity engine & logo bounding box detector (coarse-to-fine, ~0.6 s/gambar) | ✅ **Done** |
+| **Phase 2** | 02 Nov – 04 Nov | **Denin** | Bangun router triage pesan (URL vs Gambar), domain whitelist `.mil.id`, dan formula kalkulasi skor gabungan. | `app/wa_triage.py`, `app/domain_guard.py`, `app/scoring.py` + migrasi Fonnte → OpenWA | ✅ **Done** |
+| **Phase 2** | 02 Nov – 04 Nov | **Sync ★** | Uji kirim URL palsu via Postman ke FastAPI Person A; pastikan return JSON skor kemiripan dan screenshot ber-*bounding box*. | `postman/VisiKartika_Phase2.postman_collection.json` (37 assertion) + `pytest tests/` | ✅ **Done** |
 | **Phase 3** | 05 Nov | **Zuan** | Evaluasi akurasi deteksi dan latensi capture Playwright (< 5 detik). | Accuracy benchmarking & latency audit report | ⏳ Planned |
 | **Phase 3** | 05 Nov | **Denin** | Rapikan layout Dashboard Next.js untuk monitoring insiden *real-time*. | Refined Next.js SOC incident monitoring UI | ⏳ Planned |
 | **Phase 3** | 05 Nov | **Sync ★** | Ikuti **Webinar Pembekalan 2 Panitia Bersama**: sesuaikan fitur dengan arahan/kisi-kisi juri. | Briefing #2 alignment with jury criteria | ⏳ Planned |

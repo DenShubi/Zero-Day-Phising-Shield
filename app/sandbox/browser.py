@@ -25,6 +25,7 @@ from app.models import (
     InputElement,
     Phase1ScanResponse,
 )
+from app import domain_guard
 from app.sandbox.annotator import draw_dom_annotations
 from app.vision.similarity import compute_ssim_opencv
 import cv2
@@ -37,17 +38,9 @@ if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 
-OFFICIAL_MIL_DOMAINS = {
-    "mil.id",
-    "tniad.mil.id",
-    "tni.mil.id",
-    "rekrutmen-tni.mil.id",
-    "pussiberad.mil.id",
-    "kemhan.go.id",
-    "akmil.ac.id",
-    "idu.ac.id",
-    "unhanri.ac.id",
-}
+# Whitelist lives in app/domain_guard.py (single source of truth); re-exported
+# here for backward compatibility with modules importing it from the sandbox.
+OFFICIAL_MIL_DOMAINS = domain_guard.OFFICIAL_MIL_DOMAINS
 
 MILITARY_KEYWORDS = [
     "tni",
@@ -97,13 +90,7 @@ class HeadlessSandboxScanner:
 
     @staticmethod
     def _is_official_domain(hostname: str) -> bool:
-        if not hostname:
-            return False
-        host = hostname.lower().strip(".")
-        for official in OFFICIAL_MIL_DOMAINS:
-            if host == official or host.endswith(f".{official}"):
-                return True
-        return False
+        return domain_guard.is_official_domain(hostname)
 
     @staticmethod
     def _is_ip_address(hostname: str) -> bool:
@@ -629,6 +616,14 @@ class HeadlessSandboxScanner:
                 domain_score += 45.0
                 forensic_reasons.append(
                     f"Deceptive military bait tokens in URL/hostname: {', '.join(matched_bait)}"
+                )
+
+            # Lookalike / typosquat / homoglyph imitation of an official domain (Phase 2)
+            lookalike_of, lookalike_kind = domain_guard.find_lookalike(hostname)
+            if lookalike_of:
+                domain_score += 25.0
+                forensic_reasons.append(
+                    f"Lookalike domain ({lookalike_kind}) imitating official '{lookalike_of}' (+25 Domain Risk)"
                 )
 
             # Non-HTTPS scheme

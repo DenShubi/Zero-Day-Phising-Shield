@@ -1,4 +1,5 @@
 import asyncio
+import hmac
 import json
 import sys
 from typing import Optional
@@ -8,7 +9,8 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFi
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.config import BASE_DIR
+from app import domain_guard, security, wa_triage
+from app.config import BASE_DIR, get_env
 from app.models import (
     ImageScanRequest,
     ImageScanResponse,
@@ -47,13 +49,13 @@ app = FastAPI(
         "Defensive Cybersecurity Sandbox Engine (Kategori: Penangkalan) "
         "for Kartika Cyber Hackathon 2026 (PUSSIBERAD TNI AD)."
     ),
-    version="1.3.0",
+    version="1.4.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=security.cors_origins(),  # set CORS_ORIGINS in .env (comma separated)
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -79,7 +81,7 @@ app.mount(
     name="mock-targets",
 )
 
-# Person B: WhatsApp Lapor Cepat Webhook Routers (Fonnte + OpenWA Baileys)
+# Person B: WhatsApp Lapor Cepat Webhook Routers (OpenWA Baileys = active, Fonnte = legacy)
 app.include_router(wa_router)
 app.include_router(openwa_router)
 
@@ -101,8 +103,13 @@ async def supabase_status() -> dict[str, object]:
 
 
 @app.post("/api/v1/supabase/seed-portals", tags=["Supabase SOC Sync"])
-async def seed_supabase_portals() -> dict[str, object]:
-    """Upload all 9 official TNI AD / Kemhan reference portals into Supabase `official_portals`."""
+async def seed_supabase_portals(request: Request) -> dict[str, object]:
+    """Upload all 9 official TNI AD / Kemhan reference portals into Supabase `official_portals`.
+    Admin-only: call from localhost, or send header `X-Admin-Key: <ADMIN_API_KEY>`."""
+    admin_key = get_env("ADMIN_API_KEY")
+    supplied = request.headers.get("x-admin-key", "")
+    if not (security.is_loopback_request(request) or (admin_key and hmac.compare_digest(supplied, admin_key))):
+        raise HTTPException(status_code=403, detail="Admin only.")
     return await SupabaseService.seed_official_portals()
 
 
@@ -134,11 +141,38 @@ async def list_mock_targets() -> dict[str, object]:
     targets = [
         {
             "filename": p.name,
-            "url": f"http://localhost:8000/mock-targets/{p.name}",
+            "url": f"{get_env('PUBLIC_BACKEND_URL', default='http://localhost:8000').rstrip('/')}/mock-targets/{p.name}",
         }
         for p in sorted(MOCK_TARGETS_DIR.glob("*.html"))
     ]
     return {"total_targets": len(targets), "targets": targets}
+
+
+@app.get("/api/v1/domain/check", tags=["Phase 2 - Whitelist & Triage"])
+async def check_domain(url: str = Query(..., min_length=1, description="URL atau hostname yang akan dicek")) -> dict[str, object]:
+    """Cek URL terhadap whitelist resmi `.mil.id` + heuristik lookalike/typosquat (tanpa membuka halaman)."""
+    return domain_guard.assess_url(url).as_dict()
+
+
+@app.post("/api/v1/triage/preview", tags=["Phase 2 - Whitelist & Triage"])
+async def preview_triage(payload: dict[str, object]) -> dict[str, object]:
+    """
+    Preview jalur triage pesan WhatsApp tanpa menjalankan scan.
+    Body: `{"text": "...", "has_image": false}`
+    """
+    text = str(payload.get("text") or "")
+    has_image = bool(payload.get("has_image"))
+    msg = wa_triage.InboundMessage(
+        channel="TEST", sender="preview", text=text, media_bytes=b"preview" if has_image else None
+    )
+    kind, url = wa_triage.classify_message(msg)
+    result: dict[str, object] = {"triage": kind, "target_url": url}
+    if url and kind in ("URL", "IMAGE") and not has_image:
+        allowed, reason = wa_triage.validate_chat_target_url(url)
+        result["allowed"] = allowed
+        result["refusal_reason"] = reason or None
+        result["domain"] = domain_guard.assess_url(url).as_dict()
+    return result
 
 
 @app.post("/api/v1/scan/phase1", response_model=Phase1ScanResponse, tags=["Sandbox Scanner"])
@@ -146,6 +180,9 @@ async def run_phase1_scan(payload: Phase1ScanRequest) -> Phase1ScanResponse:
     target_url = payload.url.strip()
     if not target_url:
         raise HTTPException(status_code=400, detail="Target URL must not be empty.")
+    allowed, reason = security.validate_scan_target(target_url)
+    if not allowed:
+        raise HTTPException(status_code=400, detail=f"Target ditolak: {reason}")
 
     try:
         return await execute_phase1_scan(
@@ -166,6 +203,9 @@ async def run_phase2_scan(payload: Phase1ScanRequest) -> Phase2ScanResponse:
     target_url = payload.url.strip()
     if not target_url:
         raise HTTPException(status_code=400, detail="Target URL must not be empty.")
+    allowed, reason = security.validate_scan_target(target_url)
+    if not allowed:
+        raise HTTPException(status_code=400, detail=f"Target ditolak: {reason}")
 
     try:
         return await execute_phase2_scan(
@@ -217,6 +257,17 @@ async def run_image_scan(
             status_code=400,
             detail="Harap unggah file gambar (`file`) atau berikan `image_url` / `image_base64`.",
         )
+
+    if image_url and not raw_bytes and not b64_str:
+        if image_url.lower().startswith(("http://", "https://")):
+            allowed, reason = security.validate_scan_target(image_url)
+            if not allowed:
+                raise HTTPException(status_code=400, detail=f"image_url ditolak: {reason}")
+        else:
+            try:
+                security.resolve_local_image_path(image_url)
+            except PermissionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         return await execute_image_scan(

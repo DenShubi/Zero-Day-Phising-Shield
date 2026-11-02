@@ -11,6 +11,7 @@ import cv2
 import httpx
 import numpy as np
 
+from app import domain_guard, scoring, security
 from app.config import BASE_DIR
 from app.models import (
     DecodedQRCode,
@@ -19,7 +20,7 @@ from app.models import (
     Phase1ScanResponse,
     Phase2ScanResponse,
 )
-from app.sandbox.browser import HeadlessSandboxScanner, OFFICIAL_MIL_DOMAINS
+from app.sandbox.browser import HeadlessSandboxScanner
 from app.supabase_client import SupabaseService
 from app.vision.logo_detector import detect_and_annotate_logos
 from app.vision.ocr_quishing import detect_and_annotate_qr_codes
@@ -38,29 +39,10 @@ URL_IN_TEXT_REGEX = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 
 def _evaluate_extracted_url_telemetry(url_str: str) -> tuple[float, bool, list[str]]:
     """Evaluate domain telemetry risk for a URL extracted from a QR code or image caption."""
-    parsed = urlparse(url_str if "://" in url_str else f"https://{url_str}")
-    host = (parsed.hostname or "").lower()
-    if not host:
+    assessment = domain_guard.assess_url(url_str)
+    if not assessment.host:
         return 0.0, False, []
-
-    is_official = any(host == d or host.endswith("." + d) for d in OFFICIAL_MIL_DOMAINS)
-    if is_official:
-        return 0.0, True, [f"Domain resmi terverifikasi: {host}"]
-
-    reasons: list[str] = []
-    score = 55.0
-    reasons.append(f"Tautan mengarah ke domain eksternal non-militer: '{host}'")
-
-    mil_bait = ("tni", "kartika", "pussiber", "bintara", "tamtama", "sisfopers", "kemhan", "mil-id", "rekrutmen", "panpus")
-    if any(k in host for k in mil_bait):
-        score += 35.0
-        reasons.append(f"Indikasi typosquatting / penyamaran nama institusi militer pada domain '{host}'")
-
-    if parsed.scheme != "https":
-        score += 10.0
-        reasons.append("Tautan tidak menggunakan enkripsi HTTPS standar")
-
-    return min(100.0, score), False, reasons
+    return assessment.risk_score, assessment.is_official, assessment.reasons
 
 
 async def _load_image_to_path(
@@ -82,20 +64,14 @@ async def _load_image_to_path(
     if raw_bytes is None and image_url:
         u = image_url.strip()
         source_label = u
-        if u.startswith("file://"):
-            parsed = urlparse(u)
-            local_p = Path(unquote(parsed.path.lstrip("/")) if ":" in parsed.path else unquote(parsed.path))
-            raw_bytes = local_p.read_bytes()
-        elif u.startswith("http://") or u.startswith("https://"):
+        if u.startswith("http://") or u.startswith("https://"):
             async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
                 resp = await client.get(u)
                 resp.raise_for_status()
                 raw_bytes = resp.content
         else:
-            local_p = Path(u)
-            if not local_p.is_absolute():
-                local_p = BASE_DIR / local_p
-            raw_bytes = local_p.read_bytes()
+            # Local paths (incl. file://) are restricted to project folders — never arbitrary files.
+            raw_bytes = security.resolve_local_image_path(unquote(u)).read_bytes()
 
     if not raw_bytes:
         raise ValueError("Tidak ada data gambar yang valid (berikan file, image_url, atau image_base64).")
@@ -159,29 +135,17 @@ async def execute_phase2_scan(
         )
 
     # 3. VisiKartika Shield Weighted Risk Formula: 45% Visual + 30% DOM + 25% Domain
-    if p1.risk_analysis.is_official_mil_domain and not any(f.is_cross_origin for f in p1.forms):
-        total_risk = 0.0
-        verdict = "SAFE"
-    else:
-        total_risk = round(
-            (0.45 * visual_score)
-            + (0.30 * p1.risk_analysis.dom_anomaly_score)
-            + (0.25 * p1.risk_analysis.domain_telemetry_score),
-            2,
-        )
-        # Identity-Domain Mismatch rule: Official Logo + Non-.mil.id + Credential Harvesting => CRITICAL_PHISHING
-        if (
-            detected_logos
-            and not p1.risk_analysis.is_official_mil_domain
-            and p1.risk_analysis.has_credential_harvesting
-        ):
-            total_risk = max(total_risk, 92.0)
-
-        verdict = (
-            "CRITICAL_PHISHING"
-            if total_risk >= 70.0
-            else ("SUSPICIOUS" if total_risk >= 40.0 else "SAFE")
-        )
+    decision = scoring.fuse_url_scan(
+        visual=visual_score,
+        dom=p1.risk_analysis.dom_anomaly_score,
+        domain=p1.risk_analysis.domain_telemetry_score,
+        is_official_domain=p1.risk_analysis.is_official_mil_domain,
+        has_cross_origin_form=any(f.is_cross_origin for f in p1.forms),
+        has_official_logo=bool(detected_logos),
+        has_credential_harvesting=p1.risk_analysis.has_credential_harvesting,
+    )
+    total_risk = decision.total_risk_score
+    verdict = decision.verdict
 
     # 4. Upload evidence screenshots to Supabase Storage (or fallback local static URLs)
     captured_url = await SupabaseService.upload_evidence_image(
@@ -206,6 +170,7 @@ async def execute_phase2_scan(
         "detected_military_keywords": p1.detected_military_keywords,
         "external_domains_contacted": p1.external_domains_contacted,
         "forensic_reasons": p1.risk_analysis.forensic_reasons,
+        "risk_fusion": decision.as_dict(),
     }
 
     synced, incident_id = await SupabaseService.record_scan_incident(
@@ -235,6 +200,7 @@ async def execute_phase2_scan(
         annotated_bbox_url=annotated_url,
         supabase_synced=synced,
         supabase_incident_id=incident_id,
+        applied_rules=decision.applied_rules,
     )
 
 
@@ -313,6 +279,7 @@ async def execute_image_scan(
     domain_score = 45.0
     dom_score = 50.0
     any_official_url = False
+    official_url_count = 0
 
     if extracted_urls:
         max_dom_tel = 0.0
@@ -321,6 +288,7 @@ async def execute_image_scan(
             max_dom_tel = max(max_dom_tel, u_score)
             if is_off:
                 any_official_url = True
+                official_url_count += 1
             forensic_reasons.extend(u_reasons)
         domain_score = max_dom_tel
         if decoded_qrs and not any_official_url:
@@ -338,24 +306,17 @@ async def execute_image_scan(
             domain_score = 15.0
             forensic_reasons.append("Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar")
 
-    if any_official_url and not [u for u in extracted_urls if not _evaluate_extracted_url_telemetry(u)[1]]:
-        total_risk = 0.0
-        verdict = "SAFE"
-    else:
-        total_risk = round(
-            (0.45 * visual_score) + (0.30 * dom_score) + (0.25 * domain_score),
-            2,
-        )
-        if detected_logos and decoded_qrs and not any_official_url:
-            total_risk = max(total_risk, 90.0)
-        elif detected_logos and visual_score >= 80.0 and not any_official_url:
-            total_risk = max(total_risk, 78.0)
-
-        verdict = (
-            "CRITICAL_PHISHING"
-            if total_risk >= 70.0
-            else ("SUSPICIOUS" if total_risk >= 40.0 else "SAFE")
-        )
+    decision = scoring.fuse_image_scan(
+        visual=visual_score,
+        dom=dom_score,
+        domain=domain_score,
+        has_official_logo=bool(detected_logos),
+        has_qr_code=bool(decoded_qrs),
+        extracted_urls_total=len(extracted_urls),
+        extracted_urls_official=official_url_count,
+    )
+    total_risk = decision.total_risk_score
+    verdict = decision.verdict
 
     # 5. Upload Raw & Annotated Images to Supabase Storage (`scan-evidence`)
     captured_url = await SupabaseService.upload_evidence_image(
@@ -377,6 +338,7 @@ async def execute_image_scan(
         "decoded_qr_codes": [q.model_dump() for q in decoded_qrs],
         "extracted_urls": extracted_urls,
         "forensic_reasons": forensic_reasons,
+        "risk_fusion": decision.as_dict(),
     }
 
     synced, incident_id = await SupabaseService.record_scan_incident(
@@ -417,5 +379,6 @@ async def execute_image_scan(
         annotated_bbox_url=annotated_url,
         supabase_synced=synced,
         supabase_incident_id=incident_id,
+        applied_rules=decision.applied_rules,
         execution_time_sec=elapsed,
     )

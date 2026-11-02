@@ -1,4 +1,8 @@
 import asyncio
+import os
+
+# Local mock server runs on 127.0.0.1 outside /mock-targets/: allow private targets for this dev test.
+os.environ.setdefault("ALLOW_PRIVATE_SCAN_TARGETS", "true")
 import functools
 import http.server
 import json

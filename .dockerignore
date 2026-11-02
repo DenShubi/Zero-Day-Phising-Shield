@@ -12,3 +12,9 @@ storage/synthetic_yolo/
 .git/
 .gitignore
 
+
+# WhatsApp gateway runs as its own service (Node.js); never bake it or its session data into the engine image
+openwa-gateway/
+.venv/
+*.md
+!README.md

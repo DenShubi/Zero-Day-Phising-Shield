@@ -128,10 +128,81 @@ def _bbox_overlap(a: dict, b: dict) -> bool:
     return iou > 0.35 or containment > 0.60
 
 
+_COARSE_FACTOR = 0.5   # coarse pass runs on a half-resolution grayscale ROI (~12x cheaper)
+_COARSE_TOP_K = 3      # number of coarse (scale, variant, location) hypotheses refined per template
+_REFINE_PAD = 6        # +/- pixel search window around each hypothesis at full resolution
+
+
+def _coarse_to_fine_search(
+    roi: np.ndarray,
+    roi_coarse_gray: np.ndarray,
+    variants: Sequence[np.ndarray],
+    scales: Sequence[int],
+    aspect: float,
+    img_w: int,
+) -> tuple[float, Optional[dict]]:
+    """
+    Fast equivalent of the exhaustive multi-scale search.
+
+    1. Coarse pass: match every (scale, variant) on a half-resolution grayscale
+       ROI and keep the top-K hypotheses.
+    2. Fine pass: re-score each hypothesis with the ORIGINAL full-resolution
+       colour TM_CCOEFF_NORMED metric inside a small window around the location,
+       so the returned score keeps exactly the same meaning/thresholds as the
+       exhaustive search (it can only be <= the exhaustive best).
+    """
+    roi_h, roi_w = roi.shape[:2]
+    hypotheses: list[tuple[float, int, int, int, int, int]] = []  # (coarse_score, h, w, variant_idx, x, y)
+
+    for target_h in scales:
+        target_w = max(20, int(round(target_h * aspect)))
+        if target_h >= roi_h or target_w >= img_w:
+            continue
+        ch = max(8, int(round(target_h * _COARSE_FACTOR)))
+        cw = max(8, int(round(target_w * _COARSE_FACTOR)))
+        if ch >= roi_coarse_gray.shape[0] or cw >= roi_coarse_gray.shape[1]:
+            continue
+        for v_idx, var_bgr in enumerate(variants):
+            t_gray = cv2.cvtColor(
+                cv2.resize(var_bgr, (cw, ch), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY
+            )
+            res = cv2.matchTemplate(roi_coarse_gray, t_gray, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(res)
+            x = int(round(max_loc[0] / _COARSE_FACTOR))
+            y = int(round(max_loc[1] / _COARSE_FACTOR))
+            hypotheses.append((float(max_val), target_h, target_w, v_idx, x, y))
+
+    hypotheses.sort(key=lambda hyp: hyp[0], reverse=True)
+
+    best_score = 0.0
+    best_box: Optional[dict] = None
+    for _, target_h, target_w, v_idx, x, y in hypotheses[:_COARSE_TOP_K]:
+        x0 = max(0, x - _REFINE_PAD)
+        y0 = max(0, y - _REFINE_PAD)
+        x1 = min(roi_w, x + target_w + _REFINE_PAD)
+        y1 = min(roi_h, y + target_h + _REFINE_PAD)
+        window = roi[y0:y1, x0:x1]
+        if window.shape[0] < target_h or window.shape[1] < target_w:
+            continue
+        t_bgr = cv2.resize(variants[v_idx], (target_w, target_h), interpolation=cv2.INTER_AREA)
+        res = cv2.matchTemplate(window, t_bgr, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(res)
+        if float(max_val) > best_score:
+            best_score = float(max_val)
+            best_box = {
+                "x": int(x0 + max_loc[0]),
+                "y": int(y0 + max_loc[1]),
+                "width": int(target_w),
+                "height": int(target_h),
+            }
+    return best_score, best_box
+
+
 def _sliding_window_banner_search(
     raw_img: np.ndarray,
     templates: Sequence[dict],
     min_score: float = 0.72,
+    exhaustive: bool = False,
 ) -> list[dict]:
     """
     Multi-scale sliding-window template search across the top header/banner
@@ -142,6 +213,10 @@ def _sliding_window_banner_search(
     img_h, img_w = raw_img.shape[:2]
     roi_h = min(img_h, 440)
     roi = raw_img[:roi_h, :]
+    roi_coarse_gray = cv2.cvtColor(
+        cv2.resize(roi, None, fx=_COARSE_FACTOR, fy=_COARSE_FACTOR, interpolation=cv2.INTER_AREA),
+        cv2.COLOR_BGR2GRAY,
+    )
 
     scales = [28, 30, 34, 38, 48, 58, 60, 72, 90, 115, 145, 185, 222, 226]
     candidates: list[dict] = []
@@ -166,25 +241,30 @@ def _sliding_window_banner_search(
         best_tpl_score = 0.0
         best_tpl_box: Optional[dict] = None
 
-        for target_h in scales:
-            target_w = max(20, int(round(target_h * aspect)))
-            if target_h >= roi_h or target_w >= img_w:
-                continue
+        if exhaustive:
+            for target_h in scales:
+                target_w = max(20, int(round(target_h * aspect)))
+                if target_h >= roi_h or target_w >= img_w:
+                    continue
 
-            for var_bgr in variants:
-                t_bgr = cv2.resize(var_bgr, (target_w, target_h), interpolation=cv2.INTER_AREA)
-                res = cv2.matchTemplate(roi, t_bgr, cv2.TM_CCOEFF_NORMED)
-                _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                score = float(max_val)
+                for var_bgr in variants:
+                    t_bgr = cv2.resize(var_bgr, (target_w, target_h), interpolation=cv2.INTER_AREA)
+                    res = cv2.matchTemplate(roi, t_bgr, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, max_loc = cv2.minMaxLoc(res)
+                    score = float(max_val)
 
-                if score > best_tpl_score:
-                    best_tpl_score = score
-                    best_tpl_box = {
-                        "x": int(max_loc[0]),
-                        "y": int(max_loc[1]),
-                        "width": int(target_w),
-                        "height": int(target_h),
-                    }
+                    if score > best_tpl_score:
+                        best_tpl_score = score
+                        best_tpl_box = {
+                            "x": int(max_loc[0]),
+                            "y": int(max_loc[1]),
+                            "width": int(target_w),
+                            "height": int(target_h),
+                        }
+        else:
+            best_tpl_score, best_tpl_box = _coarse_to_fine_search(
+                roi, roi_coarse_gray, variants, scales, aspect, img_w
+            )
 
         if best_tpl_box is not None and best_tpl_score >= min_score:
             candidates.append(

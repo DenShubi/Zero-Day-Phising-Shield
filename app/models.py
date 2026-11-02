@@ -148,6 +148,9 @@ class ImageScanResponse(BaseModel):
     annotated_bbox_url: Optional[str] = None
     supabase_synced: bool = False
     supabase_incident_id: Optional[str] = None
+    applied_rules: list[str] = Field(
+        default_factory=list, description="Deterministic risk-fusion override rules applied (app/scoring.py)"
+    )
     execution_time_sec: float
 
 
@@ -168,4 +171,7 @@ class Phase2ScanResponse(Phase1ScanResponse):
     )
     supabase_incident_id: Optional[str] = Field(
         default=None, description="UUID of inserted row in Supabase scan_incidents"
+    )
+    applied_rules: list[str] = Field(
+        default_factory=list, description="Deterministic risk-fusion override rules applied (app/scoring.py)"
     )
