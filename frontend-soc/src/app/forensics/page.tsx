@@ -17,7 +17,11 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { BBoxOverlay } from '@/components/forensics/BBoxOverlay';
-import { overlayBoxesFor, resolveSourceSpace } from '@/components/forensics/boxes';
+import {
+  overlayBoxesFor,
+  resolveSourceSpace,
+  shouldPreferBurnedIn,
+} from '@/components/forensics/boxes';
 import { ScoreBreakdownPanel } from '@/components/ui/ScoreBreakdown';
 import { VerdictBadge } from '@/components/ui/VerdictBadge';
 import { describeTarget, formatForensicTimestamp, defang } from '@/lib/format';
@@ -40,7 +44,8 @@ function ForensicsContent() {
   const [state, setState] = useState<LoadState>({ phase: 'loading' });
   const [measured, setMeasured] = useState<SourceSpace | null>(null);
   const [highlighted, setHighlighted] = useState<string | null>(null);
-  const [showBurnedIn, setShowBurnedIn] = useState(false);
+  // null = follow the automatic preference; true/false = the operator chose.
+  const [viewOverride, setViewOverride] = useState<boolean | null>(null);
   const [defanged, setDefanged] = useState(true);
 
   useEffect(() => {
@@ -138,6 +143,11 @@ function ForensicsContent() {
   }
 
   const target = scan.finalUrl ?? describeTarget(scan.submittedUrl);
+
+  // A cold incident keeps no per-element boxes, so the engine's burned-in
+  // annotation is the only evidence that still shows them — make it the default
+  // in that case rather than presenting an unannotated screenshot.
+  const showBurnedIn = viewOverride ?? shouldPreferBurnedIn(scan, boxes);
   const evidenceUrl = showBurnedIn
     ? (scan.annotatedUrl ?? scan.screenshotUrl)
     : (scan.screenshotUrl ?? scan.annotatedUrl);
@@ -203,7 +213,7 @@ function ForensicsContent() {
             {scan.annotatedUrl && scan.screenshotUrl && (
               <button
                 type="button"
-                onClick={() => setShowBurnedIn((v) => !v)}
+                onClick={() => setViewOverride(!showBurnedIn)}
                 className="vk-no-print rounded border border-[var(--border)] px-2 py-1 text-xs text-[var(--muted-strong)] hover:bg-[var(--surface-raised)]"
               >
                 {showBurnedIn ? t.forensics.rawView : t.forensics.burnedView}

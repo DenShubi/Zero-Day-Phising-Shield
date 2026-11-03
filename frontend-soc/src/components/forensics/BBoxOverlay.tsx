@@ -185,7 +185,10 @@ export function BBoxOverlay({
         )}
       </div>
 
-      {!sourceSpace && !loadFailed && (
+      {/* Only meaningful when there is something waiting to be placed. With no
+          boxes the dimensions are irrelevant, and saying otherwise suggests the
+          page is stuck. */}
+      {boxes.length > 0 && !sourceSpace && !loadFailed && (
         <figcaption id={captionId} className="vk-overlay__note">
           Menunggu dimensi gambar untuk menempatkan anotasi…
         </figcaption>
