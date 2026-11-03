@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiAbortError, ApiError } from '@/lib/api/client';
-import { previewTriage, scanImage, scanUrl } from '@/lib/api/endpoints';
+import { getMockTargets, previewTriage, scanImage, scanUrl, type MockTarget } from '@/lib/api/endpoints';
 import { formatReport } from '@/lib/wa-report';
 import { formatTimeWib } from '@/lib/format';
 import { cacheScan, newScanId } from '@/lib/scan-store';
@@ -52,11 +52,18 @@ const GREETING =
   '━━━━━━━━━━━━━━━━━━━━━━\n' +
   'Kirim *tautan* mencurigakan, atau *poster/tangkapan layar* untuk dianalisis.';
 
-const QUICK_LINKS = [
-  { label: 'Portal palsu (Bintara)', url: 'http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html' },
-  { label: 'SSO palsu', url: 'http://localhost:8000/mock-targets/sso_sisfopers_phish.html' },
-  { label: 'Portal resmi', url: 'https://tniad.mil.id' },
-] as const;
+/**
+ * The safe control is a genuine external portal, so it can be a constant. The
+ * phishing decoys cannot: the engine builds their URLs from PUBLIC_BACKEND_URL,
+ * so hardcoding localhost would point a deployed page at the visitor's own
+ * machine instead of the engine. They are fetched at runtime instead.
+ */
+const SAFE_CONTROL = { label: 'Portal resmi', url: 'https://tniad.mil.id' } as const;
+
+/** Trim the decoy filename down to something readable on a button. */
+function decoyLabel(filename: string): string {
+  return filename.replace(/\.html$/, '').replace(/_/g, ' ');
+}
 
 let seq = 0;
 const nextId = () => `m${(seq += 1)}`;
@@ -70,6 +77,7 @@ export function WaSimulator() {
   const [busy, setBusy] = useState(false);
   const [triageLane, setTriageLane] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [decoys, setDecoys] = useState<MockTarget[]>([]);
 
   const endRef = useRef<HTMLDivElement>(null);
   const previewUrlRef = useRef<string | null>(null);
@@ -78,6 +86,18 @@ export function WaSimulator() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
+
+  // Decoy URLs are built by the engine from PUBLIC_BACKEND_URL, so they must be
+  // fetched rather than assumed — see the note on SAFE_CONTROL above.
+  useEffect(() => {
+    const ac = new AbortController();
+    void getMockTargets(ac.signal)
+      .then((r) => !ac.signal.aborted && setDecoys(r.targets))
+      .catch(() => {
+        /* the control link alone is enough to demo with */
+      });
+    return () => ac.abort();
+  }, []);
 
   useEffect(
     () => () => {
@@ -354,7 +374,10 @@ export function WaSimulator() {
 
       <div className="flex flex-wrap gap-2">
         <span className="self-center text-xs text-[var(--muted)]">Contoh laporan:</span>
-        {QUICK_LINKS.map((q) => (
+        {[
+          ...decoys.map((d) => ({ label: decoyLabel(d.filename), url: d.url })),
+          SAFE_CONTROL,
+        ].map((q) => (
           <button
             key={q.url}
             type="button"
