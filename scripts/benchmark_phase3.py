@@ -433,6 +433,25 @@ def _cleanup_temp_scans(prefix: str = "p3bench_") -> None:
                 f.unlink(missing_ok=True)
 
 
+# Ambang kelulusan KPI Phase 3, sesuai kolom "Target / Ambang" pada laporan.
+KPI_MIN_ACCURACY = 92.0
+KPI_MIN_F1 = 90.0
+KPI_MIN_RECALL = 95.0
+KPI_MIN_SPECIFICITY = 90.0
+KPI_MIN_AUC = 0.95
+
+
+def _status_badge(passed: bool) -> str:
+    """Badge status KPI yang dihitung dari hasil ukur, bukan nilai tetap.
+
+    Sebelumnya seluruh baris tabel ringkasan eksekutif menuliskan `LULUS`
+    secara hardcoded, sehingga laporan tetap mengklaim lulus walaupun
+    pengukuran gagal memenuhi ambang -- dan bertentangan dengan
+    `all_under_5s_sla` pada berkas JSON hasil.
+    """
+    return "✅ **LULUS**" if passed else "❌ **TIDAK LULUS**"
+
+
 def _write_markdown_report(
     report_path: Path,
     *,
@@ -466,14 +485,16 @@ def _write_markdown_report(
         "",
         "| Indikator Utama (KPI Phase 3) | Hasil Pengukuran | Target / Ambang | Status |",
         "| :--- | :---: | :---: | :---: |",
-        f"| **Akurasi Keseluruhan (*Overall Accuracy*)** | **{overall_metrics['accuracy']:.2f}%** (`95% CI: {ci95['accuracy_ci95'][0]:.2f}%–{ci95['accuracy_ci95'][1]:.2f}%`) | `>= 92.0%` | ✅ **LULUS** |",
-        f"| **F1-Score Deteksi Ancaman** | **{overall_metrics['f1_score']:.2f}%** (`95% CI: {ci95['f1_ci95'][0]:.2f}%–{ci95['f1_ci95'][1]:.2f}%`) | `>= 90.0%` | ✅ **LULUS** |",
-        f"| **Recall / Sensitivity (Tangkap Phishing & Scam)** | **{overall_metrics['recall']:.2f}%** (`FN = {overall_metrics['fn']}`) | `>= 95.0%` | ✅ **LULUS** |",
-        f"| **Specificity / True Negative Rate (Web & Poster Aman)** | **{overall_metrics['specificity']:.2f}%** (`FP = {overall_metrics['fp']}`) | `>= 90.0%` | ✅ **LULUS** |",
-        f"| **ROC-AUC / PR-AUC** | **`{overall_metrics['roc_auc']:.4f}` / `{overall_metrics['pr_auc']:.4f}`** | `>= 0.9500` | ✅ **LULUS** |",
-        f"| **Latensi Warm Capture Playwright + Vision (P50 / P95)** | **`{url_lat_summary['p50']:.3f}s` / `{url_lat_summary['p95']:.3f}s`** | `< 5.000s` | ✅ **LULUS ({url_lat_summary['sla_pass_pct']:.0f}%)** |",
-        f"| **Latensi Scan Gambar/Poster Multimodal (P50 / P95)** | **`{img_lat_summary['p50']:.3f}s` / `{img_lat_summary['p95']:.3f}s`** | `< 5.000s` | ✅ **LULUS ({img_lat_summary['sla_pass_pct']:.0f}%)** |",
-        f"| **Uji Konkurensi Sandbox (`4x Simultan`)** | **Maks `{concurrency_summary['max_individual_sec']:.3f}s`/req** (Batch `{concurrency_summary['wall_batch_sec']:.3f}s`) | `< 5.000s` | ✅ **LULUS** |",
+        f"| **Akurasi Keseluruhan (*Overall Accuracy*)** | **{overall_metrics['accuracy']:.2f}%** (`95% CI: {ci95['accuracy_ci95'][0]:.2f}%–{ci95['accuracy_ci95'][1]:.2f}%`) | `>= {KPI_MIN_ACCURACY:.1f}%` | {_status_badge(overall_metrics['accuracy'] >= KPI_MIN_ACCURACY)} |",
+        f"| **F1-Score Deteksi Ancaman** | **{overall_metrics['f1_score']:.2f}%** (`95% CI: {ci95['f1_ci95'][0]:.2f}%–{ci95['f1_ci95'][1]:.2f}%`) | `>= {KPI_MIN_F1:.1f}%` | {_status_badge(overall_metrics['f1_score'] >= KPI_MIN_F1)} |",
+        f"| **Recall / Sensitivity (Tangkap Phishing & Scam)** | **{overall_metrics['recall']:.2f}%** (`FN = {overall_metrics['fn']}`) | `>= {KPI_MIN_RECALL:.1f}%` | {_status_badge(overall_metrics['recall'] >= KPI_MIN_RECALL)} |",
+        f"| **Specificity / True Negative Rate (Web & Poster Aman)** | **{overall_metrics['specificity']:.2f}%** (`FP = {overall_metrics['fp']}`) | `>= {KPI_MIN_SPECIFICITY:.1f}%` | {_status_badge(overall_metrics['specificity'] >= KPI_MIN_SPECIFICITY)} |",
+        f"| **ROC-AUC / PR-AUC** | **`{overall_metrics['roc_auc']:.4f}` / `{overall_metrics['pr_auc']:.4f}`** | `>= {KPI_MIN_AUC:.4f}` | {_status_badge(overall_metrics['roc_auc'] >= KPI_MIN_AUC and overall_metrics['pr_auc'] >= KPI_MIN_AUC)} |",
+        # Kriteria latensi memakai P95 terhadap SLA (formulasi persentil baku),
+        # dengan persentase sampel di bawah SLA ditampilkan sebagai konteks.
+        f"| **Latensi Warm Capture Playwright + Vision (P50 / P95)** | **`{url_lat_summary['p50']:.3f}s` / `{url_lat_summary['p95']:.3f}s`** | `< {SLA_TARGET_SEC:.3f}s` | {_status_badge(url_lat_summary['p95'] < SLA_TARGET_SEC)} ({url_lat_summary['sla_pass_pct']:.0f}% sampel) |",
+        f"| **Latensi Scan Gambar/Poster Multimodal (P50 / P95)** | **`{img_lat_summary['p50']:.3f}s` / `{img_lat_summary['p95']:.3f}s`** | `< {SLA_TARGET_SEC:.3f}s` | {_status_badge(img_lat_summary['p95'] < SLA_TARGET_SEC)} ({img_lat_summary['sla_pass_pct']:.0f}% sampel) |",
+        f"| **Uji Konkurensi Sandbox (`4x Simultan`)** | **Maks `{concurrency_summary['max_individual_sec']:.3f}s`/req** (Batch `{concurrency_summary['wall_batch_sec']:.3f}s`) | `< {SLA_TARGET_SEC:.3f}s` | {_status_badge(bool(concurrency_summary['all_under_5s_sla']))} |",
         "",
         "---",
         "",
