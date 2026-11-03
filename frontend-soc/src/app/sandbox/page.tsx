@@ -1,13 +1,17 @@
-import { id } from '@/lib/i18n/id';
+import { ScanConsole } from '@/components/sandbox/ScanConsole';
+import { id as t } from '@/lib/i18n/id';
 
-/** Placeholder: implemented in a later build step. */
-export default function Page() {
+export default function SandboxPage() {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-      <h1 className="text-lg font-semibold text-[var(--foreground)]">Halaman ini sedang dibangun</h1>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Modul akan tersedia pada tahap pembangunan berikutnya.
-      </p>
+    <div className="mx-auto flex max-w-3xl flex-col gap-5">
+      <header>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">{t.scan.title}</h1>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">
+          Pindai tautan di dalam sandbox terisolasi, atau unggah poster dan tangkapan layar untuk
+          analisis OCR, QR, dan pencatutan logo.
+        </p>
+      </header>
+      <ScanConsole />
     </div>
   );
 }
