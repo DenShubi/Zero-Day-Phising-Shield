@@ -1,0 +1,58 @@
+{
+ "success": true,
+ "scan_id": "img_f6b97d9881",
+ "source_image": "uploaded_image.png",
+ "verdict": "CRITICAL_PHISHING",
+ "content_category": "POSTER_SCAM",
+ "layout_type": "WEB_SCREENSHOT",
+ "total_risk_score": 90.0,
+ "visual_similarity_score": 78.8,
+ "dom_anomaly_score": 88.0,
+ "domain_telemetry_score": 90.0,
+ "impersonated_target": "TNI Angkatan Darat (Kartika Eka Paksi)",
+ "detected_logos": [
+  {
+   "brand_name": "TNI Angkatan Darat (Kartika Eka Paksi)",
+   "confidence": 78.8,
+   "bbox": {
+    "x": 44,
+    "y": 22,
+    "width": 30,
+    "height": 30
+   }
+  }
+ ],
+ "decoded_qr_codes": [
+  {
+   "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "bbox": {
+    "x": 560,
+    "y": 210,
+    "width": 142,
+    "height": 142
+   }
+  }
+ ],
+ "extracted_urls": [
+  "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+ ],
+ "ocr_text_snippet": "PANITIA PUSAT PENERIMAAN PRAJURIT TNI AD TA 2026 PENGUMUMAN VERIFIKASI ULANG NRP & WOTA BINTARA SIBER Pindai QR Code di sebelah kanan untuk login NRP & Kata Sandi Ando:",
+ "visual_input_boxes_count": 0,
+ "forensic_reasons": [
+  "Terdeteksi kode QR di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+  "Terdeteksi pencatutan lambang resmi militer pada konten berisiko: TNI Angkatan Darat (Kartika Eka Paksi) (78.8% confidence)",
+  "Penggunaan kata kunci institusi militer (tniad, tni, bintara) pada domain non-resmi 'rekrutmen-bintara-tniad.com'",
+  "Tangkapan layar menampilkan antarmuka login/input data (0 kolom visual) bermuatan atribut militer tanpa domain resmi .mil.id",
+  "Poster/gambar menyisipkan QR Code menuju domain tidak terverifikasi (Indikasi Quishing)"
+ ],
+ "screenshot_path": "storage/screenshots/img_f6b97d9881.png",
+ "annotated_dom_path": "storage/annotated/img_f6b97d9881_dom.png",
+ "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_f6b97d9881.png",
+ "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_f6b97d9881_dom.png",
+ "supabase_synced": true,
+ "supabase_incident_id": "93aa7c4b-0410-4e6d-8f79-f5522cbe6d2d",
+ "applied_rules": [
+  "QUISHING_IMPERSONATION: atribut militer + QR ke domain non-resmi (skor min 90)"
+ ],
+ "execution_time_sec": 11.04
+}

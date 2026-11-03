@@ -1,0 +1,14 @@
+{
+ "configured": true,
+ "connected": true,
+ "supabase_url": "https://ifzpfineqqvqjomhogmm.supabase.co",
+ "bucket": "scan-evidence",
+ "public_backend_url": "http://localhost:8000",
+ "table_scan_incidents_ok": true,
+ "table_official_portals_ok": true,
+ "storage_bucket_ok": false,
+ "incidents_count_sample": 23,
+ "portals_count_sample": 38,
+ "storage_bucket_hint": "Bucket 'scan-evidence' belum ditemukan (400). Jalankan supabase/migrations/20261102_storage_and_rls.sql di SQL Editor atau buat Public Bucket bernama 'scan-evidence'.",
+ "message": "Terhubung ke Supabase dengan sukses!"
+}

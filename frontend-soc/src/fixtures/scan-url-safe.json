@@ -1,0 +1,55 @@
+{
+ "success": true,
+ "scan_id": "scan_b7917b19",
+ "initial_url": "https://tniad.mil.id",
+ "final_url": "https://tniad.mil.id",
+ "redirect_chain": [
+  "https://tniad.mil.id"
+ ],
+ "status_code": 200,
+ "screenshot_path": "storage/screenshots/scan_b7917b19.png",
+ "annotated_dom_path": "storage/annotated/scan_b7917b19_dom.png",
+ "page_title": "TNI AD - TNI Angkatan Darat",
+ "forms": [],
+ "inputs": [],
+ "images": [],
+ "detected_military_keywords": [
+  "tni",
+  "angkatan darat"
+ ],
+ "external_domains_contacted": [
+  "www.googletagmanager.com"
+ ],
+ "risk_analysis": {
+  "dom_anomaly_score": 0.0,
+  "domain_telemetry_score": 0.0,
+  "has_credential_harvesting": false,
+  "is_official_mil_domain": true,
+  "forensic_reasons": []
+ },
+ "execution_time_sec": 19.419,
+ "verdict": "SAFE",
+ "content_category": "OFFICIAL_MILITARY",
+ "total_risk_score": 0.0,
+ "visual_similarity_score": 100.0,
+ "impersonated_target": "Portal Utama TNI Angkatan Darat (tniad.mil.id)",
+ "detected_logos": [
+  {
+   "brand_name": "TNI Angkatan Darat (Kartika Eka Paksi)",
+   "confidence": 92.1,
+   "bbox": {
+    "x": 527,
+    "y": 181,
+    "width": 226,
+    "height": 226
+   }
+  }
+ ],
+ "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/scan_b7917b19.png",
+ "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/scan_b7917b19_dom.png",
+ "supabase_synced": true,
+ "supabase_incident_id": "a74cf53b-fb75-4f62-b667-6e192f045088",
+ "applied_rules": [
+  "OFFICIAL_WHITELIST: domain resmi .mil.id/.go.id tanpa form lintas-origin"
+ ]
+}

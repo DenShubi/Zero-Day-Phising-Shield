@@ -1,0 +1,146 @@
+{
+ "success": true,
+ "scan_id": "scan_16c43267",
+ "initial_url": "http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html",
+ "final_url": "http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html",
+ "redirect_chain": [
+  "http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html"
+ ],
+ "status_code": 200,
+ "screenshot_path": "storage/screenshots/scan_16c43267.png",
+ "annotated_dom_path": "storage/annotated/scan_16c43267_dom.png",
+ "page_title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+ "forms": [
+  {
+   "form_index": 0,
+   "action": "https://evil-exfil-collector.example.com/harvest.php",
+   "resolved_action": "https://evil-exfil-collector.example.com/harvest.php",
+   "method": "POST",
+   "is_cross_origin": true,
+   "bbox": {
+    "x": 768,
+    "y": 303,
+    "width": 403,
+    "height": 201
+   }
+  }
+ ],
+ "inputs": [
+  {
+   "tag": "input",
+   "type": "text",
+   "name": "nrp_nik",
+   "id": "nrp_nik",
+   "placeholder": "Masukkan 16 digit NIK atau NRP Prajurit",
+   "required": true,
+   "is_sensitive_credential": true,
+   "bbox": {
+    "x": 770,
+    "y": 330,
+    "width": 399,
+    "height": 37
+   }
+  },
+  {
+   "tag": "input",
+   "type": "password",
+   "name": "kata_sandi",
+   "id": "kata_sandi",
+   "placeholder": "Masukkan Kata Sandi Akun Seleksi",
+   "required": true,
+   "is_sensitive_credential": true,
+   "bbox": {
+    "x": 770,
+    "y": 402,
+    "width": 399,
+    "height": 37
+   }
+  }
+ ],
+ "images": [
+  {
+   "src": "http://localhost:8000/mock-targets/assets/kartika.png",
+   "alt": "Lambang Kartika Eka Paksi TNI Angkatan Darat",
+   "bbox": {
+    "x": 48,
+    "y": 15,
+    "width": 78,
+    "height": 98
+   }
+  },
+  {
+   "src": "http://localhost:8000/mock-targets/assets/panpus-logo.png",
+   "alt": "Logo Panitia Pusat Penerimaan Prajurit TNI AD",
+   "bbox": {
+    "x": 1136,
+    "y": 14,
+    "width": 96,
+    "height": 96
+   }
+  }
+ ],
+ "detected_military_keywords": [
+  "tni",
+  "angkatan darat",
+  "pussiberad",
+  "bintara",
+  "tamtama",
+  "sisfopers",
+  "nrp",
+  "kodam",
+  "prajurit"
+ ],
+ "external_domains_contacted": [
+  "evil-exfil-collector.example.com"
+ ],
+ "risk_analysis": {
+  "dom_anomaly_score": 100.0,
+  "domain_telemetry_score": 100.0,
+  "has_credential_harvesting": true,
+  "is_official_mil_domain": false,
+  "forensic_reasons": [
+   "Active password input field (<input type='password'>) detected on unauthorized/suspicious domain (+40 DOM Risk)",
+   "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)",
+   "Cross-origin credential exfiltration endpoint detected: https://evil-exfil-collector.example.com/harvest.php (+35 DOM Risk)",
+   "TNI AD / Military terminology (tni, angkatan darat, pussiberad, bintara, tamtama) used on non-.mil.id domain (+20 DOM Risk)",
+   "Anti-inspection tampering detected: right-click context menu (oncontextmenu) is disabled",
+   "Penggunaan kata kunci institusi militer (bintara, rekrutmen) pada domain non-resmi 'localhost'",
+   "Tautan menggunakan alamat IP mentah / host lokal ('localhost')",
+   "Tautan tidak menggunakan enkripsi HTTPS standar (skema 'http://')",
+   "Impersonated military emblem detected: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)"
+  ]
+ },
+ "execution_time_sec": 10.894,
+ "verdict": "CRITICAL_PHISHING",
+ "content_category": "MILITARY_PHISHING",
+ "total_risk_score": 99.55,
+ "visual_similarity_score": 99.0,
+ "impersonated_target": "Panpus Penerimaan Prajurit TNI AD",
+ "detected_logos": [
+  {
+   "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+   "confidence": 99.0,
+   "bbox": {
+    "x": 1136,
+    "y": 14,
+    "width": 96,
+    "height": 96
+   }
+  },
+  {
+   "brand_name": "TNI AD / Kartika Eka Paksi",
+   "confidence": 92.0,
+   "bbox": {
+    "x": 48,
+    "y": 15,
+    "width": 78,
+    "height": 98
+   }
+  }
+ ],
+ "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/scan_16c43267.png",
+ "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/scan_16c43267_dom.png",
+ "supabase_synced": true,
+ "supabase_incident_id": "f9afe0fa-ef1b-44a7-adf1-7f38dc95be47",
+ "applied_rules": []
+}

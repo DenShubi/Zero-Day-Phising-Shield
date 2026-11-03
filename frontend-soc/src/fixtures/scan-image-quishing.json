@@ -1,0 +1,56 @@
+{
+ "success": true,
+ "scan_id": "img_ec3ee9323e",
+ "source_image": "uploaded_image.png",
+ "verdict": "CRITICAL_PHISHING",
+ "content_category": "POSTER_SCAM",
+ "layout_type": "WEB_SCREENSHOT",
+ "total_risk_score": 93.45,
+ "visual_similarity_score": 99.0,
+ "dom_anomaly_score": 88.0,
+ "domain_telemetry_score": 90.0,
+ "impersonated_target": "Panpus Penerimaan Prajurit TNI AD",
+ "detected_logos": [
+  {
+   "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+   "confidence": 99.0,
+   "bbox": {
+    "x": 50,
+    "y": 15,
+    "width": 90,
+    "height": 90
+   }
+  }
+ ],
+ "decoded_qr_codes": [
+  {
+   "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "bbox": {
+    "x": 897,
+    "y": 337,
+    "width": 227,
+    "height": 227
+   }
+  }
+ ],
+ "extracted_urls": [
+  "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+ ],
+ "ocr_text_snippet": "PANITIA PUSAT PENERIMAAN PRAJURIT TNI AD TA 2026 PENGUMUMAN VERIFIKASI ULANG NRP & KUOTA BINTARA SIBER Pindai QR Code di sebelah kanan untuk login NRP & Kata Sandi Anda:",
+ "visual_input_boxes_count": 0,
+ "forensic_reasons": [
+  "Terdeteksi kode QR di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+  "Terdeteksi pencatutan lambang resmi militer pada konten berisiko: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+  "Penggunaan kata kunci institusi militer (tniad, tni, bintara) pada domain non-resmi 'rekrutmen-bintara-tniad.com'",
+  "Tangkapan layar menampilkan antarmuka login/input data (0 kolom visual) bermuatan atribut militer tanpa domain resmi .mil.id",
+  "Poster/gambar menyisipkan QR Code menuju domain tidak terverifikasi (Indikasi Quishing)"
+ ],
+ "screenshot_path": "storage/screenshots/img_ec3ee9323e.png",
+ "annotated_dom_path": "storage/annotated/img_ec3ee9323e_dom.png",
+ "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_ec3ee9323e.png",
+ "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_ec3ee9323e_dom.png",
+ "supabase_synced": true,
+ "supabase_incident_id": "caccee54-1ab0-4751-a616-d59b54d462dd",
+ "applied_rules": [],
+ "execution_time_sec": 17.577
+}

@@ -1,0 +1,6 @@
+{
+ "status": "healthy",
+ "service": "visikartika-shield-engine",
+ "platform": "win32",
+ "supabase_configured": true
+}

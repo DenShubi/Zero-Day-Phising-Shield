@@ -1,0 +1,17 @@
+{
+ "total_targets": 3,
+ "targets": [
+  {
+   "filename": "kemhan_auth_phish.html",
+   "url": "http://localhost:8000/mock-targets/kemhan_auth_phish.html"
+  },
+  {
+   "filename": "rekrutmen_bintara_phish.html",
+   "url": "http://localhost:8000/mock-targets/rekrutmen_bintara_phish.html"
+  },
+  {
+   "filename": "sso_sisfopers_phish.html",
+   "url": "http://localhost:8000/mock-targets/sso_sisfopers_phish.html"
+  }
+ ]
+}

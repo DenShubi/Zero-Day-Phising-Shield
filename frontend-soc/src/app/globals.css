@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   VisiKartika Shield - SOC command theme.
+
+   Dark tactical ground. Verdict colours are defined ONCE here and consumed by
+   badges, score bars, chart series, map markers and bbox strokes, so CRITICAL
+   never renders as three different reds across three pages.
+
+   Contrast is tuned for a conference projector: no thin low-contrast greys,
+   base font 16px, and every colour is paired with an icon and a text label in
+   the components - never colour alone.
+--------------------------------------------------------------------------- */
+
+:root {
+  --background: #0b0f14;
+  --surface: #121923;
+  --surface-raised: #182230;
+  --border: #243143;
+  --border-strong: #35486180;
+
+  --foreground: #e8eef6;
+  --muted: #9fb0c6;
+  --muted-strong: #c3d1e2;
+
+  /* Kartika Eka Paksi green - the institutional accent. */
+  --accent: #1f7a4d;
+  --accent-bright: #2fa96b;
+
+  /* Verdict scale. */
+  --verdict-safe: #2fa96b;
+  --verdict-suspicious: #e0a32e;
+  --verdict-critical: #e5484d;
+
+  /* Annotation layers, mirroring what the engine burns into the evidence PNG
+     (BGR in OpenCV, RGB here):
+       logo   crimson  app/vision/logo_detector.py
+       qr     magenta  app/vision/ocr_quishing.py
+       form   amber    app/sandbox/annotator.py
+       input  red      app/sandbox/annotator.py */
+  --layer-logo: #ed1c24;
+  --layer-qr: #d228d2;
+  --layer-form: #ffa500;
+  --layer-input: #ef4444;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-safe: var(--verdict-safe);
+  --color-suspicious: var(--verdict-suspicious);
+  --color-critical: var(--verdict-critical);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+kbd,
+samp,
+.vk-mono {
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+}
+
+/* --------------------------- bounding-box overlay ------------------------- */
+
+.vk-overlay {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.vk-overlay__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.vk-overlay__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--muted-strong);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.vk-overlay__legend-item:hover {
+  border-color: var(--swatch);
+}
+
+/* A disabled layer stays readable - dimmed and struck, not invisible. */
+.vk-overlay__legend-item[data-off] {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.vk-overlay__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  background: var(--swatch);
+}
+
+.vk-overlay__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* The image sizes the frame. No fixed aspect ratio: an image scan's source can
+   be any shape, and its bboxes are in that source's own pixel space. */
+.vk-overlay__frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.vk-overlay__image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.vk-overlay__box {
+  position: absolute;
+  padding: 0;
+  border: 2px solid var(--stroke);
+  background: color-mix(in srgb, var(--stroke) 12%, transparent);
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.vk-overlay__box:hover,
+.vk-overlay__box[data-active] {
+  background: color-mix(in srgb, var(--stroke) 28%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--stroke) 55%, transparent);
+}
+
+.vk-overlay__tag {
+  position: absolute;
+  top: -1.4rem;
+  left: -2px;
+  padding: 0.1rem 0.35rem;
+  background: var(--stroke);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: 3px 3px 0 0;
+}
+
+/* A box at the very top would otherwise have its tag clipped by the frame. */
+.vk-overlay__box[style*="top: 0%"] .vk-overlay__tag,
+.vk-overlay__box[style*="top: 0."] .vk-overlay__tag {
+  top: auto;
+  bottom: -1.4rem;
+  border-radius: 0 0 3px 3px;
+}
+
+.vk-overlay__error,
+.vk-overlay__note {
+  padding: 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* ------------------------------ print report ------------------------------ */
+
+@media print {
+  :root {
+    --background: #fff;
+    --surface: #fff;
+    --surface-raised: #fff;
+    --foreground: #000;
+    --muted: #333;
+    --border: #999;
+  }
+
+  .vk-no-print {
+    display: none !important;
+  }
+
+  .vk-overlay__legend-item {
+    border-color: #999;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: #555;
+  }
+}

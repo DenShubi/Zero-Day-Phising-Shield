@@ -1,0 +1,1400 @@
+{
+ "configured": true,
+ "total_returned": 23,
+ "incidents": [
+  {
+   "id": "6dec7ab9-54de-49b9-bc93-f4f9b405ba16",
+   "submitted_url": "https://docs.google.com/document/d/1FKZ75UUB9v_N9otB8YRRBFnxracZTXA7/edit",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 78.0,
+   "visual_similarity_score": 14.11,
+   "dom_anomaly_score": 88.0,
+   "domain_telemetry_score": 55.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_bc6fb41835.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_bc6fb41835_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "POSTER_FLYER",
+    "risk_fusion": {
+     "verdict": "CRITICAL_PHISHING",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [
+      "GENERIC_SCAM_OR_PHISHING: terdeteksi pola penipuan siber/APK/tautan phishing umum (skor min 78)"
+     ],
+     "weighted_score": 46.5,
+     "total_risk_score": 78.0
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [
+     "https://docs.google.com/document/d/1FKZ75UUB9v_N9otB8YRRBFnxracZTXA7/edit",
+     "https://bit.ly/sya"
+    ],
+    "content_category": "GENERIC_PHISHING",
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 406,
+       "y": 300,
+       "width": 97,
+       "height": 98
+      },
+      "payload": "https://docs.google.com/document/d/1FKZ75UUB9v_N9otB8YRRBFnxracZTXA7/edit"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi kode QR di dalam gambar: 'https://docs.google.com/document/d/1FKZ75UUB9v_N9otB8YRRBFnxracZTXA7/edit'",
+     "Tautan menggunakan penyingkat URL ('bit.ly') yang menyembunyikan domain tujuan asli",
+     "Poster/gambar menyisipkan QR Code menuju domain tidak terverifikasi (Indikasi Quishing)"
+    ],
+    "ocr_text_snippet": "bkkbV YAYASAN SATO LOMBA KONTEN VIDEO PENDEK e DESAIN POSTER TOTAL HADIAH 5 JUTA RUPIAH YUKKK SEGERA DAFTAR ! Kampanye Publik pelibatan Remaja Dalarn Mengatasi Stunting di Habupaten Brebes Sya rat Link pond aftaran Poster penda furan 6 - 31",
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-03T04:07:01.301972+00:00"
+  },
+  {
+   "id": "8bb8e588-8767-4d02-abf1-3e7205262b00",
+   "submitted_url": "[IMAGE:POSTER_FLYER] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Najaa)",
+   "total_risk_score": 18.73,
+   "visual_similarity_score": 28.3,
+   "dom_anomaly_score": 10.0,
+   "domain_telemetry_score": 12.0,
+   "verdict": "SAFE",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_9d8691df9a.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_9d8691df9a_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "POSTER_FLYER",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 18.73,
+     "total_risk_score": 18.73
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "content_category": "POSTER_GENERAL_SAFE",
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Gambar diklasifikasikan sebagai POSTER_FLYER umum non-militer; tidak ditemukan indikasi phishing, malware, maupun pencatutan lambang TNI AD."
+    ],
+    "ocr_text_snippet": null,
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-03T04:03:01.707924+00:00"
+  },
+  {
+   "id": "1e1cb9a2-4cc2-4843-a378-c1c0ba70aeb7",
+   "submitted_url": "[IMAGE:WEB_SCREENSHOT] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Zuzu)",
+   "total_risk_score": 13.31,
+   "visual_similarity_score": 16.24,
+   "dom_anomaly_score": 10.0,
+   "domain_telemetry_score": 12.0,
+   "verdict": "SAFE",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_dc1a6af2b2.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_dc1a6af2b2_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "WEB_SCREENSHOT",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 13.31,
+     "total_risk_score": 13.31
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "content_category": "GENERAL_WEB_SAFE",
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Gambar diklasifikasikan sebagai WEB_SCREENSHOT umum non-militer; tidak ditemukan indikasi phishing, malware, maupun pencatutan lambang TNI AD."
+    ],
+    "ocr_text_snippet": "Kreasi Hangat Kemitraan Beranda Event Portofolio Kemitraan Tentang Kami Masuk Registrasi Mari Berkolaborasi Mengembangkan Ekosstem Kreatif Kami membuka kesempatan kolaborasi dengan berbagai pihak, seperti kafe, mal, dan tutor, untuk menghad",
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-02T10:16:54.497668+00:00"
+  },
+  {
+   "id": "644fa939-610b-451b-b779-f92dd68a6fa1",
+   "submitted_url": "[IMAGE:WEB_SCREENSHOT] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Zuzu)",
+   "total_risk_score": 13.31,
+   "visual_similarity_score": 16.24,
+   "dom_anomaly_score": 10.0,
+   "domain_telemetry_score": 12.0,
+   "verdict": "SAFE",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_31818caa7a.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_31818caa7a_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "WEB_SCREENSHOT",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 13.31,
+     "total_risk_score": 13.31
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "content_category": "GENERAL_WEB_SAFE",
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Gambar diklasifikasikan sebagai WEB_SCREENSHOT umum non-militer; tidak ditemukan indikasi phishing, malware, maupun pencatutan lambang TNI AD."
+    ],
+    "ocr_text_snippet": "Kreasi Hangat Kemitraan Beranda Event Portofolio Kemitraan Tentang Kami Masuk Registrasi Mari Berkolaborasi Mengembangkan Ekosstem Kreatif Kami membuka kesempatan kolaborasi dengan berbagai pihak, seperti kafe, mal, dan tutor, untuk menghad",
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-02T10:16:53.544447+00:00"
+  },
+  {
+   "id": "31032c4a-16c9-4471-b871-838b75171ed0",
+   "submitted_url": "https://ad.rekrutmen-tni.mil.id/",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 0.0,
+   "visual_similarity_score": 13.44,
+   "dom_anomaly_score": 0.0,
+   "domain_telemetry_score": 0.0,
+   "verdict": "SAFE",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_208027d0ae.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_208027d0ae_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "POSTER_FLYER",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [
+      "OFFICIAL_WHITELIST: seluruh tautan/QR mengarah ke domain resmi"
+     ],
+     "weighted_score": 6.05,
+     "total_risk_score": 0.0
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [
+     "https://ad.rekrutmen-tni.mil.id/"
+    ],
+    "content_category": "POSTER_OFFICIAL_MILITARY",
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 314,
+       "y": 255,
+       "width": 103,
+       "height": 103
+      },
+      "payload": "https://ad.rekrutmen-tni.mil.id/"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi kode QR di dalam gambar: 'https://ad.rekrutmen-tni.mil.id/'",
+     "Domain resmi terverifikasi: ad.rekrutmen-tni.mil.id"
+    ],
+    "ocr_text_snippet": "BWBINGAN BEWAR Tetnh ENDAFTARAN BINTARA & TAMTAMA Gelombang I Tahun 2027 Website Pendafiaran I https//ad.rekrutmen-tni.mll_id- 524 EXCELLENTBLITAR_ Scan Disini: GESER",
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-02T10:15:53.610382+00:00"
+  },
+  {
+   "id": "5c873974-041f-4e21-9c33-0c83d6d0548f",
+   "submitted_url": "https://ad.rekrutmen-tni.mil.id/",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 0.0,
+   "visual_similarity_score": 13.44,
+   "dom_anomaly_score": 0.0,
+   "domain_telemetry_score": 0.0,
+   "verdict": "SAFE",
+   "impersonated_target": null,
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_f2652f2148.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_f2652f2148_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "MULTIMODAL_IMAGE_OCR_QUISHING",
+    "layout_type": "POSTER_FLYER",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [
+      "OFFICIAL_WHITELIST: seluruh tautan/QR mengarah ke domain resmi"
+     ],
+     "weighted_score": 6.05,
+     "total_risk_score": 0.0
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [
+     "https://ad.rekrutmen-tni.mil.id/"
+    ],
+    "content_category": "POSTER_OFFICIAL_MILITARY",
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 314,
+       "y": 255,
+       "width": 103,
+       "height": 103
+      },
+      "payload": "https://ad.rekrutmen-tni.mil.id/"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi kode QR di dalam gambar: 'https://ad.rekrutmen-tni.mil.id/'",
+     "Domain resmi terverifikasi: ad.rekrutmen-tni.mil.id"
+    ],
+    "ocr_text_snippet": "BWBINGAN BEWAR Tetnh ENDAFTARAN BINTARA & TAMTAMA Gelombang I Tahun 2027 Website Pendafiaran I https//ad.rekrutmen-tni.mll_id- 524 EXCELLENTBLITAR_ Scan Disini: GESER",
+    "visual_input_boxes_count": 0
+   },
+   "created_at": "2026-11-02T10:15:53.604263+00:00"
+  },
+  {
+   "id": "4b0d65b2-0e0a-4f5e-835a-0984511d77f5",
+   "submitted_url": "[IMAGE] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Zuzu)",
+   "total_risk_score": 23.62,
+   "visual_similarity_score": 34.15,
+   "dom_anomaly_score": 15.0,
+   "domain_telemetry_score": 15.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_915ee54ccf.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_915ee54ccf_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 23.62,
+     "total_risk_score": 23.62
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar"
+    ]
+   },
+   "created_at": "2026-11-02T10:09:04.140008+00:00"
+  },
+  {
+   "id": "65e0a215-19fb-4d8e-bb64-289cb8b5d734",
+   "submitted_url": "[IMAGE] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Zuzu)",
+   "total_risk_score": 21.57,
+   "visual_similarity_score": 29.59,
+   "dom_anomaly_score": 15.0,
+   "domain_telemetry_score": 15.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_23ff05d577.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_23ff05d577_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 21.57,
+     "total_risk_score": 21.57
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar"
+    ]
+   },
+   "created_at": "2026-11-02T09:57:42.538664+00:00"
+  },
+  {
+   "id": "7096ee2e-62f3-48bb-ab2c-2b52727728a6",
+   "submitted_url": "https://ad.rekrutmen-tni.mil.id/",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 0.0,
+   "visual_similarity_score": 26.03,
+   "dom_anomaly_score": 50.0,
+   "domain_telemetry_score": 0.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_ea0ff44ad5.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_ea0ff44ad5_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [
+      "OFFICIAL_WHITELIST: seluruh tautan/QR mengarah ke domain resmi"
+     ],
+     "weighted_score": 26.71,
+     "total_risk_score": 0.0
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [
+     "https://ad.rekrutmen-tni.mil.id/"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 314,
+       "y": 255,
+       "width": 103,
+       "height": 103
+      },
+      "payload": "https://ad.rekrutmen-tni.mil.id/"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://ad.rekrutmen-tni.mil.id/'",
+     "Domain resmi terverifikasi: ad.rekrutmen-tni.mil.id"
+    ]
+   },
+   "created_at": "2026-11-02T08:30:10.425454+00:00"
+  },
+  {
+   "id": "eb0ee3d8-b3fd-4b7b-89d4-b2625d33a8a7",
+   "submitted_url": "[IMAGE] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Zuzu)",
+   "total_risk_score": 21.57,
+   "visual_similarity_score": 29.59,
+   "dom_anomaly_score": 15.0,
+   "domain_telemetry_score": 15.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_0feb04f799.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_0feb04f799_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 21.57,
+     "total_risk_score": 21.57
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar"
+    ]
+   },
+   "created_at": "2026-11-02T08:27:53.798105+00:00"
+  },
+  {
+   "id": "00a70a85-0726-4c46-9db1-7f9835776b67",
+   "submitted_url": "[IMAGE] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 20.43,
+   "visual_similarity_score": 27.07,
+   "dom_anomaly_score": 15.0,
+   "domain_telemetry_score": 15.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_b0c71cfe16.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_b0c71cfe16_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 20.43,
+     "total_risk_score": 20.43
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar"
+    ]
+   },
+   "created_at": "2026-11-02T08:27:34.593635+00:00"
+  },
+  {
+   "id": "7aa9e138-575e-424c-aefe-3854c529feeb",
+   "submitted_url": "[IMAGE] uploaded_image.png",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 14.75,
+   "visual_similarity_score": 14.45,
+   "dom_anomaly_score": 15.0,
+   "domain_telemetry_score": 15.0,
+   "verdict": "SAFE",
+   "impersonated_target": "Portal Kementerian Pertahanan RI (www.kemhan.go.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_76dd04f0a3.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_76dd04f0a3_dom.png",
+   "detected_logos": [],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "SAFE",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 14.75,
+     "total_risk_score": 14.75
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [],
+    "decoded_qr_codes": [],
+    "forensic_reasons": [
+     "Tidak ditemukan QR code berbahaya maupun pencatutan lambang resmi TNI AD pada gambar"
+    ]
+   },
+   "created_at": "2026-11-02T08:13:37.398465+00:00"
+  },
+  {
+   "id": "8a40a1dc-3816-465b-ad09-f9071103981d",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Openwa (Denindra)",
+   "total_risk_score": 91.34,
+   "visual_similarity_score": 96.3,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_ef17942d66.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_ef17942d66_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 96.3
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "risk_fusion": {
+     "verdict": "CRITICAL_PHISHING",
+     "weights": {
+      "dom": 0.3,
+      "domain": 0.25,
+      "visual": 0.45
+     },
+     "applied_rules": [],
+     "weighted_score": 91.34,
+     "total_risk_score": 91.34
+    },
+    "source_image": "uploaded_image.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (96.3% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-02T08:12:50.041279+00:00"
+  },
+  {
+   "id": "31920e55-31dc-484d-8474-9dda2402afa7",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (6285745****322)",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_753eacee96.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_753eacee96_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:57:59.121524+00:00"
+  },
+  {
+   "id": "01591603-bb7a-4fde-9a95-c7f3942379c7",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (6285745****322)",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_d20673ea1e.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_d20673ea1e_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:53:25.888101+00:00"
+  },
+  {
+   "id": "d32b60d2-3e37-4423-8e4f-c4ee61dc05fc",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (6285745****322)",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_1c462f11fd.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_1c462f11fd_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:53:04.736471+00:00"
+  },
+  {
+   "id": "17895659-ab1f-4e3c-9f50-e901151a4dc8",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (Prajurit)",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_2833ba181a.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_2833ba181a_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:50:44.71769+00:00"
+  },
+  {
+   "id": "554fa8aa-6107-45fd-b211-0d5437c9725b",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (Prajurit)",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/img_c27a204082.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/img_c27a204082_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": "Izin komandan, dapat poster pendaftaran bintara lewat WA grup:",
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:43:33.012179+00:00"
+  },
+  {
+   "id": "cd389e06-8443-4fd0-be05-41fd27d2deb4",
+   "submitted_url": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp",
+   "reporter_source": "WEB_SANDBOX",
+   "reporter_unit": "Uji Juri - Quishing Poster",
+   "total_risk_score": 92.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 85.0,
+   "domain_telemetry_score": 90.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Resmi Markas Besar TNI (tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/quishing_poster_001.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/quishing_poster_001_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 50,
+      "y": 15,
+      "width": 90,
+      "height": 90
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    }
+   ],
+   "dom_findings": {
+    "caption": null,
+    "scan_mode": "IMAGE_AND_QUISHING",
+    "source_image": "poster_quishing_bintara.png",
+    "extracted_urls": [
+     "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+    ],
+    "decoded_qr_codes": [
+     {
+      "bbox": {
+       "x": 897,
+       "y": 337,
+       "width": 227,
+       "height": 227
+      },
+      "payload": "https://rekrutmen-bintara-tniad.com/verifikasi-nrp"
+     }
+    ],
+    "forensic_reasons": [
+     "Terdeteksi penggunaan lambang resmi militer pada gambar: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)",
+     "Terdeteksi kode QR (Quishing) di dalam gambar: 'https://rekrutmen-bintara-tniad.com/verifikasi-nrp'",
+     "Tautan mengarah ke domain eksternal non-militer: 'rekrutmen-bintara-tniad.com'",
+     "Indikasi typosquatting / penyamaran nama institusi militer pada domain 'rekrutmen-bintara-tniad.com'",
+     "Poster/gambar menyisipkan QR Code menuju tautan eksternal non-.mil.id (Indikasi Quishing)"
+    ]
+   },
+   "created_at": "2026-11-01T13:43:19.925945+00:00"
+  },
+  {
+   "id": "6cacb0df-0637-403c-b8a3-0c73dce8301e",
+   "submitted_url": "mock_targets/rekrutmen_bintara_phish.html",
+   "reporter_source": "WEB_SANDBOX",
+   "reporter_unit": "Uji Sinkronisasi Zuan -> Supabase Denin",
+   "total_risk_score": 99.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 100.0,
+   "domain_telemetry_score": 100.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/sync_test_bintara.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/sync_test_bintara_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 1136,
+      "y": 14,
+      "width": 96,
+      "height": 96
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    },
+    {
+     "bbox": {
+      "x": 48,
+      "y": 15,
+      "width": 78,
+      "height": 98
+     },
+     "brand_name": "TNI AD / Kartika Eka Paksi",
+     "confidence": 92.0
+    }
+   ],
+   "dom_findings": {
+    "forms": [
+     {
+      "bbox": {
+       "x": 768,
+       "y": 303,
+       "width": 403,
+       "height": 201
+      },
+      "action": "https://evil-exfil-collector.example.com/harvest.php",
+      "method": "POST",
+      "form_index": 0,
+      "is_cross_origin": true,
+      "resolved_action": "https://evil-exfil-collector.example.com/harvest.php"
+     }
+    ],
+    "final_url": "mock_targets/rekrutmen_bintara_phish.html",
+    "page_title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+    "status_code": 200,
+    "redirect_chain": [
+     "mock_targets/rekrutmen_bintara_phish.html"
+    ],
+    "forensic_reasons": [
+     "Active password input field (<input type='password'>) detected on unauthorized domain (+40 DOM Risk)",
+     "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)",
+     "Cross-origin credential exfiltration endpoint detected: https://evil-exfil-collector.example.com/harvest.php (+35 DOM Risk)",
+     "TNI AD / Military terminology (tni, angkatan darat, pussiberad, kartika, bintara) used on non-.mil.id domain (+20 DOM Risk)",
+     "Anti-inspection tampering detected: right-click context menu (oncontextmenu) is disabled",
+     "Deceptive military bait tokens in URL/hostname: bintara, rekrutmen",
+     "Transport layer lacks official TLS certificate (scheme='file://')",
+     "Target served from raw IP or non-registered hostname ('local-file')",
+     "Impersonated military emblem detected: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)"
+    ],
+    "sensitive_inputs": [
+     {
+      "id": "nrp_nik",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 330,
+       "width": 399,
+       "height": 37
+      },
+      "name": "nrp_nik",
+      "type": "text",
+      "required": true,
+      "placeholder": "Masukkan 16 digit NIK atau NRP Prajurit",
+      "is_sensitive_credential": true
+     },
+     {
+      "id": "kata_sandi",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 402,
+       "width": 399,
+       "height": 37
+      },
+      "name": "kata_sandi",
+      "type": "password",
+      "required": true,
+      "placeholder": "Masukkan Kata Sandi Akun Seleksi",
+      "is_sensitive_credential": true
+     }
+    ],
+    "detected_military_keywords": [
+     "tni",
+     "angkatan darat",
+     "pussiberad",
+     "kartika",
+     "bintara",
+     "tamtama",
+     "sisfopers",
+     "nrp",
+     "kodam",
+     "satuan"
+    ],
+    "external_domains_contacted": [
+     "evil-exfil-collector.example.com"
+    ]
+   },
+   "created_at": "2026-11-01T13:43:00.775059+00:00"
+  },
+  {
+   "id": "b83e7bb6-f615-4c41-84cb-670da91f6285",
+   "submitted_url": "mock_targets/rekrutmen_bintara_phish.html",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (085745****322)",
+   "total_risk_score": 99.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 100.0,
+   "domain_telemetry_score": 100.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/scan_3a84923a.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/scan_3a84923a_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 1136,
+      "y": 14,
+      "width": 96,
+      "height": 96
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    },
+    {
+     "bbox": {
+      "x": 48,
+      "y": 15,
+      "width": 78,
+      "height": 98
+     },
+     "brand_name": "TNI AD / Kartika Eka Paksi",
+     "confidence": 92.0
+    }
+   ],
+   "dom_findings": {
+    "forms": [
+     {
+      "bbox": {
+       "x": 768,
+       "y": 303,
+       "width": 403,
+       "height": 201
+      },
+      "action": "https://evil-exfil-collector.example.com/harvest.php",
+      "method": "POST",
+      "form_index": 0,
+      "is_cross_origin": true,
+      "resolved_action": "https://evil-exfil-collector.example.com/harvest.php"
+     }
+    ],
+    "final_url": "mock_targets/rekrutmen_bintara_phish.html",
+    "page_title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+    "status_code": 200,
+    "redirect_chain": [
+     "mock_targets/rekrutmen_bintara_phish.html"
+    ],
+    "forensic_reasons": [
+     "Active password input field (<input type='password'>) detected on unauthorized domain (+40 DOM Risk)",
+     "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)",
+     "Cross-origin credential exfiltration endpoint detected: https://evil-exfil-collector.example.com/harvest.php (+35 DOM Risk)",
+     "TNI AD / Military terminology (tni, angkatan darat, pussiberad, kartika, bintara) used on non-.mil.id domain (+20 DOM Risk)",
+     "Anti-inspection tampering detected: right-click context menu (oncontextmenu) is disabled",
+     "Deceptive military bait tokens in URL/hostname: bintara, pussiberad, rekrutmen",
+     "Transport layer lacks official TLS certificate (scheme='file://')",
+     "Target served from raw IP or non-registered hostname ('local-file')",
+     "Impersonated military emblem detected: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)"
+    ],
+    "sensitive_inputs": [
+     {
+      "id": "nrp_nik",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 330,
+       "width": 399,
+       "height": 37
+      },
+      "name": "nrp_nik",
+      "type": "text",
+      "required": true,
+      "placeholder": "Masukkan 16 digit NIK atau NRP Prajurit",
+      "is_sensitive_credential": true
+     },
+     {
+      "id": "kata_sandi",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 402,
+       "width": 399,
+       "height": 37
+      },
+      "name": "kata_sandi",
+      "type": "password",
+      "required": true,
+      "placeholder": "Masukkan Kata Sandi Akun Seleksi",
+      "is_sensitive_credential": true
+     }
+    ],
+    "detected_military_keywords": [
+     "tni",
+     "angkatan darat",
+     "pussiberad",
+     "kartika",
+     "bintara",
+     "tamtama",
+     "sisfopers",
+     "nrp",
+     "kodam",
+     "satuan"
+    ],
+    "external_domains_contacted": [
+     "evil-exfil-collector.example.com"
+    ]
+   },
+   "created_at": "2026-11-01T13:09:03.149878+00:00"
+  },
+  {
+   "id": "6ec5ee20-7fe9-4673-a3b2-84d171238a1b",
+   "submitted_url": "mock_targets/rekrutmen_bintara_phish.html",
+   "reporter_source": "WHATSAPP_BOT",
+   "reporter_unit": "WA Lapor Cepat (085706****737)",
+   "total_risk_score": 99.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 100.0,
+   "domain_telemetry_score": 100.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/scan_60ddab17.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/scan_60ddab17_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 1136,
+      "y": 14,
+      "width": 96,
+      "height": 96
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    },
+    {
+     "bbox": {
+      "x": 48,
+      "y": 15,
+      "width": 78,
+      "height": 98
+     },
+     "brand_name": "TNI AD / Kartika Eka Paksi",
+     "confidence": 92.0
+    }
+   ],
+   "dom_findings": {
+    "forms": [
+     {
+      "bbox": {
+       "x": 768,
+       "y": 303,
+       "width": 403,
+       "height": 201
+      },
+      "action": "https://evil-exfil-collector.example.com/harvest.php",
+      "method": "POST",
+      "form_index": 0,
+      "is_cross_origin": true,
+      "resolved_action": "https://evil-exfil-collector.example.com/harvest.php"
+     }
+    ],
+    "final_url": "mock_targets/rekrutmen_bintara_phish.html",
+    "page_title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+    "status_code": 200,
+    "redirect_chain": [
+     "mock_targets/rekrutmen_bintara_phish.html"
+    ],
+    "forensic_reasons": [
+     "Active password input field (<input type='password'>) detected on unauthorized domain (+40 DOM Risk)",
+     "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)",
+     "Cross-origin credential exfiltration endpoint detected: https://evil-exfil-collector.example.com/harvest.php (+35 DOM Risk)",
+     "TNI AD / Military terminology (tni, angkatan darat, pussiberad, kartika, bintara) used on non-.mil.id domain (+20 DOM Risk)",
+     "Anti-inspection tampering detected: right-click context menu (oncontextmenu) is disabled",
+     "Deceptive military bait tokens in URL/hostname: bintara, pussiberad, rekrutmen",
+     "Transport layer lacks official TLS certificate (scheme='file://')",
+     "Target served from raw IP or non-registered hostname ('local-file')",
+     "Impersonated military emblem detected: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)"
+    ],
+    "sensitive_inputs": [
+     {
+      "id": "nrp_nik",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 330,
+       "width": 399,
+       "height": 37
+      },
+      "name": "nrp_nik",
+      "type": "text",
+      "required": true,
+      "placeholder": "Masukkan 16 digit NIK atau NRP Prajurit",
+      "is_sensitive_credential": true
+     },
+     {
+      "id": "kata_sandi",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 402,
+       "width": 399,
+       "height": 37
+      },
+      "name": "kata_sandi",
+      "type": "password",
+      "required": true,
+      "placeholder": "Masukkan Kata Sandi Akun Seleksi",
+      "is_sensitive_credential": true
+     }
+    ],
+    "detected_military_keywords": [
+     "tni",
+     "angkatan darat",
+     "pussiberad",
+     "kartika",
+     "bintara",
+     "tamtama",
+     "sisfopers",
+     "nrp",
+     "kodam",
+     "satuan"
+    ],
+    "external_domains_contacted": [
+     "evil-exfil-collector.example.com"
+    ]
+   },
+   "created_at": "2026-11-01T13:08:13.29193+00:00"
+  },
+  {
+   "id": "020d685f-1e79-4943-8e88-410d25b5a671",
+   "submitted_url": "mock_targets/rekrutmen_bintara_phish.html",
+   "reporter_source": "WEB_SANDBOX",
+   "reporter_unit": "Uji Sinkronisasi Zuan -> Supabase Denin",
+   "total_risk_score": 99.55,
+   "visual_similarity_score": 99.0,
+   "dom_anomaly_score": 100.0,
+   "domain_telemetry_score": 100.0,
+   "verdict": "CRITICAL_PHISHING",
+   "impersonated_target": "Portal Rekrutmen Prajurit TNI AD (ad.rekrutmen-tni.mil.id)",
+   "captured_screenshot_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/screenshots/sync_test_bintara.png",
+   "annotated_bbox_url": "https://ifzpfineqqvqjomhogmm.supabase.co/storage/v1/object/public/scan-evidence/annotated/sync_test_bintara_dom.png",
+   "detected_logos": [
+    {
+     "bbox": {
+      "x": 1136,
+      "y": 14,
+      "width": 96,
+      "height": 96
+     },
+     "brand_name": "Panpus Penerimaan Prajurit TNI AD",
+     "confidence": 99.0
+    },
+    {
+     "bbox": {
+      "x": 48,
+      "y": 15,
+      "width": 78,
+      "height": 98
+     },
+     "brand_name": "TNI AD / Kartika Eka Paksi",
+     "confidence": 92.0
+    },
+    {
+     "bbox": {
+      "x": 1160,
+      "y": 36,
+      "width": 48,
+      "height": 48
+     },
+     "brand_name": "TNI Angkatan Darat (Kartika Eka Paksi)",
+     "confidence": 72.2
+    }
+   ],
+   "dom_findings": {
+    "forms": [
+     {
+      "bbox": {
+       "x": 768,
+       "y": 303,
+       "width": 403,
+       "height": 201
+      },
+      "action": "https://evil-exfil-collector.example.com/harvest.php",
+      "method": "POST",
+      "form_index": 0,
+      "is_cross_origin": true,
+      "resolved_action": "https://evil-exfil-collector.example.com/harvest.php"
+     }
+    ],
+    "final_url": "mock_targets/rekrutmen_bintara_phish.html",
+    "page_title": "Portal Daftar Akun / Masuk Akun - Panpus Penerimaan Prajurit TNI AD",
+    "status_code": 200,
+    "redirect_chain": [
+     "mock_targets/rekrutmen_bintara_phish.html"
+    ],
+    "forensic_reasons": [
+     "Active password input field (<input type='password'>) detected on unauthorized domain (+40 DOM Risk)",
+     "Personnel identity harvesting field (NRP/NIK) detected on non-official portal (+25 DOM Risk)",
+     "Cross-origin credential exfiltration endpoint detected: https://evil-exfil-collector.example.com/harvest.php (+35 DOM Risk)",
+     "TNI AD / Military terminology (tni, angkatan darat, pussiberad, kartika, bintara) used on non-.mil.id domain (+20 DOM Risk)",
+     "Anti-inspection tampering detected: right-click context menu (oncontextmenu) is disabled",
+     "Deceptive military bait tokens in URL/hostname: bintara, pussiberad, rekrutmen",
+     "Transport layer lacks official TLS certificate (scheme='file://')",
+     "Target served from raw IP or non-registered hostname ('local-file')",
+     "Impersonated military emblem detected: Panpus Penerimaan Prajurit TNI AD (99.0% confidence)"
+    ],
+    "sensitive_inputs": [
+     {
+      "id": "nrp_nik",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 330,
+       "width": 399,
+       "height": 37
+      },
+      "name": "nrp_nik",
+      "type": "text",
+      "required": true,
+      "placeholder": "Masukkan 16 digit NIK atau NRP Prajurit",
+      "is_sensitive_credential": true
+     },
+     {
+      "id": "kata_sandi",
+      "tag": "input",
+      "bbox": {
+       "x": 770,
+       "y": 402,
+       "width": 399,
+       "height": 37
+      },
+      "name": "kata_sandi",
+      "type": "password",
+      "required": true,
+      "placeholder": "Masukkan Kata Sandi Akun Seleksi",
+      "is_sensitive_credential": true
+     }
+    ],
+    "detected_military_keywords": [
+     "tni",
+     "angkatan darat",
+     "pussiberad",
+     "kartika",
+     "bintara",
+     "tamtama",
+     "sisfopers",
+     "nrp",
+     "kodam",
+     "satuan"
+    ],
+    "external_domains_contacted": [
+     "evil-exfil-collector.example.com"
+    ]
+   },
+   "created_at": "2026-11-01T12:58:09.185425+00:00"
+  }
+ ]
+}
