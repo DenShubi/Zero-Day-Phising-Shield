@@ -453,9 +453,18 @@ class _LazyEasyOcrEngine:
             if self._unavailable:
                 return None
             try:
+                import torch  # type: ignore
+
+                torch_threads = max(1, int(os.environ.get("TORCH_NUM_THREADS", "2")))
+                torch.set_num_threads(torch_threads)
+                gpu_pref = os.environ.get("VK_EASYOCR_GPU", "auto").strip().lower()
+                if gpu_pref == "auto":
+                    use_gpu = bool(torch.cuda.is_available())
+                else:
+                    use_gpu = gpu_pref in ("1", "true", "yes") and bool(torch.cuda.is_available())
+
                 import easyocr  # type: ignore
 
-                use_gpu = os.environ.get("VK_EASYOCR_GPU", "").strip().lower() in ("1", "true", "yes")
                 self._reader = easyocr.Reader(["id", "en"], gpu=use_gpu, verbose=False)
                 return self._reader
             except Exception:
@@ -467,7 +476,12 @@ class _LazyEasyOcrEngine:
         if reader is None:
             return ""
         try:
-            lines = reader.readtext(str(image_path.resolve()), detail=0, paragraph=True)  # type: ignore[attr-defined]
+            import torch  # type: ignore
+
+            with torch.inference_mode():
+                lines = reader.readtext(str(image_path.resolve()), detail=0, paragraph=True)  # type: ignore[attr-defined]
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             if isinstance(lines, list):
                 return "\n".join(str(item).strip() for item in lines if str(item).strip()).strip()
             return ""
@@ -497,6 +511,9 @@ def get_vision_capabilities() -> dict[str, object]:
     else:
         primary_ocr = "none"
 
+    import importlib.util
+
+    has_torch = importlib.util.find_spec("torch") is not None
     return {
         "qr_decoders": {
             "opencv_qrcode_multipass": True,
@@ -508,6 +525,8 @@ def get_vision_capabilities() -> dict[str, object]:
             "winrt_ocr_available": sys.platform == "win32" and not _WIN_OCR_WORKER._disabled,
             "tesseract_available": has_tesseract,
             "easyocr_installed": has_easyocr,
+            "pytorch_installed": has_torch,
+            "torch_profile": os.environ.get("VK_TORCH_PROFILE", "slim-none"),
         },
     }
 

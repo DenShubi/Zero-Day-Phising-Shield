@@ -1,0 +1,99 @@
+# ==============================================================================
+# VisiKartika Shield — Hardened Container Stack (Phase 5: CPU & GPU Profiles)
+# ==============================================================================
+# Usage:
+#   1. Ultra-Slim / CPU Minimal (Default):
+#        docker compose up -d --build
+#   2. PyTorch CPU + EasyOCR Profile:
+#        TORCH_PROFILE=cpu docker compose up -d --build
+#   3. NVIDIA GPU Profile (PyTorch CUDA 12.4 + EasyOCR GPU):
+#        docker compose --profile gpu up -d --build engine-gpu
+# ==============================================================================
+
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TORCH_PROFILE: ${TORCH_PROFILE:-none}
+    image: visikartika-shield-engine:${TORCH_PROFILE:-slim}
+    container_name: visikartika-engine
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8000"
+      VK_CONTAINER_MODE: "1"
+      VK_MAX_CONCURRENT_CONTEXTS: "2"
+      VK_V8_MAX_OLD_SPACE_MB: "256"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://zero-day-phising-shield.vercel.app}"
+    # Hardened Linux isolation boundaries
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    shm_size: "256mb"
+    pids_limit: 256
+    mem_limit: "1536m"
+    cpus: 2.0
+    tmpfs:
+      - /tmp:size=192m,mode=1777,nosuid,nodev
+      - /home/pwuser/.cache:size=64m,uid=10001,gid=10001,nosuid,nodev
+    volumes:
+      - engine_storage:/app/storage/screenshots
+      - engine_annotated:/app/storage/annotated
+
+  engine-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TORCH_PROFILE: gpu
+    image: visikartika-shield-engine:gpu
+    container_name: visikartika-engine-gpu
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8000"
+      VK_CONTAINER_MODE: "1"
+      VK_EASYOCR_GPU: "true"
+      VK_MAX_CONCURRENT_CONTEXTS: "4"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://zero-day-phising-shield.vercel.app}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    shm_size: "512mb"
+    pids_limit: 384
+    mem_limit: "4g"
+    tmpfs:
+      - /tmp:size=256m,mode=1777,nosuid,nodev
+      - /home/pwuser/.cache:size=128m,uid=10001,gid=10001,nosuid,nodev
+    volumes:
+      - engine_storage:/app/storage/screenshots
+      - engine_annotated:/app/storage/annotated
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  engine_storage:
+  engine_annotated:
+

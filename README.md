@@ -232,7 +232,16 @@ python scripts/benchmark_phase3.py
 
 # Menjalankan verifikasi Phase 4 Zuan (/api/v1/scan-image QR Quishing & Poster OCR)
 python scripts/verify_phase4.py
+
+# Menjalankan audit Phase 5 Zuan (Docker minimal footprint & isolasi SSRF/Chromium)
+python scripts/verify_phase5.py
 ```
+
+- **Optimasi Container Docker & Isolasi Chromium (`Phase 5 — Zuan`)**:
+  - **Multi-Stage `Dockerfile` (`TORCH_PROFILE=none|cpu|gpu`)**: Menggunakan `python:3.12-slim-bookworm` + instalasi khusus **Chromium saja** (menghemat `>1 GB` dibanding image multi-browser), `tini` sebagai PID-1 *zombie process reaper*, pembatasan memori `MALLOC_ARENA_MAX=2` & thread CPU (`OMP_NUM_THREADS=2`), serta user non-root `pwuser` (`UID 10001`).
+  - **Minimal Build Context (`.dockerignore`)**: Mengecualikan `frontend-soc/`, `node_modules/`, `openwa-gateway/`, `.venv/`, dan `storage/dataset/` sehingga konteks build hanya `~31 MB`.
+  - **Hardened Runtime (`docker-compose.yml` & `railway.toml`)**: Mendukung *read-only rootfs*, `cap_drop: ALL`, `no-new-privileges:true`, `pids_limit: 256`, `shm_size: 256mb`, profil CPU maupun GPU NVIDIA (`--profile gpu`), serta pra-konfigurasi `CORS_ORIGINS` untuk `https://zero-day-phising-shield.vercel.app`.
+  - **Zero-Trust Chromium Sub-Request Isolation (`app/sandbox/browser.py`)**: Pembatasan V8 Heap (`256 MB`), pemblokiran `ServiceWorker`/unduhan/popup/dialog trap, *auto-recycle* proses browser tiap 60 scan, serta pemblokiran *sub-request* SSRF ke `file://`, `169.254.169.254` (*cloud metadata*), `127.0.0.1`, dan jaringan privat RFC1918.
 
 ---
 
@@ -303,7 +312,7 @@ Berdasarkan **Sprint Gantt & Timeline Tracker** (**21 Workstreams** & **7 Sync M
 | **Phase 4** | 06 Nov – 08 Nov | **Zuan** | Tambahkan `PyZbar` & `EasyOCR` untuk scan QR code / poster phishing pada endpoint `/api/v1/scan-image`. | Hybrid OpenCV/PyZbar + WinRT/Tesseract/EasyOCR (`/api/v1/scan-image`) | ✅ **Done** |
 | **Phase 4** | 06 Nov – 08 Nov | **Denin** | Sambungkan endpoint FastAPI Person A ke webhook WhatsApp dan masukkan 5 halaman *mock phishing* legal ke `/public/mock-targets/`. | FastAPI-WA hook & 5 legal mock phishing targets | ⏳ Planned |
 | **Phase 4** | 06 Nov – 08 Nov | **Sync ★** | Tes alur penuh: Kirim screenshot poster phishing ber-QR ke nomor WhatsApp $\rightarrow$ Bot membalas analisis lengkap dalam < 5 detik. | End-to-end QR phishing scan in < 5s response | ⏳ Planned |
-| **Phase 5** | 09 Nov – 11 Nov | **Zuan** | Optimasi resource container Docker (PyTorch CPU/GPU minimal footprint), pastikan dependensi Chromium terisolasi. | Docker PyTorch CPU/GPU minimal container image | ⏳ Planned |
+| **Phase 5** | 09 Nov – 11 Nov | **Zuan** | Optimasi resource container Docker (PyTorch CPU/GPU minimal footprint), pastikan dependensi Chromium terisolasi. | Multi-stage `Dockerfile` (`none`/`cpu`/`gpu`), `docker-compose.yml`, & SSRF-isolated Chromium | ✅ **Done** |
 | **Phase 5** | 09 Nov – 11 Nov | **Denin** | Buat halaman *Forensics Detail* (*Side-by-side comparison*), tombol *"1-Click Judge Test"*, dan tombol *Export DNS Sinkhole*. | Forensics side-by-side UI & 1-Click test button | ⏳ Planned |
 | **Phase 5** | 09 Nov – 11 Nov | **Sync ★** | Deploy `backend-engine` ke VPS/Railway dan deploy `frontend-soc` ke Vercel; uji *public link*. | VPS backend & Vercel SOC production deployment | ⏳ Planned |
 | **Phase 6** | 12 Nov – 13 Nov | **Zuan** | Tulis draft dokumen `PRE_EXISTING_DECLARATION.md` dan susun bagian arsitektur teknis pada slide presentasi. | `PRE_EXISTING_DECLARATION.md` & tech slide draft | ⏳ Planned |

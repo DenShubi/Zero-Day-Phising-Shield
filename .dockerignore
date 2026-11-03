@@ -1,20 +1,38 @@
+# Python bytecode & local virtualenvs
 __pycache__/
 *.py[cod]
 *$py.class
 .venv/
 venv/
 env/
+.pytest_cache/
+*.egg-info/
+
+# Secrets & Git metadata (never bake into image)
 .env
+.env.*
+!.env.example
+.git/
+.gitignore
+.vscode/
+
+# Separate services (deployed independently on Vercel / Node host)
+frontend-soc/
+**/node_modules/
+openwa-gateway/
+supabase/
+
+# Ephemeral captures & offline benchmark datasets (keep 88KB phase3_benchmark_results.json for /audit)
 storage/screenshots/*.png
 storage/annotated/*.png
 storage/synthetic_yolo/
-.pytest_cache/
-.git/
-.gitignore
+storage/dataset/
+!storage/phase3_benchmark_results.json
 
-
-# WhatsApp gateway runs as its own service (Node.js); never bake it or its session data into the engine image
-openwa-gateway/
-.venv/
+# Dev / test / benchmark scripts not needed inside runtime container
+tests/
+postman/
+scripts/
+test_*.py
 *.md
 !README.md

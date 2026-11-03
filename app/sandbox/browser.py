@@ -2,6 +2,7 @@ import asyncio
 import atexit
 import ipaddress
 import json
+import os
 import re
 import shutil
 import sys
@@ -14,6 +15,11 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import cv2
+
+try:
+    cv2.setNumThreads(max(1, int(os.environ.get("VK_OPENCV_THREADS", "2"))))
+except Exception:
+    pass
 from playwright.async_api import (
     Browser,
     Playwright,
@@ -99,27 +105,157 @@ _ABORTED_TRACKER_HOSTS: tuple[str, ...] = (
     "mc.yandex.ru",
 )
 
-_CHROMIUM_ARGS: list[str] = [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--disable-extensions",
-    "--disable-background-networking",
-    "--disable-sync",
-    "--metrics-recording-only",
-    "--mute-audio",
-    "--no-first-run",
-]
+_ALLOWED_SUBREQUEST_SCHEMES: frozenset[str] = frozenset({"http", "https", "data", "blob", "about"})
+_PRIVATE_HOSTNAME_SUFFIXES: tuple[str, ...] = (
+    ".localhost",
+    ".local",
+    ".internal",
+    ".home.arpa",
+)
+_BLOCKED_METADATA_HOSTS: frozenset[str] = frozenset(
+    {
+        "localhost",
+        "localhost.localdomain",
+        "metadata.google.internal",
+        "metadata",
+        "169.254.169.254",
+        "100.100.100.200",
+        "fd00:ec2::254",
+    }
+)
 
-MAX_CONCURRENT_CONTEXTS = 4
+
+def _resolve_max_concurrent_contexts() -> int:
+    default_val = "2" if os.environ.get("VK_CONTAINER_MODE", "").strip() == "1" else "4"
+    try:
+        return max(1, min(8, int(os.environ.get("VK_MAX_CONCURRENT_CONTEXTS", default_val))))
+    except ValueError:
+        return 4
+
+
+def _resolve_browser_max_scans() -> int:
+    try:
+        return max(10, int(os.environ.get("VK_BROWSER_MAX_SCANS", "60")))
+    except ValueError:
+        return 60
+
+
+def _build_chromium_args() -> list[str]:
+    """
+    Build resource-capped and security-isolated Chromium launch flags (Phase 5).
+    - Keeps OS-level renderer sandboxing ENABLED on Windows/macOS and on Linux containers
+      configured with `VK_CHROMIUM_SANDBOX=true` (e.g. `docker/seccomp-chromium.json`).
+    - Falls back to `--no-sandbox` only on unprivileged Linux PaaS containers (e.g. Railway)
+      where host kernels restrict `CLONE_NEWUSER` user namespaces.
+    - Caps V8 JS heap (`--max-old-space-size`) and renderer count to prevent OOM DoS.
+    """
+    v8_heap_mb = max(128, min(1024, int(os.environ.get("VK_V8_MAX_OLD_SPACE_MB", "256"))))
+    os_sandbox_enabled = sys.platform == "win32" or sys.platform == "darwin" or (
+        os.environ.get("VK_CHROMIUM_SANDBOX", "").strip().lower() in ("1", "true", "yes")
+    )
+
+    args: list[str] = []
+    if not os_sandbox_enabled:
+        args.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+
+    args.extend(
+        [
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-software-rasterizer",
+            f"--js-flags=--max-old-space-size={v8_heap_mb}",
+            "--renderer-process-limit=2",
+            "--block-new-web-contents",
+            "--disable-extensions",
+            "--disable-component-extensions-with-background-pages",
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-sync",
+            "--disable-translate",
+            "--disable-default-apps",
+            "--disable-breakpad",
+            "--disable-crash-reporter",
+            "--disable-domain-reliability",
+            "--disable-client-side-phishing-detection",
+            "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints,AudioServiceOutOfProcess",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--no-default-browser-check",
+        ]
+    )
+    return args
+
+
+_CHROMIUM_ARGS: list[str] = _build_chromium_args()
+MAX_CONCURRENT_CONTEXTS = _resolve_max_concurrent_contexts()
+MAX_SCANS_BEFORE_RECYCLE = _resolve_browser_max_scans()
+
+
+def is_subrequest_allowed(req_url: str, allow_private_targets: bool = False) -> bool:
+    """
+    Enforce zero-trust network & protocol isolation on every sub-request and HTTP redirect
+    inside headless Chromium (blocks `file://`, `chrome://`, cloud metadata `169.254.169.254`,
+    and RFC1918/loopback SSRF pivots from external phishing pages).
+    """
+    if not req_url:
+        return False
+    parsed = urlparse(req_url)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in _ALLOWED_SUBREQUEST_SCHEMES:
+        return False
+    if scheme in ("data", "blob", "about"):
+        return True
+
+    host = (parsed.hostname or "").lower().strip(".").strip("[]")
+    if not host:
+        return False
+    if allow_private_targets:
+        return True
+
+    if host in _BLOCKED_METADATA_HOSTS or host.endswith(_PRIVATE_HOSTNAME_SUFFIXES):
+        return False
+
+    try:
+        ip = ipaddress.ip_address(host.split("%", 1)[0])
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return False
+    except ValueError:
+        pass
+
+    return True
+
+
+def get_sandbox_isolation_profile() -> dict[str, object]:
+    """Return active Chromium & container resource isolation settings for `/health` and Phase 5 audit."""
+    args = _build_chromium_args()
+    return {
+        "container_mode": os.environ.get("VK_CONTAINER_MODE", "").strip() == "1",
+        "os_renderer_sandbox": "--no-sandbox" not in args,
+        "dev_shm_disabled": "--disable-dev-shm-usage" in args,
+        "v8_max_old_space_mb": int(os.environ.get("VK_V8_MAX_OLD_SPACE_MB", "256")),
+        "max_concurrent_contexts": _resolve_max_concurrent_contexts(),
+        "browser_recycle_every_scans": _resolve_browser_max_scans(),
+        "ssrf_subrequest_guard": True,
+        "downloads_blocked": True,
+        "service_workers_blocked": True,
+        "non_root_user": (os.geteuid() != 0) if hasattr(os, "geteuid") else True,
+    }
 
 
 class _WarmPlaywrightPool:
     """
     Maintains a warm headless Chromium instance across scans while enforcing
     strict per-scan BrowserContext isolation (`accept_downloads=False`, fresh
-    cookies/storage) and bounded concurrency (`Semaphore(4)`).
+    cookies/storage, blocked ServiceWorkers), bounded concurrency, and automatic
+    browser process recycling every N scans to prevent memory fragmentation.
 
     On Windows (`win32`), runs inside a dedicated persistent daemon ProactorEventLoop
     thread so FastAPI/Uvicorn works seamlessly even under `--reload` SelectorEventLoop.
@@ -135,6 +271,8 @@ class _WarmPlaywrightPool:
         self._loop_id: Optional[int] = None
         self._async_lock: Optional[asyncio.Lock] = None
         self._semaphore: Optional[asyncio.Semaphore] = None
+        self._scan_count: int = 0
+        self._active_scans: int = 0
 
     def _ensure_win_loop(self) -> asyncio.AbstractEventLoop:
         with self._thread_lock:
@@ -168,12 +306,23 @@ class _WarmPlaywrightPool:
         cur_loop = asyncio.get_running_loop()
         if self._loop_id != id(cur_loop) or self._async_lock is None or self._semaphore is None:
             self._async_lock = asyncio.Lock()
-            self._semaphore = asyncio.Semaphore(MAX_CONCURRENT_CONTEXTS)
+            self._semaphore = asyncio.Semaphore(_resolve_max_concurrent_contexts())
             self._pw = None
             self._browser = None
+            self._scan_count = 0
+            self._active_scans = 0
             self._loop_id = id(cur_loop)
 
         async with self._async_lock:
+            should_recycle = (
+                self._browser is not None
+                and self._active_scans == 0
+                and self._scan_count >= _resolve_browser_max_scans()
+            )
+            if should_recycle:
+                await self._close_on_loop()
+                self._scan_count = 0
+
             if self._browser is None or not self._browser.is_connected():
                 if self._pw is not None:
                     try:
@@ -183,9 +332,19 @@ class _WarmPlaywrightPool:
                 self._pw = await async_playwright().start()
                 self._browser = await self._pw.chromium.launch(
                     headless=True,
-                    args=_CHROMIUM_ARGS,
+                    args=_build_chromium_args(),
+                    chromium_sandbox="--no-sandbox" not in _build_chromium_args(),
                 )
+                self._scan_count = 0
+            self._scan_count += 1
+            self._active_scans += 1
             return self._browser, self._semaphore
+
+    async def release_scan_slot(self) -> None:
+        if self._async_lock is None:
+            return
+        async with self._async_lock:
+            self._active_scans = max(0, self._active_scans - 1)
 
     async def _close_on_loop(self) -> None:
         browser, self._browser = self._browser, None
@@ -350,6 +509,11 @@ class HeadlessSandboxScanner:
         page_title = ""
         used_cached_portal: Optional[dict] = None
 
+        allow_private_subrequests = (
+            os.environ.get("ALLOW_PRIVATE_SCAN_TARGETS", "").strip().lower() in ("1", "true", "yes", "on")
+            or (initial_parsed.path or "").startswith("/mock-targets/")
+        )
+
         t_acq0 = time.perf_counter()
         browser, sem = await _GLOBAL_PW_POOL.acquire_browser()
 
@@ -357,11 +521,16 @@ class HeadlessSandboxScanner:
         render_settle_ms = 0.0
         screenshot_dom_extract_ms = 0.0
 
-        async with sem:
+        try:
+          async with sem:
             context = await browser.new_context(
                 viewport={"width": 1280, "height": 720},
                 accept_downloads=False,
                 ignore_https_errors=True,
+                service_workers="block",
+                permissions=[],
+                bypass_csp=False,
+                locale="id-ID",
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -369,7 +538,11 @@ class HeadlessSandboxScanner:
                 ),
             )
             try:
+                await context.add_init_script(
+                    "window.print = () => {}; window.open = () => null;"
+                )
                 page = await context.new_page()
+                page.on("dialog", lambda dlg: asyncio.create_task(dlg.dismiss()))
                 browser_acquire_ms = round((time.perf_counter() - t_acq0) * 1000.0, 2)
 
                 def _on_request(req: Request) -> None:
@@ -380,8 +553,11 @@ class HeadlessSandboxScanner:
 
                 async def _route_filter(route: Route) -> None:
                     req = route.request
+                    if not is_subrequest_allowed(req.url, allow_private_targets=allow_private_subrequests):
+                        await route.abort("accessdenied")
+                        return
                     rtype = req.resource_type
-                    if rtype in ("media", "eventsource"):
+                    if rtype in ("media", "eventsource", "websocket"):
                         await route.abort()
                         return
                     rhost = (urlparse(req.url).hostname or "").lower()
@@ -649,6 +825,8 @@ class HeadlessSandboxScanner:
                 screenshot_dom_extract_ms = round((time.perf_counter() - t_cap0) * 1000.0, 2)
             finally:
                 await context.close()
+        finally:
+            await _GLOBAL_PW_POOL.release_scan_slot()
 
         t_ann0 = time.perf_counter()
         forms = [FormElement(**f) for f in dom_payload["forms"]]

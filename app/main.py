@@ -24,6 +24,7 @@ from app.scanner_service import (
     execute_phase2_scan,
 )
 from app.supabase_client import SupabaseService
+from app.sandbox.browser import get_sandbox_isolation_profile
 from app.vision.image_analyzer import get_vision_capabilities
 from app.webhook_wa import router as wa_router
 from app.webhook_openwa import router as openwa_router
@@ -95,6 +96,7 @@ async def health_check() -> dict[str, object]:
         "platform": sys.platform,
         "supabase_configured": SupabaseService.is_configured(),
         "vision_capabilities": get_vision_capabilities(),
+        "sandbox_isolation": get_sandbox_isolation_profile(),
     }
 
 
