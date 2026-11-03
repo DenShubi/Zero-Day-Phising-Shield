@@ -1,13 +1,17 @@
-import { id } from '@/lib/i18n/id';
+import { WaSimulator } from '@/components/whatsapp/WaSimulator';
+import { id as t } from '@/lib/i18n/id';
 
-/** Placeholder: implemented in a later build step. */
-export default function Page() {
+export default function WhatsAppPage() {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-      <h1 className="text-lg font-semibold text-[var(--foreground)]">Halaman ini sedang dibangun</h1>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Modul akan tersedia pada tahap pembangunan berikutnya.
-      </p>
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      <header>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">{t.nav.whatsapp}</h1>
+        <p className="mt-0.5 text-sm text-[var(--muted)]">
+          Bagaimana seorang prajurit melaporkan tautan atau poster mencurigakan dari ponsel, dan
+          menerima putusan forensik dalam hitungan detik.
+        </p>
+      </header>
+      <WaSimulator />
     </div>
   );
 }
