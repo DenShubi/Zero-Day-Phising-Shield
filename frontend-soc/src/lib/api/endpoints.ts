@@ -254,16 +254,88 @@ export async function scanImage(
 
 /* -------------------------------- benchmark ------------------------------- */
 
+/**
+ * Shapes mirror what scripts/benchmark_phase3.py writes to
+ * storage/phase3_benchmark_results.json — read from the writer rather than
+ * inferred from a sample, so optional fields are known rather than guessed.
+ */
+
+export interface BenchmarkMetrics {
+  total: number;
+  tp: number;
+  tn: number;
+  fp: number;
+  fn: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  specificity: number;
+  f1_score: number;
+  balanced_accuracy: number;
+  fpr: number;
+  fnr: number;
+  roc_auc: number;
+  pr_auc: number;
+}
+
+/** Each entry is a [low, high] percentile pair from a 1000-draw bootstrap. */
+export interface BenchmarkCi95 {
+  accuracy_ci95?: [number, number];
+  precision_ci95?: [number, number];
+  recall_ci95?: [number, number];
+  f1_ci95?: [number, number];
+}
+
+export interface BenchmarkSlice {
+  slice_name: string;
+  modality: string;
+  count: number;
+  correct: number;
+  accuracy: number;
+  mean_sec: number;
+  p50_sec: number;
+  p95_sec: number;
+  sla_pct: number;
+}
+
+/** A baseline row is the model name plus the same metric set. */
+export type BenchmarkBaseline = { model: string } & Partial<BenchmarkMetrics>;
+
+export interface BenchmarkLatency {
+  count: number;
+  min: number;
+  mean: number;
+  p50: number;
+  p90: number;
+  p95: number;
+  max: number;
+  sla_pass_pct: number;
+}
+
+export interface BenchmarkConcurrency {
+  concurrent_requests: number;
+  wall_batch_sec: number;
+  mean_individual_sec: number;
+  max_individual_sec: number;
+  all_under_5s_sla: boolean;
+}
+
 export interface BenchmarkResponse {
   available: boolean;
   message?: string;
   generated_at?: string;
   sla_target_sec?: number;
-  overall_metrics?: Record<string, unknown>;
-  slice_summaries?: unknown[];
-  baseline_comparison?: unknown[];
-  concurrency_4x_summary?: Record<string, unknown>;
-  [key: string]: unknown;
+  browser_pool_warmup_ms?: number;
+  overall_metrics?: BenchmarkMetrics;
+  bootstrap_ci_95?: BenchmarkCi95;
+  slice_summaries?: BenchmarkSlice[];
+  baseline_comparison?: BenchmarkBaseline[];
+  playwright_url_latency_sec?: BenchmarkLatency;
+  playwright_url_stage_mean_ms?: Record<string, number>;
+  concurrency_4x_summary?: BenchmarkConcurrency;
+  multimodal_image_latency_sec?: BenchmarkLatency;
+  multimodal_image_stage_mean_ms?: Record<string, number>;
+  live_wan_results?: unknown[];
 }
 
 /**
