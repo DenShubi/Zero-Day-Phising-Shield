@@ -90,6 +90,10 @@ class Phase1ScanResponse(BaseModel):
     external_domains_contacted: list[str]
     risk_analysis: DomRiskAnalysis
     execution_time_sec: float
+    latency_breakdown_ms: dict[str, float] = Field(
+        default_factory=dict,
+        description="Stage-by-stage execution latency in milliseconds (Phase 3 telemetry)",
+    )
 
 
 class DetectedLogo(BaseModel):
@@ -101,6 +105,7 @@ class DetectedLogo(BaseModel):
 class DecodedQRCode(BaseModel):
     payload: str = Field(..., description="Decoded QR text or URL payload")
     bbox: BoundingBox = Field(..., description="Bounding box of the QR code inside the image")
+    decoder: str = Field(default="opencv", description="QR decoder engine used (opencv or pyzbar)")
 
 
 class ImageScanRequest(BaseModel):
@@ -133,6 +138,14 @@ class ImageScanResponse(BaseModel):
     scan_id: str
     source_image: str
     verdict: str = Field(..., description="Final threat verdict: SAFE, SUSPICIOUS, or CRITICAL_PHISHING")
+    content_category: str = Field(
+        default="UNKNOWN",
+        description="Classified content category (POSTER_SCAM, POSTER_OFFICIAL_MILITARY, POSTER_GENERAL_SAFE, MILITARY_PHISHING, GENERIC_PHISHING, GENERAL_WEB_SAFE)",
+    )
+    layout_type: str = Field(
+        default="GENERAL_IMAGE",
+        description="Detected image geometry/layout: POSTER_FLYER, MOBILE_SCREENSHOT, WEB_SCREENSHOT, or GENERAL_IMAGE",
+    )
     total_risk_score: float = Field(..., ge=0.0, le=100.0)
     visual_similarity_score: float = Field(..., ge=0.0, le=100.0)
     dom_anomaly_score: float = Field(..., ge=0.0, le=100.0)
@@ -141,6 +154,12 @@ class ImageScanResponse(BaseModel):
     detected_logos: list[DetectedLogo] = Field(default_factory=list)
     decoded_qr_codes: list[DecodedQRCode] = Field(default_factory=list)
     extracted_urls: list[str] = Field(default_factory=list)
+    ocr_text_snippet: Optional[str] = Field(
+        default=None, description="Snippet of OCR text extracted from the poster or screenshot"
+    )
+    visual_input_boxes_count: int = Field(
+        default=0, description="Number of visual form input boxes detected inside the screenshot"
+    )
     forensic_reasons: list[str] = Field(default_factory=list)
     screenshot_path: str
     annotated_dom_path: str
@@ -152,10 +171,18 @@ class ImageScanResponse(BaseModel):
         default_factory=list, description="Deterministic risk-fusion override rules applied (app/scoring.py)"
     )
     execution_time_sec: float
+    latency_breakdown_ms: dict[str, float] = Field(
+        default_factory=dict,
+        description="Stage-by-stage execution latency in milliseconds (Phase 3 telemetry)",
+    )
 
 
 class Phase2ScanResponse(Phase1ScanResponse):
     verdict: str = Field(..., description="Final threat verdict: SAFE, SUSPICIOUS, or CRITICAL_PHISHING")
+    content_category: str = Field(
+        default="UNKNOWN",
+        description="Classified content category (OFFICIAL_MILITARY, MILITARY_PHISHING, GENERIC_PHISHING, GENERAL_WEB_SAFE)",
+    )
     total_risk_score: float = Field(..., ge=0.0, le=100.0, description="Weighted composite risk score (0-100)")
     visual_similarity_score: float = Field(..., ge=0.0, le=100.0, description="SSIM + visual similarity score (0-100)")
     impersonated_target: Optional[str] = Field(default=None, description="Matched official portal name if impersonated")

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -31,6 +32,8 @@ class SupabaseService:
 
     @classmethod
     def is_configured(cls) -> bool:
+        if os.environ.get("VK_OFFLINE_BENCHMARK", "").lower() in ("1", "true", "yes"):
+            return False
         url, key, _, _ = cls._credentials()
         if not url or not key:
             return False

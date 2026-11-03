@@ -31,3 +31,5 @@ openwa-gateway/.env
 **/__pycache__/
 
 openwa-gateway/
+
+storage/screenshots/synth_tests/
