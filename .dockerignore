@@ -29,7 +29,8 @@ storage/synthetic_yolo/
 storage/dataset/
 !storage/phase3_benchmark_results.json
 
-# Dev / test / benchmark scripts not needed inside runtime container
+# Dev / test / benchmark scripts & docs not needed inside runtime container
+docs/
 tests/
 postman/
 scripts/
