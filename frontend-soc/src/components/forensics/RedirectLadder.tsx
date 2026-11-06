@@ -1,26 +1,22 @@
 'use client';
 
 /**
- * The redirect chain, with every hop enriched through the domain guard.
- *
- * /api/v1/domain/check never loads the page, so enriching each hop costs little
- * and turns a flat list of URLs into the most analytical panel on the page:
- * which hop introduced the shortener, where the lookalike appeared, which hop
- * dropped TLS. It reuses an endpoint that already exists — no backend work.
+ * HTTP redirect chain, enriched per hop through /api/v1/domain/check.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { checkDomain, type DomainAssessment } from '@/lib/api/endpoints';
 import { defang, formatScore, truncateMiddle } from '@/lib/format';
+import { id as t } from '@/lib/i18n/id';
 import { bandOf, VERDICT_VAR } from '@/lib/verdict';
+import { IconOctagonAlert, IconShieldCheck, VerdictIcon } from '@/components/ui/icons';
 
-/** Flags worth calling out per hop, in the order a reader scans them. */
 const HOP_FLAGS: { key: keyof DomainAssessment; label: string }[] = [
-  { key: 'is_shortener', label: 'pemendek' },
-  { key: 'is_free_or_tunnel_host', label: 'hosting gratis' },
-  { key: 'is_high_abuse_tld', label: 'TLD rawan' },
-  { key: 'is_punycode', label: 'punycode' },
-  { key: 'is_ip', label: 'IP mentah' },
+  { key: 'is_shortener', label: t.forensics.hopShortener },
+  { key: 'is_free_or_tunnel_host', label: t.forensics.hopFreeHost },
+  { key: 'is_high_abuse_tld', label: t.forensics.hopAbuseTld },
+  { key: 'is_punycode', label: t.forensics.hopPunycode },
+  { key: 'is_ip', label: t.forensics.hopRawIp },
 ];
 
 export function RedirectLadder({
@@ -39,8 +35,6 @@ export function RedirectLadder({
     abortRef.current = ac;
 
     void (async () => {
-      // Sequential rather than parallel: the chain is short, and this keeps a
-      // long redirect chain from opening a burst of connections at once.
       for (const hop of chain) {
         if (ac.signal.aborted) return;
         try {
@@ -49,7 +43,7 @@ export function RedirectLadder({
             setHops((prev) => ({ ...prev, [hop]: assessment }));
           }
         } catch {
-          // A hop that cannot be assessed is still worth showing as a hop.
+          // Unassessed hop still renders cleanly as a hop.
         }
       }
     })();
@@ -60,10 +54,10 @@ export function RedirectLadder({
   if (chain.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <h2 className="text-sm font-semibold text-[var(--foreground)]">
-        Rantai Pengalihan ({chain.length} lompatan)
-      </h2>
+    <div className="vk-bento min-w-0 p-4">
+      <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+        {t.forensics.redirectTitle} ({chain.length} {t.forensics.hopsSuffix})
+      </h3>
 
       <ol className="mt-3 flex flex-col gap-2">
         {chain.map((hop, i) => {
@@ -72,42 +66,49 @@ export function RedirectLadder({
           const flags = a ? HOP_FLAGS.filter(({ key }) => a[key] === true) : [];
 
           return (
-            <li key={`${hop}-${i}`} className="grid grid-cols-[1.5rem_1fr] gap-2">
+            <li key={`${hop}-${i}`} className="grid grid-cols-[1.75rem_1fr] gap-2">
               <span
                 aria-hidden="true"
-                className="vk-mono mt-0.5 text-right text-xs text-[var(--muted)]"
+                className="vk-mono vk-tabular mt-1.5 text-right text-[0.8125rem] text-[var(--muted)]"
               >
                 {i + 1}.
               </span>
-              <div className="min-w-0 rounded border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-1.5">
-                <p className="vk-mono break-all text-xs text-[var(--foreground)]">
+              <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
+                <div className="vk-mono break-all text-[0.8125rem] text-[var(--foreground)]">
                   {defanged ? defang(truncateMiddle(hop, 92)) : truncateMiddle(hop, 92)}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                  {a ? (
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.8125rem]">
+                  {a && band ? (
                     <>
                       <span
-                        className="vk-mono text-[0.7rem] font-semibold tabular-nums"
-                        style={{ color: `var(${VERDICT_VAR[band!]})` }}
+                        className="vk-mono vk-tabular inline-flex items-center gap-1 font-semibold"
+                        style={{ color: `var(${VERDICT_VAR[band]})` }}
                       >
-                        {formatScore(a.risk_score)}
+                        <VerdictIcon verdict={band} size={13} />
+                        <span>{formatScore(a.risk_score)}</span>
                       </span>
                       {a.is_official && (
-                        <span className="text-[0.7rem] text-[var(--verdict-safe)]">resmi</span>
+                        <span className="inline-flex items-center gap-1 text-[var(--verdict-safe)]">
+                          <IconShieldCheck size={12} />
+                          <span>{t.forensics.hopOfficial}</span>
+                        </span>
                       )}
                       {a.lookalike_of && (
-                        <span className="text-[0.7rem] text-[var(--verdict-critical)]">
-                          menyerupai {a.lookalike_of}
+                        <span className="inline-flex items-center gap-1 text-[var(--verdict-critical)]">
+                          <IconOctagonAlert size={12} />
+                          <span>
+                            {t.forensics.hopLookalikePrefix} {a.lookalike_of}
+                          </span>
                         </span>
                       )}
                       {flags.map(({ key, label }) => (
-                        <span key={key} className="text-[0.7rem] text-[var(--muted-strong)]">
+                        <span key={String(key)} className="text-[var(--muted-strong)]">
                           {label}
                         </span>
                       ))}
                     </>
                   ) : (
-                    <span className="text-[0.7rem] text-[var(--muted)]">memeriksa…</span>
+                    <span className="text-[var(--muted)]">{t.forensics.hopChecking}</span>
                   )}
                 </div>
               </div>
@@ -115,6 +116,6 @@ export function RedirectLadder({
           );
         })}
       </ol>
-    </section>
+    </div>
   );
 }

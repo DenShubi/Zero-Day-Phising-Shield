@@ -1,20 +1,17 @@
 'use client';
 
 /**
- * The impersonated page against the genuine portal it copies.
+ * Visual diff comparator between the suspect artifact and the genuine .mil.id
+ * portal it impersonates.
  *
- * Two views of the same comparison:
- *   - side by side, for reading detail and for the submission screenshot;
- *   - an overlay slider, which is the version that lands on a projector —
- *     dragging the handle wipes between fake and real in the same frame.
- *
- * The reference image comes from /static/reference/<id>.png, which the engine
- * already serves from its reference_db. Nothing new is needed server-side.
- *
- * This is submission screenshot #2 (side-by-side visual forensics).
+ * Designed as an authentic diff tool:
+ *   1. Interactive pointer-drag split curtain ("Tirai Diff Geser") with top
+ *      provenance badges and instant 0% / 25% / 50% / 75% / 100% split presets.
+ *   2. Dual-frame side-by-side diff ("Sandingkan Dua Panel") with top header bars
+ *      (never captions below images).
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findPortal,
   getReferencePortals,
@@ -23,9 +20,18 @@ import {
 } from '@/lib/api/endpoints';
 import { engineUrl } from '@/lib/api/client';
 import { formatScore } from '@/lib/format';
+import { id as t } from '@/lib/i18n/id';
 import { bandOf, VERDICT_VAR } from '@/lib/verdict';
+import {
+  IconOctagonAlert,
+  IconShieldCheck,
+  IconSplitDiff,
+  VerdictIcon,
+} from '@/components/ui/icons';
 
-type View = 'split' | 'slider';
+type DiffMode = 'curtain' | 'side';
+
+const SPLIT_PRESETS = [0, 25, 50, 75, 100] as const;
 
 export function SideBySide({
   evidenceUrl,
@@ -37,10 +43,13 @@ export function SideBySide({
   visualScore: number;
 }) {
   const [portal, setPortal] = useState<ReferencePortal | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [view, setView] = useState<View>('split');
+  const [failedTarget, setFailedTarget] = useState<string | null>(null);
+  const [mode, setMode] = useState<DiffMode>('curtain');
   const [wipe, setWipe] = useState(50);
-  const sliderRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const curtainRef = useRef<HTMLDivElement>(null);
+
+  const failed = Boolean(impersonatedTarget && failedTarget === impersonatedTarget);
 
   useEffect(() => {
     if (!impersonatedTarget) return;
@@ -51,7 +60,7 @@ export function SideBySide({
         if (!cancelled) setPortal(findPortal(r.portals, impersonatedTarget));
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (!cancelled) setFailedTarget(impersonatedTarget);
       });
 
     return () => {
@@ -64,156 +73,244 @@ export function SideBySide({
     [portal],
   );
 
-  // No impersonation detected: the similarity figure alone is the finding,
-  // and an empty comparison frame would imply a match that was not made.
+  const updateWipeFromClientX = useCallback((clientX: number) => {
+    const el = curtainRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    setWipe(Math.round(pct));
+  }, []);
+
+  const scoreBand = bandOf(visualScore);
+  const scoreColor = `var(${VERDICT_VAR[scoreBand]})`;
+
   if (!impersonatedTarget) {
     return (
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
-          Pembanding Portal Resmi
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Tidak ada portal resmi yang cocok untuk dibandingkan — mesin tidak menemukan indikasi
-          peniruan tata letak.
-        </p>
-        <p className="mt-2 text-xs text-[var(--muted-strong)]">
-          Kemiripan visual tertinggi:{' '}
-          <span className="vk-mono" style={{ color: `var(${VERDICT_VAR[bandOf(visualScore)]})` }}>
-            {formatScore(visualScore)}%
+      <div className="vk-bento min-w-0 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+            {t.forensics.reference}
+          </h3>
+          <span
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.8125rem] font-semibold"
+            style={{
+              color: scoreColor,
+              borderColor: `color-mix(in srgb, ${scoreColor} 35%, transparent)`,
+              background: `color-mix(in srgb, ${scoreColor} 10%, transparent)`,
+            }}
+          >
+            <VerdictIcon verdict={scoreBand} size={13} />
+            <span>
+              {t.forensics.maxSimilarityPrefix} {formatScore(visualScore)}%
+            </span>
           </span>
-        </p>
-      </section>
+        </div>
+        <div className="mt-2.5 text-[0.875rem] leading-relaxed text-[var(--muted-strong)]">
+          {t.forensics.noReference}
+        </div>
+      </div>
     );
   }
 
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
-          Pembanding Portal Resmi
-        </h2>
-        <span
-          className="vk-mono text-xs font-semibold"
-          style={{ color: `var(${VERDICT_VAR[bandOf(visualScore)]})` }}
-        >
-          kemiripan {formatScore(visualScore)}%
-        </span>
+    <div className="vk-bento min-w-0 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+            {t.forensics.reference}
+          </h3>
+          <span
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-[0.8125rem] font-semibold"
+            style={{
+              color: scoreColor,
+              borderColor: `color-mix(in srgb, ${scoreColor} 38%, transparent)`,
+              background: `color-mix(in srgb, ${scoreColor} 11%, transparent)`,
+            }}
+          >
+            <VerdictIcon verdict={scoreBand} size={14} />
+            <span>
+              {t.forensics.similarityBadgePrefix}: {formatScore(visualScore)}%
+            </span>
+          </span>
+        </div>
+
         {referenceUrl && (
-          <div className="vk-no-print ml-auto flex gap-1">
-            {(['split', 'slider'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                aria-pressed={view === v}
-                className={[
-                  'rounded px-2 py-1 text-xs transition-colors',
-                  view === v
-                    ? 'bg-[var(--accent)]/20 text-[var(--accent-bright)]'
-                    : 'text-[var(--muted-strong)] hover:bg-[var(--surface-raised)]',
-                ].join(' ')}
-              >
-                {v === 'split' ? 'Berdampingan' : 'Geser'}
-              </button>
-            ))}
+          <div className="vk-no-print flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+            {(['curtain', 'side'] as const).map((m) => {
+              const active = mode === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  aria-pressed={active}
+                  className={[
+                    'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
+                    active
+                      ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
+                      : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                  ].join(' ')}
+                >
+                  {m === 'curtain' ? t.forensics.splitModeCurtain : t.forensics.splitModeSide}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        Terindikasi meniru: <span className="text-[var(--muted-strong)]">{impersonatedTarget}</span>
-        {portal && <span className="vk-mono"> · {portal.official_domain}</span>}
-      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-1.5 text-[0.8125rem]">
+        <span className="text-[var(--muted)]">{t.forensics.impersonatingPrefix}</span>
+        <span className="font-semibold text-[var(--foreground)]">{impersonatedTarget}</span>
+        {portal && (
+          <span className="vk-mono text-[var(--verdict-safe)]">· {portal.official_domain}</span>
+        )}
+      </div>
 
       {!referenceUrl ? (
-        <p className="mt-3 text-sm text-[var(--muted)]">
-          {failed
-            ? 'Daftar portal rujukan tidak dapat dimuat dari mesin.'
-            : 'Mencari tangkapan layar portal rujukan…'}
-        </p>
-      ) : view === 'split' ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <figure className="m-0">
-            <figcaption className="mb-1 text-xs font-semibold text-[var(--verdict-critical)]">
-              Halaman diperiksa (palsu)
-            </figcaption>
-            {evidenceUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element -- evidence host varies at runtime */
-              <img
-                src={evidenceUrl}
-                alt="Tangkapan layar halaman yang diperiksa"
-                referrerPolicy="no-referrer"
-                className="w-full rounded border border-[var(--verdict-critical)]/40"
-              />
-            ) : (
-              <p className="text-xs text-[var(--muted)]">Tidak ada bukti visual.</p>
-            )}
-          </figure>
-          <figure className="m-0">
-            <figcaption className="mb-1 text-xs font-semibold text-[var(--verdict-safe)]">
-              Portal resmi (rujukan)
-            </figcaption>
-            {/* eslint-disable-next-line @next/next/no-img-element -- served from the engine */}
-            <img
-              src={referenceUrl}
-              alt={`Tangkapan layar portal resmi ${portal?.portal_name ?? ''}`}
-              referrerPolicy="no-referrer"
-              className="w-full rounded border border-[var(--verdict-safe)]/40"
-              onError={() => setFailed(true)}
-            />
-          </figure>
+        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-3 text-[0.875rem] text-[var(--muted-strong)]">
+          {failed ? t.forensics.failedReference : t.forensics.loadingReference}
         </div>
-      ) : (
-        <div className="mt-3">
+      ) : mode === 'curtain' ? (
+        <div className="mt-3 flex flex-col gap-2.5">
+          {/* Top Diff Header Strip + Split Presets (zero range inputs, zero captions below) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem]">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-critical)]">
+              <IconOctagonAlert size={14} />
+              <span>{t.forensics.suspectFrameLabel}</span>
+            </span>
+
+            <div className="vk-no-print flex items-center gap-1">
+              <span className="mr-1 text-[var(--muted)]">{t.forensics.curtainPresetLabel}</span>
+              {SPLIT_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setWipe(preset)}
+                  aria-pressed={wipe === preset}
+                  className={[
+                    'vk-mono vk-tabular rounded border px-2 py-0.5 text-[0.8125rem] font-medium transition-colors',
+                    wipe === preset
+                      ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] text-[var(--accent-ink)]'
+                      : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                  ].join(' ')}
+                >
+                  {preset}%
+                </button>
+              ))}
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-safe)]">
+              <IconShieldCheck size={14} />
+              <span>{t.forensics.officialFrameLabel}</span>
+            </span>
+          </div>
+
           <div
-            ref={sliderRef}
-            className="relative overflow-hidden rounded border border-[var(--border)]"
+            ref={curtainRef}
+            tabIndex={0}
+            role="group"
+            aria-label={t.forensics.curtainDragAria}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setWipe((v) => Math.max(0, v - 5));
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setWipe((v) => Math.min(100, v + 5));
+              }
+            }}
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              setDragging(true);
+              updateWipeFromClientX(e.clientX);
+            }}
+            onPointerMove={(e) => {
+              if (dragging) updateWipeFromClientX(e.clientX);
+            }}
+            onPointerUp={() => setDragging(false)}
+            onPointerCancel={() => setDragging(false)}
+            className="relative cursor-ew-resize select-none overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--canvas)]"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- served from the engine */}
+            {/* Base layer: genuine official reference portal */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}
             <img
               src={referenceUrl}
-              alt={`Portal resmi ${portal?.portal_name ?? ''}`}
+              alt={`${t.forensics.portalOfficialAltPrefix} ${portal?.portal_name ?? ''}`}
               referrerPolicy="no-referrer"
+              draggable={false}
               className="block w-full"
+              onError={() => setFailedTarget(impersonatedTarget)}
             />
+
+            {/* Clipped top layer: suspect phishing page */}
             {evidenceUrl && (
               <div
                 className="absolute inset-0"
-                // clip-path is the whole trick: one image laid over the other,
-                // revealed progressively. No canvas, no measurement.
                 style={{ clipPath: `inset(0 ${100 - wipe}% 0 0)` }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- evidence host varies at runtime */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- runtime evidence host */}
                 <img
                   src={evidenceUrl}
-                  alt="Halaman yang diperiksa"
+                  alt={t.forensics.evidenceAlt}
                   referrerPolicy="no-referrer"
+                  draggable={false}
                   className="block h-full w-full object-cover"
                 />
               </div>
             )}
-            <span
+
+            {/* Optical Curtain Seam & Reticle Handle */}
+            <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 w-0.5 bg-[var(--accent-bright)]"
+              className="pointer-events-none absolute inset-y-0 w-[2px] bg-[var(--accent-ink)]"
               style={{ left: `${wipe}%` }}
-            />
+            >
+              <span className="absolute top-1/2 left-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[var(--accent-ink)] bg-[var(--surface-0)] text-[var(--accent-ink)]">
+                <IconSplitDiff size={15} />
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="overflow-hidden rounded-lg border border-[var(--verdict-critical)]/45 bg-[var(--canvas)]">
+            <div className="flex items-center gap-1.5 border-b border-[var(--verdict-critical)]/35 bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--verdict-critical)]">
+              <IconOctagonAlert size={14} />
+              <span>{t.forensics.suspectFrameLabel}</span>
+            </div>
+            {evidenceUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- runtime evidence host */
+              <img
+                src={evidenceUrl}
+                alt={t.forensics.evidenceAlt}
+                referrerPolicy="no-referrer"
+                className="block w-full"
+              />
+            ) : (
+              <div className="p-4 text-[0.8125rem] text-[var(--muted)]">
+                {t.forensics.noVisualEvidence}
+              </div>
+            )}
           </div>
 
-          <label className="mt-2 flex items-center gap-3 text-xs text-[var(--muted)]">
-            <span className="text-[var(--verdict-critical)]">palsu</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={wipe}
-              onChange={(e) => setWipe(Number(e.target.value))}
-              aria-label="Geser perbandingan antara halaman palsu dan portal resmi"
-              className="flex-1"
+          <div className="overflow-hidden rounded-lg border border-[var(--verdict-safe)]/45 bg-[var(--canvas)]">
+            <div className="flex items-center gap-1.5 border-b border-[var(--verdict-safe)]/35 bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--verdict-safe)]">
+              <IconShieldCheck size={14} />
+              <span>{t.forensics.officialFrameLabel}</span>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}
+            <img
+              src={referenceUrl}
+              alt={`${t.forensics.portalOfficialAltPrefix} ${portal?.portal_name ?? ''}`}
+              referrerPolicy="no-referrer"
+              className="block w-full"
+              onError={() => setFailedTarget(impersonatedTarget)}
             />
-            <span className="text-[var(--verdict-safe)]">resmi</span>
-          </label>
+          </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

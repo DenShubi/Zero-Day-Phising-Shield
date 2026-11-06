@@ -1,59 +1,53 @@
 'use client';
 
 /**
- * Ablation: the fusion engine against the single-signal approaches it replaces.
- *
- * This is the table that answers "why not just check the domain?" — the point
- * of the multimodal design is that each single signal fails on a different
- * attack shape (a screenshot has no URL to check; a restyled clone defeats
- * layout similarity), and the comparison makes that concrete rather than
- * asserted.
- *
- * The final row is the full engine and is highlighted; the script emits it last.
+ * Ablation study table: compares full multimodal fusion (final row) against
+ * single-signal detector baselines, with sticky header and tabular numerals.
  */
 
 import type { BenchmarkBaseline } from '@/lib/api/endpoints';
+import { id as t } from '@/lib/i18n/id';
 
 const COLUMNS: { key: keyof BenchmarkBaseline; label: string; suffix?: string }[] = [
-  { key: 'accuracy', label: 'Akurasi', suffix: '%' },
-  { key: 'precision', label: 'Presisi', suffix: '%' },
-  { key: 'recall', label: 'Recall', suffix: '%' },
-  { key: 'specificity', label: 'Spesifisitas', suffix: '%' },
-  { key: 'f1_score', label: 'F1', suffix: '%' },
-  { key: 'roc_auc', label: 'ROC-AUC' },
-  { key: 'pr_auc', label: 'PR-AUC' },
+  { key: 'accuracy', label: t.audit.colAccuracy, suffix: '%' },
+  { key: 'precision', label: t.audit.colPrecision, suffix: '%' },
+  { key: 'recall', label: t.audit.colRecall, suffix: '%' },
+  { key: 'specificity', label: t.audit.colSpecificity, suffix: '%' },
+  { key: 'f1_score', label: t.audit.colF1, suffix: '%' },
+  { key: 'roc_auc', label: t.audit.colRocAuc },
+  { key: 'pr_auc', label: t.audit.colPrAuc },
 ];
 
-function cell(value: unknown, suffix?: string): string {
+function formatCell(value: unknown, suffix?: string): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
-  // AUC values are 0–1 and want more precision than a percentage does.
   return suffix ? `${value.toFixed(2)}${suffix}` : value.toFixed(4);
 }
 
 export function BaselineTable({ baselines }: { baselines: readonly BenchmarkBaseline[] }) {
   if (baselines.length === 0) return null;
 
-  // The full engine is the last row the script appends.
   const bestIndex = baselines.length - 1;
 
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <h2 className="text-sm font-semibold text-[var(--foreground)]">
-        Perbandingan Terhadap Model Baseline
-      </h2>
-      <p className="mt-0.5 text-xs text-[var(--muted)]">
-        Mengapa pendekatan tunggal tidak cukup menghadapi serangan multi-vektor.
-      </p>
+    <div className="vk-bento flex min-h-0 min-w-0 flex-col p-4">
+      <div>
+        <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+          {t.audit.baselineTitle}
+        </h3>
+        <div className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">
+          {t.audit.baselineSubtitle}
+        </div>
+      </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full border-collapse text-xs">
-          <thead>
+      <div className="vk-scroll mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--border)]">
+        <table className="w-full border-collapse text-[0.8125rem]">
+          <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
             <tr className="border-b border-[var(--border)] text-left">
-              <th className="py-1.5 pr-3 font-semibold text-[var(--muted)]">Pendekatan</th>
+              <th className="px-3 py-2 font-medium text-[var(--muted)]">{t.audit.colApproach}</th>
               {COLUMNS.map((col) => (
                 <th
                   key={String(col.key)}
-                  className="px-2 py-1.5 text-right font-semibold text-[var(--muted)]"
+                  className="px-2.5 py-2 text-right font-medium text-[var(--muted)]"
                 >
                   {col.label}
                 </th>
@@ -66,17 +60,17 @@ export function BaselineTable({ baselines }: { baselines: readonly BenchmarkBase
               return (
                 <tr
                   key={row.model}
-                  className="border-b border-[var(--border)] last:border-0"
+                  className="border-b border-[var(--border-subtle)] last:border-0"
                   style={
                     isBest
-                      ? { background: 'color-mix(in srgb, var(--accent) 12%, transparent)' }
+                      ? { background: 'var(--accent-tint)' }
                       : undefined
                   }
                 >
                   <td
-                    className="py-1.5 pr-3"
+                    className="px-3 py-2"
                     style={{
-                      color: isBest ? 'var(--accent-bright)' : 'var(--muted-strong)',
+                      color: isBest ? 'var(--accent-ink)' : 'var(--muted-strong)',
                       fontWeight: isBest ? 600 : 400,
                     }}
                   >
@@ -85,10 +79,13 @@ export function BaselineTable({ baselines }: { baselines: readonly BenchmarkBase
                   {COLUMNS.map((col) => (
                     <td
                       key={String(col.key)}
-                      className="vk-mono px-2 py-1.5 text-right tabular-nums"
-                      style={{ color: isBest ? 'var(--foreground)' : 'var(--muted-strong)' }}
+                      className="vk-mono vk-tabular px-2.5 py-2 text-right"
+                      style={{
+                        color: isBest ? 'var(--foreground)' : 'var(--muted-strong)',
+                        fontWeight: isBest ? 600 : 400,
+                      }}
                     >
-                      {cell(row[col.key], col.suffix)}
+                      {formatCell(row[col.key], col.suffix)}
                     </td>
                   ))}
                 </tr>
@@ -97,6 +94,6 @@ export function BaselineTable({ baselines }: { baselines: readonly BenchmarkBase
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   );
 }

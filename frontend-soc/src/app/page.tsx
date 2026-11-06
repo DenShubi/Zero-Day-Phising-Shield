@@ -1,157 +1,170 @@
 'use client';
 
-import { useMemo } from 'react';
+/**
+ * Single-route SOC Command Console (`/`).
+ *
+ * Switches client-side across all 6 operational panels without page reloads via
+ * URL query parameters (`?view=komando|pemindaian|forensik|audit|mitigasi|lapor-cepat`,
+ * `&insiden=<id>`, `&host=<hostname>`), preserving browser back/forward history
+ * and direct deep-linking for conference demos.
+ */
+
+import { Suspense, useCallback, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { AuditPanel } from '@/components/panels/AuditPanel';
+import { CommandPanel } from '@/components/panels/CommandPanel';
+import { ForensicsPanel } from '@/components/panels/ForensicsPanel';
+import { MitigationPanel } from '@/components/panels/MitigationPanel';
+import { ScanConsole } from '@/components/sandbox/ScanConsole';
+import { IconForensics } from '@/components/ui/icons';
+import { WaSimulator } from '@/components/whatsapp/WaSimulator';
+import { id as t } from '@/lib/i18n/id';
+import type { NormalizedScan } from '@/lib/normalize';
+import { buildPanelHref, readPanelQuery } from '@/lib/panel-route';
 import { useIncidentFeed } from '@/lib/supabase/useIncidentFeed';
-import { IncidentFeed } from '@/components/feed/IncidentFeed';
-import { VerdictBadge } from '@/components/ui/VerdictBadge';
-import { formatScore } from '@/lib/format';
-import { id } from '@/lib/i18n/id';
-import { VERDICT_ORDER, VERDICT_VAR, type Verdict } from '@/lib/verdict';
-import { locateUnit } from '@/lib/units-geo';
 
-function Tile({
-  label,
-  value,
-  hint,
-  color,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  color?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-[var(--muted)]">{label}</p>
-      <p
-        className="vk-mono mt-1 text-2xl font-bold tabular-nums"
-        style={{ color: color ?? 'var(--foreground)' }}
-      >
-        {value}
-      </p>
-      {hint && <p className="mt-0.5 text-xs text-[var(--muted)]">{hint}</p>}
-    </div>
-  );
-}
+function ConsoleWorkspace() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = readPanelQuery(searchParams);
 
-export default function CommandCentrePage() {
   const feed = useIncidentFeed();
-  const { incidents } = feed;
+  const [sessionScans, setSessionScans] = useState<NormalizedScan[]>([]);
 
-  const stats = useMemo(() => {
-    const counts: Record<Verdict, number> = {
-      SAFE: 0,
-      SUSPICIOUS: 0,
-      CRITICAL_PHISHING: 0,
-    };
-    let scoreSum = 0;
-    let mapped = 0;
+  const handleScanComplete = useCallback((scan: NormalizedScan) => {
+    setSessionScans((prev) => {
+      const key = scan.incidentId ?? scan.scanId;
+      return [scan, ...prev.filter((item) => (item.incidentId ?? item.scanId) !== key)];
+    });
+  }, []);
 
-    for (const i of incidents) {
-      counts[i.verdict] += 1;
-      scoreSum += i.scores.total;
-      if (locateUnit(i.reporterUnit)) mapped += 1;
+  // Merge fresh tab scans ahead of the realtime/polling feed without duplicates.
+  const mergedIncidents = useMemo(() => {
+    const seen = new Set<string>();
+    const combined: NormalizedScan[] = [];
+
+    for (const item of [...sessionScans, ...feed.incidents]) {
+      const key = item.incidentId ?? item.scanId;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      combined.push(item);
     }
 
-    return {
-      counts,
-      total: incidents.length,
-      meanScore: incidents.length > 0 ? scoreSum / incidents.length : 0,
-      mapped,
-      unmapped: incidents.length - mapped,
-    };
-  }, [incidents]);
+    return combined;
+  }, [sessionScans, feed.incidents]);
 
-  return (
-    <div className="flex flex-col gap-5">
-      <header>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">{id.nav.command}</h1>
-        <p className="mt-0.5 text-sm text-[var(--muted)]">
-          Pemantauan insiden phishing secara langsung dari seluruh kanal pelaporan.
-        </p>
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Tile label="Total Insiden" value={String(stats.total)} />
-        {VERDICT_ORDER.map((v) => (
-          <Tile
-            key={v}
-            label={
-              v === 'CRITICAL_PHISHING'
-                ? 'Kritis'
-                : v === 'SUSPICIOUS'
-                  ? 'Mencurigakan'
-                  : 'Aman'
-            }
-            value={String(stats.counts[v])}
-            color={`var(${VERDICT_VAR[v]})`}
-          />
-        ))}
-        <Tile label="Rerata Skor" value={formatScore(stats.meanScore)} hint="dari 100" />
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[1fr_minmax(26rem,38%)]">
-        <div className="flex flex-col gap-5">
-          {/* The map lands in build step 6; this placeholder keeps the layout
-              honest meanwhile and already surfaces the unmapped count, which is
-              the majority case with WhatsApp-originated reports. */}
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-            <h2 className="text-sm font-semibold text-[var(--foreground)]">
-              Sebaran Asal Laporan
-            </h2>
-            <p className="mt-0.5 text-xs text-[var(--muted)]">
-              Peta menampilkan asal laporan, bukan lokasi pelaku.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-                <p className="text-xs text-[var(--muted)]">Terpeta</p>
-                <p className="vk-mono text-lg font-semibold tabular-nums">{stats.mapped}</p>
-              </div>
-              <div className="rounded border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-                <p className="text-xs text-[var(--muted)]">{id.common.unmapped}</p>
-                <p className="vk-mono text-lg font-semibold tabular-nums">{stats.unmapped}</p>
-              </div>
+  switch (query.view) {
+    case 'pemindaian':
+      return (
+        <section className="vk-panel-section">
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                {t.scan.title}
+              </h1>
+              <p className="mt-0.5 max-w-[68ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
+                {t.scan.subtitle}
+              </p>
             </div>
-          </section>
 
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-            <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
-              Distribusi Putusan
-            </h2>
-            {stats.total === 0 ? (
-              <p className="text-sm text-[var(--muted)]">{id.feed.empty}</p>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {VERDICT_ORDER.map((v) => {
-                  const pct = (stats.counts[v] / stats.total) * 100;
-                  return (
-                    <div key={v} className="grid grid-cols-[10rem_1fr_3rem] items-center gap-3">
-                      <VerdictBadge verdict={v} size="sm" />
-                      <span className="h-2.5 overflow-hidden rounded-full bg-[var(--surface-raised)]">
-                        <span
-                          className="block h-full rounded-full"
-                          style={{ width: `${pct}%`, background: `var(${VERDICT_VAR[v]})` }}
-                        />
-                      </span>
-                      <span className="vk-mono text-right text-sm tabular-nums">
-                        {stats.counts[v]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
+            <button
+              type="button"
+              onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
+              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.875rem] font-medium"
+            >
+              <IconForensics size={16} />
+              <span>{t.command.openForensicsAction}</span>
+            </button>
+          </div>
 
-        <IncidentFeed
-          incidents={feed.incidents}
-          status={feed.status}
-          lastEventAt={feed.lastEventAt}
-          error={feed.error}
-          onRefresh={feed.refresh}
+          <div
+            data-ui="console-workspace"
+            className="vk-scroll min-h-0 flex-1 overflow-y-auto pr-0.5"
+          >
+            <ScanConsole onScanComplete={handleScanComplete} />
+          </div>
+        </section>
+      );
+
+    case 'forensik':
+      return (
+        <ForensicsPanel
+          requestedId={query.insiden}
+          incidents={mergedIncidents}
+          onScanUpdated={handleScanComplete}
         />
-      </div>
-    </div>
+      );
+
+    case 'audit':
+      return <AuditPanel />;
+
+    case 'mitigasi':
+      return (
+        <MitigationPanel
+          incidents={mergedIncidents}
+          focusedHost={query.host}
+        />
+      );
+
+    case 'lapor-cepat':
+      return (
+        <section className="vk-panel-section">
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                {t.whatsapp.headline}
+              </h1>
+              <p className="mt-0.5 max-w-[68ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
+                {t.whatsapp.subtitle}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
+              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.875rem] font-medium"
+            >
+              <IconForensics size={16} />
+              <span>{t.command.openForensicsAction}</span>
+            </button>
+          </div>
+
+          <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col">
+            <WaSimulator onScanComplete={handleScanComplete} />
+          </div>
+        </section>
+      );
+
+    case 'komando':
+    default:
+      return (
+        <CommandPanel
+          incidents={mergedIncidents}
+          feedStatus={feed.status}
+          lastEventAt={feed.lastEventAt}
+          feedError={feed.error}
+          onRefreshFeed={feed.refresh}
+        />
+      );
+  }
+}
+
+export default function VisiKartikaConsolePage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="vk-panel-section">
+          <div className="flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]">
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--accent-ink)]"
+            />
+            <span>{t.common.loading}</span>
+          </div>
+        </section>
+      }
+    >
+      <ConsoleWorkspace />
+    </Suspense>
   );
 }

@@ -2,50 +2,44 @@
 
 /**
  * Live domain telemetry as the operator types.
- *
- * /api/v1/domain/check never opens the page, so it answers in well under a
- * second — which makes it usable per keystroke and gives instant feedback long
- * before a full scan would finish. It also surfaces the domain guard as a
- * capability in its own right rather than hiding it inside a composite score.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { checkDomain, type DomainAssessment } from '@/lib/api/endpoints';
 import { bandOf, VERDICT_VAR } from '@/lib/verdict';
 import { formatScore } from '@/lib/format';
+import { id as t } from '@/lib/i18n/id';
+import { IconShieldCheck, VerdictIcon } from '@/components/ui/icons';
 
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 350;
 const MIN_LENGTH = 4;
 
-/** Indonesian labels for the boolean flags the domain guard returns. */
-const FLAG_LABELS: { key: keyof DomainAssessment; label: string }[] = [
-  { key: 'is_official', label: 'Domain resmi' },
-  { key: 'is_shortener', label: 'Pemendek tautan' },
-  { key: 'is_free_or_tunnel_host', label: 'Hosting gratis/tunnel' },
-  { key: 'is_high_abuse_tld', label: 'TLD rawan penyalahgunaan' },
-  { key: 'is_punycode', label: 'Punycode' },
-  { key: 'is_ip', label: 'Alamat IP langsung' },
+const FLAG_KEYS: { key: keyof DomainAssessment; label: string }[] = [
+  { key: 'is_official', label: t.domainFlags.is_official },
+  { key: 'is_shortener', label: t.domainFlags.is_shortener },
+  { key: 'is_free_or_tunnel_host', label: t.domainFlags.is_free_or_tunnel_host },
+  { key: 'is_high_abuse_tld', label: t.domainFlags.is_high_abuse_tld },
+  { key: 'is_punycode', label: t.domainFlags.is_punycode },
+  { key: 'is_ip', label: t.domainFlags.is_ip },
 ];
 
 export function DomainPreview({ url }: { url: string }) {
-  const [result, setResult] = useState<DomainAssessment | null>(null);
-  const [pending, setPending] = useState(false);
+  const [resolved, setResolved] = useState<{
+    target: string;
+    assessment: DomainAssessment | null;
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const trimmed = url.trim();
+  const trimmed = url.trim();
+  const eligible = trimmed.length >= MIN_LENGTH && /[.:]/.test(trimmed);
 
-    // Nothing worth asking about yet.
-    if (trimmed.length < MIN_LENGTH || !/[.:]/.test(trimmed)) {
+  useEffect(() => {
+    if (!eligible) {
       abortRef.current?.abort();
-      setResult(null);
-      setPending(false);
       return;
     }
 
-    setPending(true);
     const timer = setTimeout(() => {
-      // Supersede the in-flight request rather than racing it.
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -53,78 +47,87 @@ export function DomainPreview({ url }: { url: string }) {
       void checkDomain(trimmed, ac.signal)
         .then((r) => {
           if (!ac.signal.aborted) {
-            setResult(r);
-            setPending(false);
+            setResolved({ target: trimmed, assessment: r });
           }
         })
         .catch(() => {
           if (!ac.signal.aborted) {
-            // A malformed host mid-typing is expected, not an error worth showing.
-            setResult(null);
-            setPending(false);
+            setResolved({ target: trimmed, assessment: null });
           }
         });
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [url]);
+  }, [trimmed, eligible]);
+
+  if (!eligible) return null;
+
+  const isCurrent = resolved?.target === trimmed;
+  const result = isCurrent ? resolved.assessment : null;
 
   if (!result) {
-    return pending ? (
-      <p className="mt-2 text-xs text-[var(--muted)]">Memeriksa domain…</p>
+    return !isCurrent ? (
+      <div className="mt-2.5 text-[0.8125rem] text-[var(--muted)]">{t.scan.checkingDomain}</div>
     ) : null;
   }
 
   const band = bandOf(result.risk_score);
-  const activeFlags = FLAG_LABELS.filter(({ key }) => result[key] === true);
+  const bandColor = `var(${VERDICT_VAR[band]})`;
+  const activeFlags = FLAG_KEYS.filter(({ key }) => result[key] === true);
 
   return (
-    <div className="mt-2 rounded border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="vk-mono text-xs text-[var(--foreground)]">{result.host}</span>
+    <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.8125rem]">
+        <span className="vk-mono font-semibold text-[var(--foreground)]">{result.host}</span>
+
         <span
-          className="vk-mono text-xs font-semibold tabular-nums"
-          style={{ color: `var(${VERDICT_VAR[band]})` }}
+          className="vk-mono vk-tabular inline-flex items-center gap-1.5 font-semibold"
+          style={{ color: bandColor }}
         >
-          telemetri {formatScore(result.risk_score)}
+          <VerdictIcon verdict={band} size={14} />
+          <span>
+            {t.scan.telemetryPrefix} {formatScore(result.risk_score)}
+          </span>
         </span>
+
         {result.is_official && (
-          <span className="text-xs text-[var(--verdict-safe)]">✓ daftar putih resmi</span>
+          <span className="inline-flex items-center gap-1 font-medium text-[var(--verdict-safe)]">
+            <IconShieldCheck size={14} />
+            <span>{t.scan.officialWhitelist}</span>
+          </span>
+        )}
+
+        {result.lookalike_of && (
+          <span className="font-medium text-[var(--verdict-critical)]">
+            {t.scan.lookalikePrefix}{' '}
+            <span className="vk-mono">{result.lookalike_of}</span>
+            {result.lookalike_kind && ` (${result.lookalike_kind})`}
+          </span>
         )}
       </div>
 
-      {result.lookalike_of && (
-        <p className="mt-1 text-xs text-[var(--verdict-critical)]">
-          Menyerupai <span className="vk-mono">{result.lookalike_of}</span>
-          {result.lookalike_kind && ` (${result.lookalike_kind})`}
-        </p>
-      )}
-
-      {activeFlags.length > 0 && (
-        <ul className="mt-1.5 flex flex-wrap gap-1.5">
+      {(activeFlags.length > 0 || result.bait_tokens.length > 0) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {activeFlags.map(({ key, label }) => (
-            <li
+            <span
               key={key}
-              className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[0.7rem] text-[var(--muted-strong)]"
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-3)] px-2 py-0.5 text-[0.8125rem] text-[var(--muted-strong)]"
             >
               {label}
-            </li>
+            </span>
           ))}
-        </ul>
-      )}
-
-      {result.bait_tokens.length > 0 && (
-        <p className="mt-1 text-[0.7rem] text-[var(--muted-strong)]">
-          Kata umpan: {result.bait_tokens.join(', ')}
-        </p>
+          {result.bait_tokens.length > 0 && (
+            <span className="text-[0.8125rem] text-[var(--muted-strong)]">
+              {t.scan.baitTokensPrefix} {result.bait_tokens.join(', ')}
+            </span>
+          )}
+        </div>
       )}
 
       {result.reasons.length > 0 && (
-        <ul className="mt-1.5 flex flex-col gap-0.5">
+        <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.8125rem] text-[var(--muted)]">
           {result.reasons.slice(0, 3).map((reason) => (
-            <li key={reason} className="text-[0.7rem] leading-snug text-[var(--muted)]">
-              • {reason}
-            </li>
+            <li key={reason}>• {reason}</li>
           ))}
         </ul>
       )}

@@ -51,7 +51,7 @@ export interface IncidentFeed {
 }
 
 export function useIncidentFeed(): IncidentFeed {
-  const configured = useMemo(isSupabaseConfigured, []);
+  const configured = useMemo(() => isSupabaseConfigured(), []);
 
   const [store, setStore] = useState<ReadonlyMap<string, NormalizedScan>>(() => new Map());
   const [status, setStatus] = useState<FeedStatus>(configured ? 'connecting' : 'unconfigured');
@@ -121,6 +121,11 @@ export function useIncidentFeed(): IncidentFeed {
 
     // Without Supabase there is no socket to manage - load history and stop.
     if (!configured) {
+      // catchUp() is async: its setState calls land in a later microtask, not
+      // synchronously in this effect body, so the cascading-render this rule
+      // guards against cannot happen here. setStatus below is the terminal
+      // state for this branch - `configured` never flips within a session.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void catchUp();
       setStatus('unconfigured');
       return () => {

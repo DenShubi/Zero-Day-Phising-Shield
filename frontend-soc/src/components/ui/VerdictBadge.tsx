@@ -1,16 +1,12 @@
 import { VERDICT_LABEL, VERDICT_VAR, type Verdict } from '@/lib/verdict';
+import { VerdictIcon } from './icons';
 
 /**
- * Verdict is never encoded by colour alone: each badge carries a glyph and the
- * written label too, so it survives a projector, a greyscale print, and a
- * colour-blind reader.
+ * Verdict is never encoded by colour alone: each badge carries an inline SVG
+ * icon and the Indonesian text label, consuming the single-source CSS variables
+ * in globals.css so projector legibility, greyscale print, and colour-blind
+ * accessibility all hold simultaneously.
  */
-
-const GLYPH: Record<Verdict, string> = {
-  SAFE: '✓',
-  SUSPICIOUS: '!',
-  CRITICAL_PHISHING: '✕',
-};
 
 export function VerdictBadge({
   verdict,
@@ -19,20 +15,27 @@ export function VerdictBadge({
   verdict: Verdict;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const pad =
-    size === 'lg' ? 'px-3 py-1.5 text-sm' : size === 'sm' ? 'px-1.5 py-0.5 text-[0.7rem]' : 'px-2 py-1 text-xs';
+  const sizing =
+    size === 'lg'
+      ? 'px-3 py-1.5 text-[0.8125rem] gap-1.5'
+      : size === 'sm'
+        ? 'px-2 py-0.5 text-[0.75rem] gap-1'
+        : 'px-2.5 py-1 text-[0.8125rem] gap-1.5';
+
+  const iconSize = size === 'lg' ? 16 : size === 'sm' ? 13 : 14;
+  const colorVar = `var(${VERDICT_VAR[verdict]})`;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded border font-semibold uppercase tracking-wide ${pad}`}
+      className={`inline-flex items-center rounded-full border font-semibold tracking-[0.02em] whitespace-nowrap ${sizing}`}
       style={{
-        color: `var(${VERDICT_VAR[verdict]})`,
-        borderColor: `color-mix(in srgb, var(${VERDICT_VAR[verdict]}) 45%, transparent)`,
-        background: `color-mix(in srgb, var(${VERDICT_VAR[verdict]}) 14%, transparent)`,
+        color: colorVar,
+        borderColor: `color-mix(in srgb, ${colorVar} 42%, transparent)`,
+        background: `color-mix(in srgb, ${colorVar} 12%, transparent)`,
       }}
     >
-      <span aria-hidden="true">{GLYPH[verdict]}</span>
-      {VERDICT_LABEL[verdict]}
+      <VerdictIcon verdict={verdict} size={iconSize} />
+      <span>{VERDICT_LABEL[verdict]}</span>
     </span>
   );
 }

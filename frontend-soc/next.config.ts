@@ -9,7 +9,7 @@ import type { NextConfig } from 'next';
  * The app is entirely client-side (no server data fetching, no route handlers),
  * so a static export is a genuine option rather than a compromise. Keeping the
  * export path working means routes must avoid dynamic segments: the forensics
- * view is /forensics?id=<id>, not /forensics/[scanId].
+ * view is /?view=forensik&insiden=<id>, not /forensics/[scanId].
  *
  * Note that static hosting does NOT remove the need for an HTTPS backend. Both
  * *.vercel.app and *.github.io are HTTPS public origins, so mixed content,
@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
   // mount, and which one depends on runtime config — so the host is not known
   // at build time. We use plain <img>, so the optimizer is simply off.
   images: { unoptimized: true },
+
+  // Hide the floating Next.js dev indicator so it never covers the sidebar footer.
+  devIndicators: false,
 
   // Tailwind is wired through postcss.config.mjs so the stylesheet builds on
   // both webpack and Turbopack. See that file for why webpack is the default

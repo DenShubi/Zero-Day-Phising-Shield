@@ -3,34 +3,22 @@
 /**
  * Interactive bounding-box layer drawn over the RAW evidence screenshot.
  *
- * The engine also burns boxes into `annotated_bbox_url`. We render a live layer
- * instead of showing only that image, because a live layer can be toggled per
- * category, hovered, and cross-highlighted against the DOM telemetry tables —
- * which makes the page an analysis tool rather than a picture. The burned-in
- * image stays available as a toggle, and is the primary render when a cold
- * incident has no per-element boxes.
+ * COORDINATE SPACE:
+ *   URL scans   1280x720 always (app/sandbox/browser.py captures fixed viewport).
+ *   Image scans the uploaded image's OWN pixel space (measured on load).
  *
- * COORDINATE SPACE — the important part, verified empirically on 2026-11-03:
- *
- *   URL scans   1280x720 always. app/sandbox/browser.py:494 captures with
- *               full_page=False into a fixed viewport.
- *   Image scans the uploaded image's OWN pixel space. Proven by rescaling one
- *               poster: at 1280x720 its QR box was {x:897,y:337,w:227,h:227};
- *               at 800x450 it was {x:560,y:210,w:142,h:142} — exactly 0.625x.
- *
- * So there is no safe default and `sourceSpace` is required. For image scans it
- * comes from the <img>'s naturalWidth/naturalHeight once loaded. Boxes are then
- * positioned in percentages, which keeps them correct at any rendered size with
- * no ResizeObserver and no hydration mismatch.
+ * Boxes are positioned in percentages so they remain exact at any rendered width
+ * without ResizeObserver or hydration mismatch.
  */
 
-import { useId, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   LAYER_LABEL,
   LAYER_VAR,
   type OverlayLayer,
 } from '@/lib/verdict';
 import type { BBox, SourceSpace } from '@/lib/normalize';
+import { id as t } from '@/lib/i18n/id';
 
 export interface OverlayBox {
   id: string;
@@ -64,11 +52,10 @@ export function BBoxOverlay({
   highlightedId = null,
   onHighlight,
   onImageLoad,
-  alt = 'Bukti tangkapan layar',
+  alt = t.forensics.evidenceAlt,
 }: BBoxOverlayProps) {
   const [hidden, setHidden] = useState<ReadonlySet<OverlayLayer>>(() => new Set());
   const [loadFailed, setLoadFailed] = useState(false);
-  const captionId = useId();
 
   // Only layers actually present get a toggle, so the legend reflects reality.
   const presentLayers = useMemo(() => {
@@ -90,7 +77,6 @@ export function BBoxOverlay({
       return next;
     });
 
-  // Percentages, so the overlay is correct at any rendered width.
   const pct = (box: BBox) => {
     if (!sourceSpace || sourceSpace.width <= 0 || sourceSpace.height <= 0) return null;
     return {
@@ -102,43 +88,52 @@ export function BBoxOverlay({
   };
 
   return (
-    <figure className="vk-overlay">
-      {presentLayers.length > 0 && (
-        <div className="vk-overlay__legend" role="group" aria-label="Lapisan anotasi">
-          {presentLayers.map((layer) => {
-            const off = hidden.has(layer);
-            const count = boxes.filter((b) => b.layer === layer).length;
-            return (
-              <button
-                key={layer}
-                type="button"
-                onClick={() => toggle(layer)}
-                aria-pressed={!off}
-                className="vk-overlay__legend-item"
-                data-off={off || undefined}
-                style={{ '--swatch': `var(${LAYER_VAR[layer]})` } as React.CSSProperties}
-              >
-                <span className="vk-overlay__swatch" aria-hidden="true" />
-                {LAYER_LABEL[layer]}
-                <span className="vk-overlay__count">{count}</span>
-              </button>
-            );
-          })}
+    <div className="vk-overlay">
+      {(presentLayers.length > 0 || (boxes.length > 0 && !sourceSpace && !loadFailed)) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {presentLayers.length > 0 && (
+            <div
+              className="vk-overlay__legend"
+              role="group"
+              aria-label={t.forensics.overlayLayersAria}
+            >
+              {presentLayers.map((layer) => {
+                const off = hidden.has(layer);
+                const count = boxes.filter((b) => b.layer === layer).length;
+                return (
+                  <button
+                    key={layer}
+                    type="button"
+                    onClick={() => toggle(layer)}
+                    aria-pressed={!off}
+                    className="vk-overlay__legend-item"
+                    data-off={off || undefined}
+                    style={{ '--swatch': `var(${LAYER_VAR[layer]})` } as React.CSSProperties}
+                  >
+                    <span className="vk-overlay__swatch" aria-hidden="true" />
+                    <span>{LAYER_LABEL[layer]}</span>
+                    <span className="vk-overlay__count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {boxes.length > 0 && !sourceSpace && !loadFailed && (
+            <div className="vk-overlay__note">{t.forensics.overlayWaiting}</div>
+          )}
         </div>
       )}
 
-      {/* The image sizes the frame; boxes are absolutely positioned against it.
-          No fixed aspect ratio — an image scan's source can be any shape. */}
+      {/* Image sizes the frame; boxes are percentage-positioned over it. */}
       <div className="vk-overlay__frame">
         {loadFailed ? (
-          <p className="vk-overlay__error" role="status">
-            Gambar bukti tidak dapat dimuat. Periksa koneksi ke penyimpanan bukti.
-          </p>
+          <div className="vk-overlay__error" role="status">
+            {t.forensics.overlayError}
+          </div>
         ) : (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the evidence
-                host varies at runtime (Supabase Storage or the engine's /static
-                mount), so next/image remotePatterns cannot be configured. */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- evidence host varies at runtime */}
             <img
               src={imageUrl}
               alt={alt}
@@ -158,10 +153,15 @@ export function BBoxOverlay({
                 const style = pct(box.bbox);
                 if (!style) return null;
                 const active = highlightedId === box.id;
+                const isNearRight = box.bbox.x / sourceSpace.width > 0.55;
+                const tagStyle: React.CSSProperties = isNearRight
+                  ? { right: '-2px', left: 'auto' }
+                  : { left: '-2px', right: 'auto' };
+
                 return (
-                  <button
+                  <div
                     key={box.id}
-                    type="button"
+                    tabIndex={0}
                     className="vk-overlay__box"
                     data-active={active || undefined}
                     style={
@@ -174,25 +174,27 @@ export function BBoxOverlay({
                     onMouseLeave={() => onHighlight?.(null)}
                     onFocus={() => onHighlight?.(box.id)}
                     onBlur={() => onHighlight?.(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onHighlight?.(active ? null : box.id);
+                      }
+                    }}
                     aria-label={`${LAYER_LABEL[box.layer]}: ${box.label}`}
                     title={box.detail ?? box.label}
                   >
-                    <span className="vk-overlay__tag">{box.label}</span>
-                  </button>
+                    <span
+                      className="vk-overlay__tag max-w-[14rem] truncate"
+                      style={tagStyle}
+                    >
+                      {box.label}
+                    </span>
+                  </div>
                 );
               })}
           </>
         )}
       </div>
-
-      {/* Only meaningful when there is something waiting to be placed. With no
-          boxes the dimensions are irrelevant, and saying otherwise suggests the
-          page is stuck. */}
-      {boxes.length > 0 && !sourceSpace && !loadFailed && (
-        <figcaption id={captionId} className="vk-overlay__note">
-          Menunggu dimensi gambar untuk menempatkan anotasi…
-        </figcaption>
-      )}
-    </figure>
+    </div>
   );
 }
