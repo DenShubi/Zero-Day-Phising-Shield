@@ -3,7 +3,7 @@
 /**
  * DOM telemetry: structural evidence behind the DOM anomaly score.
  *
- * Rows cross-highlight with the bounding-box overlay — hovering a form or input
+ * Rows cross-highlight with the bounding-box overlay: hovering a form or input
  * here outlines it on the screenshot, and vice versa.
  */
 
@@ -35,15 +35,15 @@ function TelemetryChip({
         : 'var(--muted-strong)';
   return (
     <span
-      className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[0.8125rem] font-medium leading-none"
+      className="vk-mono inline-flex items-center gap-1 rounded-[2px] border px-1.5 py-0.5 text-[0.72rem] font-semibold uppercase leading-none"
       style={{
         color,
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
         background: `color-mix(in srgb, ${color} 10%, transparent)`,
       }}
     >
-      {tone === 'critical' && <IconOctagonAlert size={12} />}
-      {tone === 'safe' && <IconShieldCheck size={12} />}
+      {tone === 'critical' && <IconOctagonAlert size={11} />}
+      {tone === 'safe' && <IconShieldCheck size={11} />}
       <span>{children}</span>
     </span>
   );
@@ -61,11 +61,9 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
 
   if (!hasRows) {
     return (
-      <div className="vk-bento min-w-0 p-4">
-        <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-          {t.forensics.domTelemetry}
-        </h3>
-        <div className="mt-2 text-[0.875rem] text-[var(--muted)]">{t.forensics.domEmpty}</div>
+      <div className="min-w-0 p-4">
+        <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.domTelemetry}</h2>
+        <div className="mt-2 text-[0.8125rem] text-[var(--muted)]">{t.forensics.domEmpty}</div>
       </div>
     );
   }
@@ -73,16 +71,14 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
   const sensitiveCount = url.inputs.filter((i) => i.isSensitiveCredential).length;
 
   return (
-    <div className="vk-bento min-w-0 p-4">
-      <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-        {t.forensics.domTelemetry}
-      </h3>
+    <div className="min-w-0 p-4">
+      <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.domTelemetry}</h2>
 
       {url.forms.length > 0 && (
-        <div className="mt-3.5">
-          <h4 className="mb-2 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+        <div className="mt-3">
+          <h3 className="vk-pane-label mb-1.5">
             {t.forensics.formsHeader} ({url.forms.length})
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-1.5">
             {url.forms.map((form, i) => {
               const boxId = boxIdForForm(form.index ?? i);
@@ -93,15 +89,15 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
                   key={boxId}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-lg border px-3 py-2 transition-colors"
+                  className="rounded-[3px] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-form)' : 'var(--border)',
                     background: active
                       ? 'color-mix(in srgb, var(--layer-form) 14%, transparent)'
-                      : 'var(--surface-2)',
+                      : 'var(--surface-0)',
                   }}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <TelemetryChip>{form.method ?? 'GET'}</TelemetryChip>
                     {form.isCrossOrigin ? (
                       <TelemetryChip tone="critical">{t.forensics.crossOriginBadge}</TelemetryChip>
@@ -110,8 +106,8 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
                     )}
                   </div>
                   {/* Rendered as text, never an anchor: attacker endpoint must not be clickable. */}
-                  <div className="vk-mono mt-1.5 break-all text-[0.8125rem] text-[var(--muted-strong)]">
-                    → {show(truncateMiddle(dest, 88))}
+                  <div className="vk-mono mt-1.5 break-all text-[0.75rem] text-[var(--muted-strong)]">
+                    -&gt; {show(truncateMiddle(dest, 88))}
                   </div>
                 </li>
               );
@@ -121,12 +117,12 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
       )}
 
       {url.inputs.length > 0 && (
-        <div className="mt-4">
-          <h4 className="mb-2 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+        <div className="mt-3.5">
+          <h3 className="vk-pane-label mb-1.5">
             {t.forensics.inputsHeader} ({sensitiveCount} {t.forensics.sensitiveCountSuffix}{' '}
             {url.inputs.length})
-          </h4>
-          <ul className="flex flex-col gap-1.5">
+          </h3>
+          <ul className="divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]">
             {url.inputs.map((input, i) => {
               const boxId = boxIdForInput(i);
               const active = highlightedId === boxId;
@@ -135,18 +131,17 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
                   key={boxId}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 rounded-lg border px-3 py-1.5 text-[0.8125rem] transition-colors"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-3 py-1.5 text-[0.8125rem] transition-colors"
                   style={{
-                    borderColor: active ? 'var(--layer-input)' : 'var(--border-subtle)',
                     background: active
-                      ? 'color-mix(in srgb, var(--layer-input) 14%, transparent)'
-                      : 'var(--surface-2)',
+                      ? 'color-mix(in srgb, var(--layer-input) 15%, transparent)'
+                      : undefined,
                   }}
                 >
-                  <span className="vk-mono font-medium text-[var(--foreground)]">
+                  <span className="vk-mono text-[0.75rem] font-medium text-[var(--foreground)]">
                     {input.name ?? input.id ?? input.tag}
                   </span>
-                  <span className="truncate text-[var(--muted)]">
+                  <span className="truncate text-[0.75rem] text-[var(--muted)]">
                     {input.placeholder ?? input.type ?? ''}
                   </span>
                   {input.isSensitiveCredential ? (
@@ -162,17 +157,17 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
       )}
 
       {(url.externalDomains.length > 0 || url.militaryKeywords.length > 0) && (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-3.5 grid gap-4 sm:grid-cols-2">
           {url.externalDomains.length > 0 && (
             <div>
-              <h4 className="mb-1.5 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+              <h3 className="vk-pane-label mb-1.5">
                 {t.forensics.externalDomainsHeader} ({url.externalDomains.length})
-              </h4>
+              </h3>
               <ul className="flex flex-col gap-1">
                 {url.externalDomains.map((domain) => (
                   <li
                     key={domain}
-                    className="vk-mono break-all text-[0.8125rem] text-[var(--muted-strong)]"
+                    className="vk-mono break-all text-[0.75rem] text-[var(--muted-strong)]"
                   >
                     {show(domain)}
                   </li>
@@ -183,9 +178,9 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
 
           {url.militaryKeywords.length > 0 && (
             <div>
-              <h4 className="mb-1.5 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+              <h3 className="vk-pane-label mb-1.5">
                 {t.forensics.militaryKeywordsHeader} ({url.militaryKeywords.length})
-              </h4>
+              </h3>
               <div className="text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
                 {url.militaryKeywords.join(', ')}
               </div>
@@ -194,7 +189,7 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
         </div>
       )}
 
-      <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 border-t border-[var(--border-subtle)] pt-3 text-[0.8125rem]">
+      <dl className="mt-3.5 flex flex-wrap gap-x-6 gap-y-1.5 border-t border-[var(--border-subtle)] pt-2.5 text-[0.75rem]">
         {url.statusCode !== null && (
           <div className="flex gap-1.5">
             <dt className="text-[var(--muted)]">{t.forensics.httpStatusLabel}</dt>
@@ -209,7 +204,7 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
               color: url.isOfficialMilDomain ? 'var(--verdict-safe)' : 'var(--verdict-critical)',
             }}
           >
-            {url.isOfficialMilDomain ? <IconShieldCheck size={13} /> : <IconOctagonAlert size={13} />}
+            {url.isOfficialMilDomain ? <IconShieldCheck size={12} /> : <IconOctagonAlert size={12} />}
             <span>{url.isOfficialMilDomain ? t.forensics.yes : t.forensics.no}</span>
           </dd>
         </div>
@@ -222,9 +217,9 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
             }}
           >
             {url.hasCredentialHarvesting ? (
-              <IconOctagonAlert size={13} />
+              <IconOctagonAlert size={12} />
             ) : (
-              <IconShieldCheck size={13} />
+              <IconShieldCheck size={12} />
             )}
             <span>
               {url.hasCredentialHarvesting ? t.forensics.detected : t.forensics.notDetected}

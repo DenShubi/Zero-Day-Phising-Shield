@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Mitigasi panel: indicator checkbox table on the left, one clear download CTA
+ * Mitigasi panel: indicator checkbox ledger on the left, one clear download CTA
  * per export format + live Geist Mono configuration preview on the right, and
- * seamless ?host=<hostname> deep-linking from Forensik / Simulasi Lapor Cepat.
+ * ?host=<hostname> deep-linking from Forensik / Simulasi Lapor Cepat.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -134,27 +134,11 @@ export function MitigationPanel({
     [previewFormat, chosen],
   );
 
-  /**
-   * The preview is bounded by whole lines rather than left to scroll: a box
-   * that ends mid-glyph reads as broken on a projector, and the complete rule
-   * set is one click away via Salin / Unduh. PREVIEW_LINE_BUDGET is what fits
-   * the shortest panel height this layout produces.
-   */
   const previewLines = useMemo(() => {
     if (!renderedPreview) return [];
-    // Every format opens with a provenance banner - eight-odd comment lines
-    // that wrap to the full height of this column, so the preview filled up
-    // before a single rule appeared. The banner is boilerplate the operator
-    // gets in the file; the rules are what they came here to check, so only
-    // the rules are previewed. Download and Salin always emit renderFormat()'s
-    // untouched output, banner included.
     const body = renderedPreview
       .split('\n')
       .filter((line) => line.trim() !== '' && !/^\s*[;#]/.test(line));
-    // Narrower still: the lines that name a chosen host. What is left of an
-    // RPZ file after the banner is mostly a wrapped SOA record - true to the
-    // format and useless to an operator checking which domains are about to
-    // be sinkholed. These lines are short enough to read at a glance.
     const hostLines = body.filter((line) => chosen.some((ioc) => line.includes(ioc.host)));
     const lines = hostLines.length > 0 ? hostLines : body;
     return (lines.length > 0 ? lines : renderedPreview.trim().split('\n')).slice(
@@ -203,13 +187,18 @@ export function MitigationPanel({
 
   return (
     <section className="vk-panel-section">
-      {/* Title Row */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      {/* Flush Architectural Header */}
+      <header className="vk-page-header">
         <div>
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          <div className="vk-kicker">{t.mitigation.sectionIndex}</div>
+          <h1
+            id="vk-main-heading"
+            tabIndex={-1}
+            className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+          >
             {t.mitigation.title}
           </h1>
-          <p className="mt-0.5 max-w-[66ch] text-[0.875rem] text-[var(--muted-strong)]">
+          <p className="mt-0.5 max-w-[66ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
             {t.mitigation.subtitle}
           </p>
         </div>
@@ -223,98 +212,103 @@ export function MitigationPanel({
               renderFormat(previewFormat, chosen),
             )
           }
-          className="vk-btn vk-btn-primary h-9 px-3.5 text-[0.875rem]"
+          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
         >
-          <IconDownload size={15} />
+          <IconDownload size={14} />
           <span>{t.mitigation.ctaDownloadRules}</span>
         </button>
+      </header>
+
+      {/* Flush Controlled Export Notice Bar */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[0.75rem] text-[var(--muted-strong)] sm:px-5">
+        <span className="shrink-0 text-[var(--verdict-suspicious)]" aria-hidden="true">
+          <IconAlertTriangle size={14} />
+        </span>
+        <div>
+          <strong className="font-semibold text-[var(--foreground)]">
+            {t.mitigation.simulationNoticeTitle}:
+          </strong>{' '}
+          {t.mitigation.simulationNotice}
+        </div>
       </div>
 
-      <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col gap-3">
-        {/* Unmissable but Calm Simulation Notice Callout */}
-        <div className="flex shrink-0 items-center gap-2.5 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-suspicious)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-          <span className="shrink-0 text-[var(--verdict-suspicious)]">
-            <IconAlertTriangle size={15} />
-          </span>
-          <div>
-            <strong className="font-semibold text-[var(--foreground)]">
-              {t.mitigation.simulationNoticeTitle}:
-            </strong>{' '}
-            {t.mitigation.simulationNotice}
-          </div>
-        </div>
-
-        {/* Main 12-Col Bento: IOC Checkbox Table (Left 7) + Export Formats & Live Preview (Right 5) */}
-        <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-          {/* LEFT 7 COLUMNS: Validated IOC Checkbox Table */}
-          <div className="vk-bento flex min-h-0 min-w-0 flex-col p-4 lg:col-span-7">
+      {/* Main 12-Col Split Ledger: Validated IOC Table (Left 7) + Export Formats & Live Preview (Right 5) */}
+      <div
+        data-ui="console-workspace"
+        className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+      >
+        {/* LEFT 7 COLUMNS: Validated IOC Checkbox Ledger */}
+        <div className="flex min-h-0 min-w-0 flex-col bg-[var(--surface-1)] lg:col-span-7">
+          <div className="shrink-0 border-b border-[var(--border)] bg-[var(--surface-0)] px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+              <h2 className="vk-pane-label text-[var(--foreground)]">
                 {t.mitigation.iocTableTitle}{' '}
-                <span className="vk-mono vk-tabular text-[0.875rem] font-normal text-[var(--muted)]">
+                <span className="vk-mono vk-tabular ml-1 text-[0.75rem] font-normal text-[var(--muted)]">
                   ({chosen.length} {t.mitigation.selectedCountMid} {verdictFiltered.length})
                 </span>
-              </h3>
+              </h2>
 
-            <button
-              type="button"
-              disabled={verdictFiltered.length === 0}
-              onClick={toggleSelectAll}
-              className="vk-btn vk-btn-secondary h-8 px-2.5 text-[0.8125rem]"
-            >
-              {selected.size === verdictFiltered.length
-                ? t.mitigation.clearAll
-                : t.mitigation.selectAll}
-            </button>
-          </div>
-
-          {/* Search & Verdict Filter Strip */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[12rem] flex-1">
-              <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[var(--muted)]">
-                <IconSearch size={14} />
-              </span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t.mitigation.searchPlaceholder}
-                aria-label={t.mitigation.searchPlaceholder}
-                className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--canvas)] pr-3 pl-8 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--ink-disabled)]"
-              />
+              <button
+                type="button"
+                disabled={verdictFiltered.length === 0}
+                onClick={toggleSelectAll}
+                className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
+              >
+                {selected.size === verdictFiltered.length
+                  ? t.mitigation.clearAll
+                  : t.mitigation.selectAll}
+              </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1">
-              {VERDICT_ORDER.map((v) => {
-                const on = minVerdicts.has(v);
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => toggleVerdict(v)}
-                    aria-pressed={on}
-                    /* The off state is carried by the frame, not by opacity:
-                       dimming the badge to 0.45 dropped SAFE green to 2.55:1
-                       against the panel, under the 4.5:1 this UI holds itself
-                       to. A dashed, unfilled frame reads as "off" at full
-                       legibility, and aria-pressed states it for assistive
-                       tech. */
-                    className="rounded-md border px-1.5 py-1 transition-colors"
-                    style={{
-                      borderColor: on ? 'var(--border-strong)' : 'var(--border)',
-                      borderStyle: on ? 'solid' : 'dashed',
-                      background: on ? 'var(--surface-2)' : 'transparent',
-                    }}
-                  >
-                    <VerdictBadge verdict={v} size="sm" />
-                  </button>
-                );
-              })}
+            {/* Search & Verdict Filter Strip */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[12rem] flex-1">
+                <label htmlFor="vk-ioc-search" className="visually-hidden">
+                  {t.mitigation.searchPlaceholder}
+                </label>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[var(--muted)]"
+                >
+                  <IconSearch size={13} />
+                </span>
+                <input
+                  id="vk-ioc-search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t.mitigation.searchPlaceholder}
+                  className="h-8 w-full rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] pr-3 pl-8 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1">
+                {VERDICT_ORDER.map((v) => {
+                  const on = minVerdicts.has(v);
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => toggleVerdict(v)}
+                      aria-pressed={on}
+                      className="rounded-[3px] border px-1.5 py-1 transition-colors"
+                      style={{
+                        borderColor: on ? 'var(--border-strong)' : 'var(--border)',
+                        borderStyle: on ? 'solid' : 'dashed',
+                        background: on ? 'var(--surface-2)' : 'transparent',
+                      }}
+                    >
+                      <VerdictBadge verdict={v} size="sm" />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* Focused Host Banner when arriving from Forensik */}
           {focusedHost && (
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-tint)] px-3 py-1.5 text-[0.8125rem]">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--accent-border)] bg-[var(--accent-tint)] px-4 py-2 text-[0.8125rem]">
               <span className="text-[var(--foreground)]">
                 {t.mitigation.focusedHostBanner}{' '}
                 <strong className="vk-mono text-[var(--accent-ink)]">{focusedHost}</strong>
@@ -322,7 +316,7 @@ export function MitigationPanel({
               <button
                 type="button"
                 onClick={() => router.replace(buildPanelHref('mitigasi'), { scroll: false })}
-                className="text-[var(--accent-ink)] underline hover:text-[var(--foreground)]"
+                className="text-[0.75rem] font-medium text-[var(--accent-ink)] underline hover:text-[var(--foreground)]"
               >
                 {t.mitigation.clearFocusedHost}
               </button>
@@ -330,38 +324,44 @@ export function MitigationPanel({
           )}
 
           {/* Sticky-Header IOC Table */}
-          <div className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--border)]">
+          <div
+            role="region"
+            aria-labelledby="vk-ioc-caption"
+            tabIndex={0}
+            className="vk-scroll min-h-0 flex-1 overflow-auto"
+          >
             {visible.length === 0 ? (
-              <div className="p-6 text-center text-[0.875rem] text-[var(--muted)]">
+              <div className="p-6 text-center text-[0.8125rem] text-[var(--muted)]">
                 {t.mitigation.emptyIocs}
               </div>
             ) : (
-              /* Five columns, not six: the ticket rides under its host rather
-                 than holding an axis of its own, and provenance — the one
-                 secondary column — drops below xl. Sideways scrolling is not a
-                 fix here; a table a demo operator has to drag is a table that
-                 does not fit. */
               <table className="w-full border-collapse text-[0.8125rem]">
-                <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
-                  <tr className="border-b border-[var(--border)] text-left">
-                    <th className="w-9 px-2.5 py-2 font-medium text-[var(--muted)]">
+                <caption id="vk-ioc-caption" className="visually-hidden">
+                  {t.mitigation.iocTableCaption}
+                </caption>
+                <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-0)]">
+                  <tr className="text-left">
+                    <th scope="col" className="vk-pane-label w-10 px-3 py-2.5">
                       {t.mitigation.colInclude}
                     </th>
-                    <th className="px-2.5 py-2 font-medium whitespace-nowrap text-[var(--muted)]">
+                    <th scope="col" className="vk-pane-label whitespace-nowrap px-3 py-2.5">
                       {t.mitigation.colHost}
                     </th>
-                    <th className="px-2 py-2 font-medium whitespace-nowrap text-[var(--muted)]">
+                    <th scope="col" className="vk-pane-label whitespace-nowrap px-2.5 py-2.5">
                       {t.mitigation.colVerdict}
                     </th>
-                    <th className="hidden px-2 py-2 text-right font-medium whitespace-nowrap text-[var(--muted)] xl:table-cell">
+                    <th
+                      scope="col"
+                      className="vk-pane-label hidden whitespace-nowrap px-2.5 py-2.5 text-right xl:table-cell"
+                    >
                       {t.mitigation.colScore}
                     </th>
-                    <th className="hidden px-2 py-2 font-medium text-[var(--muted)] lg:table-cell">
+                    <th scope="col" className="vk-pane-label hidden px-3 py-2.5 lg:table-cell">
                       {t.mitigation.provenance}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {visible.map((ioc) => {
                     const low = LOW_CONFIDENCE.has(ioc.provenance);
                     const isFocused = Boolean(normalizedFocus && ioc.host === normalizedFocus);
@@ -370,33 +370,30 @@ export function MitigationPanel({
                       <tr
                         key={ioc.host}
                         onClick={() => toggleHost(ioc.host)}
-                        className="cursor-pointer border-b border-[var(--border-subtle)] transition-colors last:border-0 hover:bg-[var(--surface-2)]"
+                        className="cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
                         style={isFocused ? { background: 'var(--accent-tint)' } : undefined}
                       >
-                        <td className="px-2.5 py-2" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleHost(ioc.host)}
                             aria-label={`${t.mitigation.includeHostAriaPrefix} ${ioc.host}`}
-                            className="h-4 w-4 accent-[var(--accent)]"
+                            className="h-4 w-4 accent-[var(--accent-ink)]"
                           />
                         </td>
-                        <td className="px-2.5 py-2">
-                          <div className="vk-mono font-medium break-all text-[var(--foreground)]">
+                        <td className="px-3 py-2.5">
+                          <div className="vk-mono break-all text-[0.8125rem] font-medium text-[var(--foreground)]">
                             {ioc.host}
                           </div>
                           {ioc.ticket && (
-                            <div className="vk-mono text-[0.75rem] whitespace-nowrap text-[var(--muted)]">
+                            <div className="vk-mono whitespace-nowrap text-[0.72rem] text-[var(--muted)]">
                               {ioc.ticket}
                             </div>
                           )}
-                          {/* Below lg the provenance column is gone, so the
-                              "needs a human look" flag rides with the host
-                              instead of disappearing with it. */}
                           {low && (
                             <div
-                              className="mt-0.5 inline-flex items-center gap-1 text-[0.75rem] lg:hidden"
+                              className="mt-0.5 inline-flex items-center gap-1 text-[0.72rem] lg:hidden"
                               style={{ color: 'var(--verdict-suspicious)' }}
                             >
                               <IconAlertTriangle size={11} />
@@ -404,28 +401,19 @@ export function MitigationPanel({
                             </div>
                           )}
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-2.5 py-2.5">
                           <VerdictBadge verdict={ioc.verdict} size="sm" />
                         </td>
-                        {/* Score drops below xl, not provenance: the verdict
-                            badge already carries severity, while provenance is
-                            what tells an operator an indicator came from OCR
-                            and still needs a human look before it reaches a
-                            resolver. */}
-                        <td className="vk-mono vk-tabular hidden px-2 py-2 text-right font-semibold text-[var(--foreground)] xl:table-cell">
+                        <td className="vk-mono vk-tabular hidden px-2.5 py-2.5 text-right font-semibold text-[var(--foreground)] xl:table-cell">
                           {formatScore(ioc.riskScore)}
                         </td>
-                        <td className="hidden px-2 py-2 lg:table-cell">
+                        <td className="hidden px-3 py-2.5 lg:table-cell">
                           <span className="text-[var(--muted-strong)]">
                             {PROVENANCE_LABEL[ioc.provenance]}
                           </span>
-                          {/* No outline here: a bordered pill beside real
-                              buttons reads as a third button style on this
-                              screen. Icon + amber text carries the same
-                              warning without pretending to be clickable. */}
                           {low && (
                             <span
-                              className="ml-1.5 inline-flex items-center gap-1 text-[0.75rem]"
+                              className="ml-1.5 inline-flex items-center gap-1 text-[0.72rem]"
                               style={{ color: 'var(--verdict-suspicious)' }}
                             >
                               <IconAlertTriangle size={11} />
@@ -442,109 +430,98 @@ export function MitigationPanel({
           </div>
 
           {rejected.length > 0 && (
-            <div className="mt-2.5 border-t border-[var(--border-subtle)] pt-2">
+            <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-0)] px-4 py-2">
               <button
                 type="button"
                 onClick={() => setShowRejected((v) => !v)}
-                className="text-[0.8125rem] text-[var(--muted-strong)] underline hover:text-[var(--foreground)]"
+                className="text-[0.75rem] text-[var(--muted-strong)] underline hover:text-[var(--foreground)]"
               >
                 {rejected.length} {t.mitigation.rejectedToggleSuffix}
               </button>
               {showRejected && (
-                <ul className="vk-scroll mt-1.5 max-h-24 overflow-y-auto rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2">
+                <ul className="vk-scroll mt-1.5 max-h-24 overflow-y-auto rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] p-2">
                   {rejected.slice(0, 40).map((r, idx) => (
                     <li
                       key={`${r.raw}-${idx}`}
-                      className="vk-mono text-[0.75rem] text-[var(--muted)]"
+                      className="vk-mono text-[0.72rem] text-[var(--muted)]"
                     >
-                      {r.raw} — {r.reason}
+                      {r.raw}: {r.reason}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
           )}
-          </div>
+        </div>
 
-          {/* RIGHT 5 COLUMNS: One Clear Download Action per Format + Live Code Preview */}
-          <div className="vk-bento flex min-h-0 min-w-0 flex-col p-4 lg:col-span-5">
-            <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-              {t.mitigation.formatsTitle}
-            </h3>
+        {/* RIGHT 5 COLUMNS: Infrastructure Formats + Live Geist Mono Rule Preview */}
+        <aside className="flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] bg-[var(--surface-0)] lg:col-span-5">
+          <div className="flex min-h-0 flex-1 flex-col p-4">
+            <h2 className="vk-pane-label text-[var(--foreground)]">{t.mitigation.formatsTitle}</h2>
 
-          <div className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-y-auto pr-0.5">
-            <ul className="flex flex-col gap-2">
-              {FORMATS.map((f) => {
-                const isPreviewed = previewFormat === f.id;
-                return (
-                  <li
-                    key={f.id}
-                    className="flex min-w-0 items-center justify-between gap-2.5 rounded-lg border px-3 py-2 transition-colors"
-                    style={{
-                      borderColor: isPreviewed ? 'var(--accent-border)' : 'var(--border)',
-                      background: isPreviewed ? 'var(--accent-tint)' : 'var(--surface-2)',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setPreviewFormat(f.id)}
-                      className="min-w-0 flex-1 text-left"
+            <div className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-y-auto pr-0.5">
+              <ul className="divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
+                {FORMATS.map((f) => {
+                  const isPreviewed = previewFormat === f.id;
+                  return (
+                    <li
+                      key={f.id}
+                      className="flex min-w-0 items-center justify-between gap-2.5 px-3 py-2 transition-colors"
+                      style={{
+                        background: isPreviewed ? 'var(--accent-tint)' : undefined,
+                      }}
                     >
-                      <div className="text-[0.875rem] font-semibold text-[var(--foreground)]">
-                        {f.label}
-                      </div>
-                      {/* Only the previewed format explains itself. Nine
-                          descriptions stacked in this column either truncate
-                          to nothing useful or push the list past its own
-                          scroll box; one full description, on the row the
-                          operator is actually looking at, says more. */}
-                      {isPreviewed && (
-                        <div className="mt-0.5 text-[0.8125rem] leading-snug text-[var(--muted)]">
-                          {f.description}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewFormat(f.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="text-[0.8125rem] font-semibold text-[var(--foreground)]">
+                          {f.label}
                         </div>
-                      )}
-                    </button>
+                        {isPreviewed && (
+                          <div className="mt-0.5 text-[0.75rem] leading-snug text-[var(--muted)]">
+                            {f.description}
+                          </div>
+                        )}
+                      </button>
 
-                    <button
-                      type="button"
-                      disabled={chosen.length === 0}
-                      onClick={() => downloadText(f.filename, f.mime, renderFormat(f.id, chosen))}
-                      className="vk-btn vk-btn-primary h-8 shrink-0 px-3 text-[0.8125rem]"
-                    >
-                      <IconDownload size={14} />
-                      <span>{t.mitigation.download}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                      <button
+                        type="button"
+                        disabled={chosen.length === 0}
+                        onClick={() => downloadText(f.filename, f.mime, renderFormat(f.id, chosen))}
+                        className="vk-btn vk-btn-primary h-7 shrink-0 px-2.5 text-[0.75rem]"
+                      >
+                        <IconDownload size={13} />
+                        <span>{t.mitigation.download}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
 
           {/* Live Geist Mono Rule Preview */}
-          <div className="mt-3 flex min-w-0 shrink-0 flex-col border-t border-[var(--border-subtle)] pt-3">
+          <div className="flex min-w-0 shrink-0 flex-col p-4">
             <div className="flex items-center justify-between gap-2">
-              <h4 className="min-w-0 text-[0.8125rem] leading-snug font-medium tracking-[0.02em] break-all text-[var(--muted-strong)]">
+              <h3 className="vk-mono min-w-0 break-all text-[0.75rem] font-semibold text-[var(--foreground)]">
                 {t.mitigation.previewHeaderPrefix} {activeFormatMeta.filename}
-              </h4>
+              </h3>
               <button
                 type="button"
                 disabled={chosen.length === 0}
                 onClick={copyRules}
-                className="vk-btn vk-btn-secondary h-7 shrink-0 px-2.5 text-[0.8125rem]"
+                className="vk-btn vk-btn-secondary h-7 shrink-0 px-2.5 text-[0.75rem]"
               >
-                {copiedPreview ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                {copiedPreview ? <IconCheck size={12} /> : <IconCopy size={12} />}
                 <span>{copiedPreview ? t.common.copied : t.mitigation.copyCode}</span>
               </button>
             </div>
 
-            {/* Fixed height, and every rule is budgeted at two wrapped lines,
-                so the box holds exactly what it shows - two rules below xl,
-                five above - at any column width. Wrapping without that budget
-                made the visible line count depend on the width, and the box
-                ended mid-rule at some viewport every time. */}
             <div
               aria-label={`${t.mitigation.previewHeaderPrefix} ${activeFormatMeta.filename}`}
-              className="vk-mono mt-2 h-[7.5rem] w-full min-w-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--canvas)] p-3 text-[0.75rem] leading-[1.21875rem] text-[var(--muted-strong)] xl:h-[13.75rem]"
+              className="vk-mono mt-2 h-[7.5rem] w-full min-w-0 overflow-hidden rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)] p-3 text-[0.75rem] leading-[1.21875rem] text-[var(--muted-strong)] xl:h-[12.5rem]"
             >
               {chosen.length === 0 ? (
                 <p className="leading-snug">{t.mitigation.emptyIocs}</p>
@@ -556,24 +533,23 @@ export function MitigationPanel({
                       i >= 2 ? 'hidden line-clamp-2 break-all xl:block' : 'line-clamp-2 break-all'
                     }
                   >
-                    {line || ' '}
+                    {line || '\u00a0'}
                   </div>
                 ))
               )}
             </div>
 
             {previewLines.length > 2 && (
-              <p className="mt-1.5 text-[0.75rem] text-[var(--muted)]">
+              <p className="mt-1.5 text-[0.72rem] text-[var(--muted)]">
                 {t.mitigation.previewTruncatedNote}
               </p>
             )}
 
-            <div className="mt-2 text-[0.75rem] text-[var(--muted)]">
+            <div className="mt-1.5 text-[0.72rem] text-[var(--muted)]">
               {t.mitigation.localGenNotePrefix} {chosen.length} {t.mitigation.localGenNoteSuffix}
             </div>
           </div>
-          </div>
-        </div>
+        </aside>
       </div>
     </section>
   );

@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Forensik panel: dominant >= 64% interactive visual evidence canvas on the left,
- * collapsible dense telemetry/score rail on the right, seamless link to Mitigasi,
+ * Forensik panel: dominant interactive visual evidence workbench on the left,
+ * collapsible dense telemetry/score ledger on the right, direct link to Mitigasi,
  * and white-ground @media print incident report support.
  */
 
@@ -62,6 +62,10 @@ function extractHost(raw: string | null | undefined): string | null {
   }
 }
 
+function cleanTarget(raw: string): string {
+  return raw.replace(/\s*\u2014\s*/g, ': ');
+}
+
 function ForensicsDetailView({
   initialScan,
   incidents,
@@ -112,7 +116,7 @@ function ForensicsDetailView({
     }
   }, [scan, rescanning, onScanUpdated, router]);
 
-  const target = scan.finalUrl ?? describeTarget(scan.submittedUrl);
+  const target = cleanTarget(scan.finalUrl ?? describeTarget(scan.submittedUrl));
   const candidateHost = extractHost(scan.finalUrl ?? scan.submittedUrl);
   const showBurnedIn = viewOverride ?? shouldPreferBurnedIn(scan, boxes);
   const evidenceUrl = showBurnedIn
@@ -124,24 +128,25 @@ function ForensicsDetailView({
 
   return (
     <section className="vk-panel-section">
-      {/* Compact Forensic Title Row */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="max-w-[54rem]">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+      {/* Flush Architectural Forensic Header */}
+      <header className="vk-page-header">
+        <div className="min-w-0 max-w-[56rem]">
+          <div className="vk-kicker">{t.forensics.sectionIndex}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <h1
+              id="vk-main-heading"
+              tabIndex={-1}
+              className="text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+            >
               {t.forensics.title}
             </h1>
-            <VerdictBadge verdict={scan.verdict} size="lg" />
-            <span className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.8125rem] text-[var(--muted-strong)]">
+            <VerdictBadge verdict={scan.verdict} size="md" />
+            <span className="vk-mono rounded-[3px] border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.04em] text-[var(--muted-strong)]">
               {scan.degraded ? t.forensics.archiveBadge : t.forensics.liveSessionBadge}
             </span>
           </div>
 
-          <p className="mt-0.5 text-[0.875rem] text-[var(--muted-strong)]">
-            {t.forensics.subtitle}
-          </p>
-
-          <p className="vk-mono mt-1 break-all text-[0.875rem] text-[var(--foreground)]">
+          <p className="vk-mono mt-1 break-all text-[0.8125rem] text-[var(--foreground)]">
             {defanged ? defang(target) : target}
           </p>
         </div>
@@ -156,7 +161,7 @@ function ForensicsDetailView({
               { scroll: false },
             )
           }
-          className="vk-btn vk-btn-primary h-9 px-3.5 text-[0.875rem]"
+          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
         >
           {candidateHost && scan.verdict !== 'SAFE' ? (
             <IconMitigation size={15} />
@@ -169,286 +174,282 @@ function ForensicsDetailView({
               : t.command.ctaLaunchScan}
           </span>
         </button>
-      </div>
+      </header>
 
-      {/* Interactive Forensic Workspace */}
-      <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col gap-3">
-        {/* Metadata + Operator Toolbar (.vk-no-print on toolbar so print report stays clean) */}
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8125rem] text-[var(--muted)]">
-            <span className="vk-mono vk-tabular">{formatForensicTimestamp(scan.createdAtIso)}</span>
-            {scan.ticket && (
-              <span className="vk-mono">
-                · {t.common.ticket} {scan.ticket}
-              </span>
-            )}
-            {scan.reporterUnit && <span>· {scan.reporterUnit}</span>}
-            {scan.contentCategory && <span>· {scan.contentCategory}</span>}
-          </div>
-
-          <div className="vk-no-print flex flex-wrap items-center gap-2">
-            {incidents.length > 0 && (
-              <select
-                aria-label={t.forensics.selectIncidentLabel}
-                value={activeOptionValue}
-                onChange={(e) =>
-                  router.replace(buildPanelHref('forensik', { insiden: e.target.value }), {
-                    scroll: false,
-                  })
-                }
-                className="h-9 max-w-[14rem] rounded-lg border border-[var(--border-strong)] bg-[var(--surface-1)] px-2.5 text-[0.8125rem] text-[var(--foreground)]"
-              >
-                {!incidents.some((i) => (i.incidentId ?? i.scanId) === activeOptionValue) && (
-                  <option value={activeOptionValue}>
-                    {scan.ticket ?? truncateMiddle(describeTarget(scan.submittedUrl), 28)}
-                  </option>
-                )}
-                {incidents.slice(0, 25).map((item) => {
-                  const val = item.incidentId ?? item.scanId;
-                  const label = item.ticket
-                    ? `${item.ticket} — ${truncateMiddle(describeTarget(item.submittedUrl), 24)}`
-                    : truncateMiddle(describeTarget(item.submittedUrl), 34);
-                  return (
-                    <option key={val} value={val}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setDefanged((v) => !v)}
-              aria-pressed={defanged}
-              className={[
-                'vk-btn h-9 px-3 text-[0.8125rem]',
-                defanged
-                  ? 'vk-btn-secondary border-[var(--accent-border)] text-[var(--accent-ink)]'
-                  : 'vk-btn-secondary',
-              ].join(' ')}
-            >
-              <IconLockDefang size={14} />
-              <span>{t.common.defang}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="vk-btn vk-btn-secondary h-9 px-3 text-[0.8125rem]"
-            >
-              <IconPrint size={15} />
-              <span>{t.forensics.print}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setRailCollapsed((v) => !v)}
-              aria-pressed={railCollapsed}
-              title={railCollapsed ? t.forensics.expandInspector : t.forensics.collapseInspector}
-              className="vk-btn vk-btn-secondary hidden h-9 px-2.5 text-[0.8125rem] lg:inline-flex"
-            >
-              {railCollapsed ? <IconSidebarCollapse size={15} /> : <IconSidebarExpand size={15} />}
-              <span>
-                {railCollapsed ? t.forensics.expandInspector : t.forensics.collapseInspector}
-              </span>
-            </button>
-          </div>
+      {/* Metadata + Operator Toolbar (.vk-no-print on toolbar controls) */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-1)] px-4 py-2 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.75rem] text-[var(--muted)]">
+          <span className="vk-mono vk-tabular">{formatForensicTimestamp(scan.createdAtIso)}</span>
+          {scan.ticket && (
+            <span className="vk-mono">
+              · {t.common.ticket} {scan.ticket}
+            </span>
+          )}
+          {scan.reporterUnit && <span>· {scan.reporterUnit}</span>}
+          {scan.contentCategory && <span>· {scan.contentCategory}</span>}
         </div>
 
-        {/* Degraded / Rescan / Sync Status Banner */}
-        {(scan.degraded || rescanError || (!scan.synced && !scan.degraded)) && (
-          <div className="vk-no-print flex shrink-0 flex-col gap-1.5">
-            {scan.degraded && (
-              <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-suspicious)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-                <span className="inline-flex items-center gap-2">
-                  <span className="text-[var(--verdict-suspicious)]">
-                    <IconAlertTriangle size={14} />
-                  </span>
-                  <span>{t.forensics.degraded}</span>
+        <div className="vk-no-print flex flex-wrap items-center gap-1.5">
+          {incidents.length > 0 && (
+            <select
+              aria-label={t.forensics.selectIncidentLabel}
+              value={activeOptionValue}
+              onChange={(e) =>
+                router.replace(buildPanelHref('forensik', { insiden: e.target.value }), {
+                  scroll: false,
+                })
+              }
+              className="h-8 max-w-[14rem] rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-0)] px-2.5 text-[0.75rem] text-[var(--foreground)]"
+            >
+              {!incidents.some((i) => (i.incidentId ?? i.scanId) === activeOptionValue) && (
+                <option value={activeOptionValue}>
+                  {scan.ticket ?? truncateMiddle(cleanTarget(describeTarget(scan.submittedUrl)), 28)}
+                </option>
+              )}
+              {incidents.slice(0, 25).map((item) => {
+                const val = item.incidentId ?? item.scanId;
+                const cleanDesc = cleanTarget(describeTarget(item.submittedUrl));
+                const label = item.ticket
+                  ? `${item.ticket}: ${truncateMiddle(cleanDesc, 24)}`
+                  : truncateMiddle(cleanDesc, 34);
+                return (
+                  <option key={val} value={val}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setDefanged((v) => !v)}
+            aria-pressed={defanged}
+            className={[
+              'vk-btn h-8 px-2.5 text-[0.75rem]',
+              defanged
+                ? 'vk-btn-secondary border-[var(--accent-border)] text-[var(--accent-ink)]'
+                : 'vk-btn-secondary',
+            ].join(' ')}
+          >
+            <IconLockDefang size={13} />
+            <span>{t.common.defang}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="vk-btn vk-btn-secondary h-8 px-2.5 text-[0.75rem]"
+          >
+            <IconPrint size={14} />
+            <span>{t.forensics.print}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRailCollapsed((v) => !v)}
+            aria-pressed={railCollapsed}
+            title={railCollapsed ? t.forensics.expandInspector : t.forensics.collapseInspector}
+            className="vk-btn vk-btn-secondary hidden h-8 px-2.5 text-[0.75rem] lg:inline-flex"
+          >
+            {railCollapsed ? <IconSidebarCollapse size={14} /> : <IconSidebarExpand size={14} />}
+            <span>
+              {railCollapsed ? t.forensics.expandInspector : t.forensics.collapseInspector}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Flush Degraded / Rescan / Sync Status Notices */}
+      {(scan.degraded || rescanError || (!scan.synced && !scan.degraded)) && (
+        <div className="vk-no-print shrink-0 divide-y divide-[var(--border)] border-b border-[var(--border)] bg-[var(--surface-2)]">
+          {scan.degraded && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2 text-[0.8125rem] text-[var(--muted-strong)] sm:px-5">
+              <span className="inline-flex items-center gap-2">
+                <span className="text-[var(--verdict-suspicious)]" aria-hidden="true">
+                  <IconAlertTriangle size={14} />
                 </span>
-                {canRescan && (
+                <span>{t.forensics.degraded}</span>
+              </span>
+              {canRescan && (
+                <button
+                  type="button"
+                  onClick={() => void rescan()}
+                  disabled={rescanning}
+                  className="vk-btn vk-btn-primary h-7 px-2.5 text-[0.75rem]"
+                >
+                  <IconRefresh size={12} />
+                  <span>{rescanning ? t.forensics.rescanning : t.forensics.rescan}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {rescanError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 px-4 py-2 text-[0.8125rem] text-[var(--foreground)] sm:px-5"
+            >
+              <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
+                <IconOctagonAlert size={14} />
+              </span>
+              <span>{rescanError}</span>
+            </div>
+          )}
+
+          {!scan.synced && !scan.degraded && (
+            <div className="px-4 py-2 text-[0.8125rem] text-[var(--muted-strong)] sm:px-5">
+              {t.forensics.notSynced}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main Split Workbench: >= 65% Visual Evidence Canvas + Collapsible Right Inspector Rail */}
+      <div
+        data-ui="console-workspace"
+        className={[
+          'grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:divide-x lg:divide-y-0',
+          railCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,1.9fr)_23rem]',
+        ].join(' ')}
+      >
+        {/* Left Dominant Evidence Stage */}
+        <div className="vk-scroll flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] overflow-y-auto bg-[var(--surface-1)]">
+          <div className="min-w-0 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.evidence}</h2>
+
+                <div className="vk-no-print flex items-center gap-0.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
                   <button
                     type="button"
-                    onClick={() => void rescan()}
-                    disabled={rescanning}
-                    className="vk-btn vk-btn-primary h-7 px-2.5 text-[0.8125rem]"
+                    onClick={() => setStageTab('evidence')}
+                    aria-pressed={stageTab === 'evidence'}
+                    className={[
+                      'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                      stageTab === 'evidence'
+                        ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
+                        : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                    ].join(' ')}
                   >
-                    <IconRefresh size={13} />
-                    <span>{rescanning ? t.forensics.rescanning : t.forensics.rescan}</span>
+                    {t.forensics.tabEvidence}
                   </button>
-                )}
-              </div>
-            )}
-
-            {rescanError && (
-              <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-critical)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--foreground)]">
-                <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
-                  <IconOctagonAlert size={14} />
-                </span>
-                <span>{rescanError}</span>
-              </div>
-            )}
-
-            {!scan.synced && !scan.degraded && (
-              <div className="rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-suspicious)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-                {t.forensics.notSynced}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Main Split Stage: >= 65% Visual Evidence Canvas + Collapsible Right Inspector Rail */}
-        <div
-          className={[
-            'grid min-h-0 flex-1 gap-3.5',
-            railCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,1.9fr)_minmax(21rem,1fr)]',
-          ].join(' ')}
-        >
-          {/* Left Dominant Evidence Stage */}
-          <div className="vk-scroll flex min-h-0 min-w-0 flex-col gap-3.5 overflow-y-auto pr-1">
-            <div className="vk-bento min-w-0 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                    {t.forensics.evidence}
-                  </h3>
-
-                  <div className="vk-no-print flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setStageTab('evidence')}
-                      aria-pressed={stageTab === 'evidence'}
-                      className={[
-                        'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
-                        stageTab === 'evidence'
-                          ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
-                          : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                      ].join(' ')}
-                    >
-                      {t.forensics.tabEvidence}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStageTab('diff')}
-                      aria-pressed={stageTab === 'diff'}
-                      className={[
-                        'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
-                        stageTab === 'diff'
-                          ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
-                          : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                      ].join(' ')}
-                    >
-                      {t.forensics.tabDiff}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStageTab('diff')}
+                    aria-pressed={stageTab === 'diff'}
+                    className={[
+                      'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                      stageTab === 'diff'
+                        ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
+                        : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                    ].join(' ')}
+                  >
+                    {t.forensics.tabDiff}
+                  </button>
                 </div>
-
-                {stageTab === 'evidence' && scan.annotatedUrl && scan.screenshotUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setViewOverride(!showBurnedIn)}
-                    className="vk-no-print vk-btn vk-btn-secondary h-8 px-2.5 text-[0.8125rem]"
-                  >
-                    {showBurnedIn ? t.forensics.rawView : t.forensics.burnedView}
-                  </button>
-                )}
               </div>
 
-              {stageTab === 'evidence' ? (
-                evidenceUrl ? (
-                  <BBoxOverlay
-                    imageUrl={evidenceUrl}
-                    boxes={showBurnedIn ? [] : boxes}
-                    sourceSpace={sourceSpace}
-                    highlightedId={highlighted}
-                    onHighlight={setHighlighted}
-                    onImageLoad={onImageLoad}
-                  />
-                ) : (
-                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-6 text-[0.875rem] text-[var(--muted)]">
-                    {t.forensics.noVisualEvidence}
-                  </div>
-                )
-              ) : (
-                <SideBySide
-                  evidenceUrl={scan.screenshotUrl ?? scan.annotatedUrl}
-                  impersonatedTarget={scan.impersonatedTarget}
-                  visualScore={scan.scores.visual}
-                />
+              {stageTab === 'evidence' && scan.annotatedUrl && scan.screenshotUrl && (
+                <button
+                  type="button"
+                  onClick={() => setViewOverride(!showBurnedIn)}
+                  className="vk-no-print vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
+                >
+                  {showBurnedIn ? t.forensics.rawView : t.forensics.burnedView}
+                </button>
               )}
             </div>
 
-            {stageTab === 'evidence' && (
+            {stageTab === 'evidence' ? (
+              evidenceUrl ? (
+                <BBoxOverlay
+                  imageUrl={evidenceUrl}
+                  boxes={showBurnedIn ? [] : boxes}
+                  sourceSpace={sourceSpace}
+                  highlightedId={highlighted}
+                  onHighlight={setHighlighted}
+                  onImageLoad={onImageLoad}
+                />
+              ) : (
+                <div className="rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-4 py-6 text-[0.8125rem] text-[var(--muted)]">
+                  {t.forensics.noVisualEvidence}
+                </div>
+              )
+            ) : (
               <SideBySide
                 evidenceUrl={scan.screenshotUrl ?? scan.annotatedUrl}
                 impersonatedTarget={scan.impersonatedTarget}
                 visualScore={scan.scores.visual}
               />
             )}
-
-            {scan.url && (
-              <DomTelemetry
-                url={scan.url}
-                highlightedId={highlighted}
-                onHighlight={setHighlighted}
-                defanged={defanged}
-              />
-            )}
-
-            {scan.image && (
-              <MultimodalPanel
-                image={scan.image}
-                highlightedId={highlighted}
-                onHighlight={setHighlighted}
-                defanged={defanged}
-              />
-            )}
-
-            {scan.url && scan.url.redirectChain.length > 0 && (
-              <RedirectLadder chain={scan.url.redirectChain} defanged={defanged} />
-            )}
           </div>
 
-          {/* Right Collapsible Inspector Rail */}
-          {!railCollapsed && (
-            <div className="vk-scroll flex min-h-0 min-w-0 flex-col gap-3.5 overflow-y-auto pr-0.5">
-              <ScoreBreakdownPanel scores={scan.scores} appliedRules={scan.appliedRules} />
+          {stageTab === 'evidence' && (
+            <SideBySide
+              evidenceUrl={scan.screenshotUrl ?? scan.annotatedUrl}
+              impersonatedTarget={scan.impersonatedTarget}
+              visualScore={scan.scores.visual}
+            />
+          )}
 
-              <div className="vk-bento min-w-0 p-4">
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                  {t.forensics.findings}
-                </h3>
-                {scan.forensicReasons.length === 0 ? (
-                  <div className="mt-2 text-[0.8125rem] text-[var(--muted)]">
-                    {t.forensics.noFindings}
-                  </div>
-                ) : (
-                  /* The cap only applies where the side rail is a fixed
-                     column. Once the layout stacks, the rail scrolls as a
-                     whole, and a capped list inside it is a scroll area within
-                     a scroll area that leaves findings half-drawn at its own
-                     boundary. */
-                  <ul className="vk-scroll mt-2.5 flex flex-col gap-2 overflow-y-auto pr-0.5 xl:max-h-44">
-                    {scan.forensicReasons.map((reason) => (
-                      <li
-                        key={reason}
-                        className="flex items-start gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] leading-snug text-[var(--foreground)]"
-                      >
-                        <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]">
-                          <IconOctagonAlert size={13} />
-                        </span>
-                        <span className="min-w-0 flex-1">{reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+          {scan.url && (
+            <DomTelemetry
+              url={scan.url}
+              highlightedId={highlighted}
+              onHighlight={setHighlighted}
+              defanged={defanged}
+            />
+          )}
 
-              <LatencyWaterfall latencyMs={scan.latencyMs} />
-            </div>
+          {scan.image && (
+            <MultimodalPanel
+              image={scan.image}
+              highlightedId={highlighted}
+              onHighlight={setHighlighted}
+              defanged={defanged}
+            />
+          )}
+
+          {scan.url && scan.url.redirectChain.length > 0 && (
+            <RedirectLadder chain={scan.url.redirectChain} defanged={defanged} />
           )}
         </div>
+
+        {/* Right Collapsible Inspector Rail */}
+        {!railCollapsed && (
+          <aside className="vk-scroll flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] overflow-y-auto bg-[var(--surface-0)]">
+            <ScoreBreakdownPanel scores={scan.scores} appliedRules={scan.appliedRules} />
+
+            <div className="min-w-0 p-4">
+              <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.findings}</h2>
+              {scan.forensicReasons.length === 0 ? (
+                <div className="mt-2 text-[0.8125rem] text-[var(--muted)]">
+                  {t.forensics.noFindings}
+                </div>
+              ) : (
+                <ul className="mt-2.5 divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
+                  {scan.forensicReasons.map((reason) => (
+                    <li
+                      key={reason}
+                      className="flex items-start gap-2 px-3 py-2 text-[0.8125rem] leading-snug text-[var(--foreground)]"
+                    >
+                      <span
+                        className="mt-0.5 shrink-0 text-[var(--verdict-critical)]"
+                        aria-hidden="true"
+                      >
+                        <IconOctagonAlert size={13} />
+                      </span>
+                      <span className="min-w-0 flex-1">{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <LatencyWaterfall latencyMs={scan.latencyMs} />
+          </aside>
+        )}
       </div>
     </section>
   );
@@ -559,14 +560,21 @@ export function ForensicsPanel({
   if (needsRemoteFetch && asyncLookup?.id !== effectiveId) {
     return (
       <section className="vk-panel-section">
-        <div className="shrink-0">
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            {t.forensics.title}
-          </h1>
-        </div>
+        <header className="vk-page-header">
+          <div>
+            <div className="vk-kicker">{t.forensics.sectionIndex}</div>
+            <h1
+              id="vk-main-heading"
+              tabIndex={-1}
+              className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+            >
+              {t.forensics.title}
+            </h1>
+          </div>
+        </header>
         <div
           data-ui="console-workspace"
-          className="vk-bento flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]"
+          className="flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]"
         >
           <span
             aria-hidden="true"
@@ -592,38 +600,46 @@ export function ForensicsPanel({
   if (asyncLookup?.id === effectiveId && asyncLookup.outcome === 'error') {
     return (
       <section className="vk-panel-section">
-        <div className="shrink-0">
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            {t.forensics.title}
-          </h1>
-        </div>
-        <div data-ui="console-workspace" className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-          <div className="vk-bento flex flex-col justify-between border-l-2 border-l-[var(--verdict-critical)] p-6 lg:col-span-8">
+        <header className="vk-page-header">
+          <div>
+            <div className="vk-kicker">{t.forensics.sectionIndex}</div>
+            <h1
+              id="vk-main-heading"
+              tabIndex={-1}
+              className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+            >
+              {t.forensics.title}
+            </h1>
+          </div>
+        </header>
+        <div
+          data-ui="console-workspace"
+          className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+        >
+          <div className="flex flex-col justify-between p-6 lg:col-span-8">
             <div>
               <div className="flex items-center gap-2 text-[var(--verdict-critical)]">
                 <IconOctagonAlert size={18} />
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+                <h2 className="text-[1.0625rem] font-semibold text-[var(--foreground)]">
                   {t.common.error}
-                </h3>
+                </h2>
               </div>
-              <p className="mt-2 text-[1rem] leading-[1.55] text-[var(--muted-strong)]">
+              <p className="mt-2 text-[0.875rem] leading-[1.55] text-[var(--muted-strong)]">
                 {asyncLookup.message}
               </p>
             </div>
             <a
               href={buildPanelHref('pemindaian')}
               onClick={goScan}
-              className="vk-btn vk-btn-primary mt-4 h-9 w-fit px-4 text-[0.875rem] no-underline"
+              className="vk-btn vk-btn-primary mt-4 h-9 w-fit px-4 text-[0.8125rem] no-underline"
             >
-              <IconScan size={16} />
+              <IconScan size={15} />
               <span>{t.forensics.goToScan}</span>
             </a>
           </div>
-          <div className="vk-bento flex flex-col justify-between p-5 lg:col-span-4">
-            <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-              {t.forensics.evidence}
-            </h3>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 text-[0.875rem] text-[var(--muted)]">
+          <div className="flex flex-col justify-start bg-[var(--surface-0)] p-5 lg:col-span-4">
+            <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.evidence}</h2>
+            <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] p-4 text-[0.8125rem] text-[var(--muted)]">
               {t.forensics.noVisualEvidence}
             </div>
           </div>
@@ -634,57 +650,61 @@ export function ForensicsPanel({
 
   return (
     <section className="vk-panel-section">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="max-w-[54rem]">
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+      <header className="vk-page-header">
+        <div>
+          <div className="vk-kicker">{t.forensics.sectionIndex}</div>
+          <h1
+            id="vk-main-heading"
+            tabIndex={-1}
+            className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+          >
             {t.forensics.title}
           </h1>
-          <p className="mt-0.5 text-[0.875rem] text-[var(--muted-strong)]">
+          <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
             {t.forensics.subtitle}
           </p>
         </div>
         <button
           type="button"
           onClick={() => router.replace(buildPanelHref('pemindaian'), { scroll: false })}
-          className="vk-btn vk-btn-primary h-9 px-3.5 text-[0.875rem]"
+          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
         >
           <IconScan size={15} />
           <span>{t.command.ctaLaunchScan}</span>
         </button>
-      </div>
+      </header>
 
-      <div data-ui="console-workspace" className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-        <div className="vk-bento flex min-h-0 flex-col justify-start p-5 lg:col-span-8">
-          <div>
-            <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-              {t.forensics.notFound}
-            </h3>
-            <p className="mt-1.5 max-w-[58ch] text-[0.875rem] leading-[1.5] text-[var(--muted-strong)]">
-              {t.forensics.notFoundHint}
-            </p>
-            <a
-              href={buildPanelHref('pemindaian')}
-              onClick={goScan}
-              className="vk-btn vk-btn-primary mt-3 h-8.5 w-fit px-3.5 text-[0.8125rem] no-underline"
-            >
-              <IconScan size={15} />
-              <span>{t.forensics.goToScan}</span>
-            </a>
-          </div>
+      <div
+        data-ui="console-workspace"
+        className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+      >
+        <div className="flex min-h-0 flex-col justify-start p-5 lg:col-span-8">
+          <h2 className="text-[1.0625rem] font-semibold text-[var(--foreground)]">
+            {t.forensics.notFound}
+          </h2>
+          <p className="mt-1.5 max-w-[58ch] text-[0.875rem] leading-[1.5] text-[var(--muted-strong)]">
+            {t.forensics.notFoundHint}
+          </p>
+          <a
+            href={buildPanelHref('pemindaian')}
+            onClick={goScan}
+            className="vk-btn vk-btn-primary mt-3 h-9 w-fit px-3.5 text-[0.8125rem] no-underline"
+          >
+            <IconScan size={15} />
+            <span>{t.forensics.goToScan}</span>
+          </a>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <div className="text-[0.8125rem] font-medium text-[var(--foreground)]">
+          <div className="mt-5 grid divide-y divide-[var(--border)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+            <div className="p-3.5">
+              <div className="vk-pane-label text-[var(--foreground)]">
                 {t.forensics.tabEvidence}
               </div>
               <div className="mt-1 text-[0.75rem] text-[var(--muted)]">
                 {t.forensics.noVisualEvidence}
               </div>
             </div>
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <div className="text-[0.8125rem] font-medium text-[var(--foreground)]">
-                {t.forensics.tabDiff}
-              </div>
+            <div className="p-3.5">
+              <div className="vk-pane-label text-[var(--foreground)]">{t.forensics.tabDiff}</div>
               <div className="mt-1 text-[0.75rem] text-[var(--muted)]">
                 {t.forensics.noReference}
               </div>
@@ -692,17 +712,13 @@ export function ForensicsPanel({
           </div>
         </div>
 
-        <div className="vk-bento flex min-h-0 flex-col justify-start p-5 lg:col-span-4">
-          <div>
-            <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-              {t.forensics.findings}
-            </h3>
-            <div className="mt-1.5 text-[0.8125rem] text-[var(--muted)]">
-              {t.forensics.noFindings}
-            </div>
+        <div className="flex min-h-0 flex-col justify-start bg-[var(--surface-0)] p-5 lg:col-span-4">
+          <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.findings}</h2>
+          <div className="mt-1.5 text-[0.8125rem] text-[var(--muted)]">
+            {t.forensics.noFindings}
           </div>
 
-          <div className="mt-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 text-[0.75rem] text-[var(--muted)]">
+          <div className="mt-4 rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[0.75rem] text-[var(--muted)]">
             {t.forensics.domEmpty}
           </div>
         </div>

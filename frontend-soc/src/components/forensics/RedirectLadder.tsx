@@ -54,37 +54,37 @@ export function RedirectLadder({
   if (chain.length === 0) return null;
 
   return (
-    <div className="vk-bento min-w-0 p-4">
-      <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+    <div className="min-w-0 p-4">
+      <h2 className="vk-pane-label text-[var(--foreground)]">
         {t.forensics.redirectTitle} ({chain.length} {t.forensics.hopsSuffix})
-      </h3>
+      </h2>
 
-      <ol className="mt-3 flex flex-col gap-2">
+      <ol className="mt-2.5 divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]">
         {chain.map((hop, i) => {
           const a = hops[hop];
           const band = a ? bandOf(a.risk_score) : null;
           const flags = a ? HOP_FLAGS.filter(({ key }) => a[key] === true) : [];
 
           return (
-            <li key={`${hop}-${i}`} className="grid grid-cols-[1.75rem_1fr] gap-2">
+            <li key={`${hop}-${i}`} className="grid grid-cols-[2rem_1fr] gap-2 px-3 py-2">
               <span
                 aria-hidden="true"
-                className="vk-mono vk-tabular mt-1.5 text-right text-[0.8125rem] text-[var(--muted)]"
+                className="vk-mono vk-tabular text-[0.75rem] font-semibold text-[var(--muted)]"
               >
-                {i + 1}.
+                0{i + 1}
               </span>
-              <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
-                <div className="vk-mono break-all text-[0.8125rem] text-[var(--foreground)]">
+              <div className="min-w-0">
+                <div className="vk-mono break-all text-[0.75rem] text-[var(--foreground)]">
                   {defanged ? defang(truncateMiddle(hop, 92)) : truncateMiddle(hop, 92)}
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.8125rem]">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.75rem]">
                   {a && band ? (
                     <>
                       <span
                         className="vk-mono vk-tabular inline-flex items-center gap-1 font-semibold"
                         style={{ color: `var(${VERDICT_VAR[band]})` }}
                       >
-                        <VerdictIcon verdict={band} size={13} />
+                        <VerdictIcon verdict={band} size={12} />
                         <span>{formatScore(a.risk_score)}</span>
                       </span>
                       {a.is_official && (

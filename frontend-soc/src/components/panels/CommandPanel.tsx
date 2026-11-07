@@ -18,6 +18,7 @@ import {
 import {
   IconAlertTriangle,
   IconArrowRight,
+  IconMitigation,
   IconOctagonAlert,
   IconScan,
   IconShieldCheck,
@@ -105,6 +106,7 @@ export function CommandPanel({
   const inspectHref = inspectTarget
     ? buildPanelHref('forensik', { insiden: inspectTarget.incidentId ?? inspectTarget.scanId })
     : buildPanelHref('pemindaian');
+  const mitigationHref = buildPanelHref('mitigasi');
 
   const rankingRows: readonly UnitBucket[] = useMemo(() => {
     const rows: UnitBucket[] = [...stats.unitRanking];
@@ -127,13 +129,18 @@ export function CommandPanel({
 
   return (
     <section className="vk-panel-section">
-      {/* Top Panel Title Row */}
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Flush Architectural Page Header */}
+      <header className="vk-page-header">
         <div>
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          <div className="vk-kicker">{t.command.sectionIndex}</div>
+          <h1
+            id="vk-main-heading"
+            tabIndex={-1}
+            className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+          >
             {t.command.headline}
           </h1>
-          <p className="mt-0.5 max-w-[66ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
+          <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
             {t.command.subtitle}
           </p>
         </div>
@@ -141,129 +148,153 @@ export function CommandPanel({
         <button
           type="button"
           onClick={() => router.replace(buildPanelHref('pemindaian'), { scroll: false })}
-          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.875rem] font-medium"
+          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
         >
-          <IconScan size={16} />
+          <IconScan size={15} />
           <span>{t.command.ctaLaunchScan}</span>
         </button>
-      </div>
+      </header>
 
-      {/* Asymmetric 12-Column Bento Stage */}
-      <div
-        data-ui="console-workspace"
-        className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12"
-      >
-        {/* Left 7 Columns: Dominant Critical Hero + Satellites + Stacked Bar + Unit Ranking */}
-        <div className="flex min-h-0 min-w-0 flex-col gap-3.5 lg:col-span-7">
-          {/* Row 1: Dominant Critical Hero + 4 Subordinate Satellite Metrics */}
-          <div className="grid shrink-0 gap-3.5 xl:grid-cols-12">
-            <div className="vk-bento flex min-w-0 flex-col justify-between border-l-2 border-l-[var(--verdict-critical)] p-4 xl:col-span-6">
-              <div className="flex items-center gap-2 text-[var(--verdict-critical)]">
-                <IconOctagonAlert size={17} />
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                  {t.command.criticalHeroLabel}
-                </h3>
-              </div>
+      {/* Ruled Telemetry Strip (Dominant Critical Active + 4 Subordinate Cells) */}
+      <div className="grid shrink-0 grid-cols-2 divide-x divide-y divide-[var(--border)] border-b border-[var(--border)] bg-[var(--surface-1)] lg:grid-cols-12 lg:divide-y-0">
+        <div className="col-span-2 flex min-w-0 flex-col justify-between bg-[var(--surface-0)] px-4 py-3 lg:col-span-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="vk-pane-label inline-flex items-center gap-1.5 text-[var(--foreground)]">
+              <span className="text-[var(--verdict-critical)]" aria-hidden="true">
+                <IconOctagonAlert size={14} />
+              </span>
+              <span>{t.command.criticalHeroLabel}</span>
+            </span>
 
-              <div className="my-2 flex flex-wrap items-baseline justify-between gap-3">
-                <span
-                  className="vk-mono vk-tabular text-[4.25rem] leading-[0.95] font-bold tracking-[-0.04em]"
-                  style={{ color: 'var(--verdict-critical)' }}
-                >
-                  {stats.counts.CRITICAL_PHISHING}
-                </span>
-
-                <a
-                  href={inspectHref}
-                  onClick={(e) => navigate(e, inspectHref)}
-                  className="vk-btn vk-btn-secondary h-8 shrink-0 px-3 text-[0.8125rem] no-underline"
-                >
-                  <span>{t.command.openLatestForensics}</span>
-                  <IconArrowRight size={14} />
-                </a>
-              </div>
-
-              <div className="text-[0.8125rem] leading-snug text-[var(--muted-strong)]">
-                {t.command.criticalHeroHint}
-              </div>
-            </div>
-
-            {/* Satellite Metrics (Clearly subordinate 24px scale, zero clipping) */}
-            <div className="grid min-w-0 grid-cols-2 gap-2.5 xl:col-span-6">
-              <div className="vk-bento flex min-w-0 flex-col justify-between p-3">
-                <span className="text-[0.8125rem] leading-tight text-[var(--muted)]">
-                  {t.command.totalIncidents}
-                </span>
-                <span className="vk-mono vk-tabular mt-1.5 text-[1.5rem] leading-[1.1] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                  {stats.total}
-                </span>
-              </div>
-
-              <div className="vk-bento flex min-w-0 flex-col justify-between p-3">
-                <span className="inline-flex items-center gap-1.5 text-[0.8125rem] leading-tight text-[var(--muted)]">
-                  <span className="shrink-0 text-[var(--verdict-suspicious)]">
-                    <IconAlertTriangle size={13} />
-                  </span>
-                  <span>{t.command.suspiciousCount}</span>
-                </span>
-                <span
-                  className="vk-mono vk-tabular mt-1.5 text-[1.5rem] leading-[1.1] font-semibold tracking-[-0.02em]"
-                  style={{ color: 'var(--verdict-suspicious)' }}
-                >
-                  {stats.counts.SUSPICIOUS}
-                </span>
-              </div>
-
-              <div className="vk-bento flex min-w-0 flex-col justify-between p-3">
-                <span className="inline-flex items-center gap-1.5 text-[0.8125rem] leading-tight text-[var(--muted)]">
-                  <span className="shrink-0 text-[var(--verdict-safe)]">
-                    <IconShieldCheck size={13} />
-                  </span>
-                  <span>{t.command.safeCount}</span>
-                </span>
-                <span
-                  className="vk-mono vk-tabular mt-1.5 text-[1.5rem] leading-[1.1] font-semibold tracking-[-0.02em]"
-                  style={{ color: 'var(--verdict-safe)' }}
-                >
-                  {stats.counts.SAFE}
-                </span>
-              </div>
-
-              <div className="vk-bento flex min-w-0 flex-col justify-between p-3">
-                <span className="text-[0.8125rem] leading-tight text-[var(--muted)]">
-                  {t.command.meanRisk}
-                </span>
-                <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                  <span className="vk-mono vk-tabular text-[1.5rem] leading-[1.1] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-                    {formatScore(stats.meanScore)}
-                  </span>
-                  <span className="text-[0.75rem] text-[var(--muted)]">
-                    {t.command.outOfHundred}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <a
+              href={inspectHref}
+              onClick={(e) => navigate(e, inspectHref)}
+              className="vk-btn vk-btn-secondary h-7 shrink-0 px-2.5 text-[0.75rem] no-underline"
+            >
+              <span>{t.command.openLatestForensics}</span>
+              <IconArrowRight size={13} />
+            </a>
           </div>
 
-          {/* Row 2: Single Stacked Verdict Distribution Bar */}
-          <div className="vk-bento min-w-0 shrink-0 p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+          <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
+            <span
+              className="vk-mono vk-tabular text-[2.375rem] leading-none font-bold tracking-[-0.04em]"
+              style={{
+                color:
+                  stats.counts.CRITICAL_PHISHING > 0
+                    ? 'var(--verdict-critical)'
+                    : 'var(--foreground)',
+              }}
+            >
+              {stats.counts.CRITICAL_PHISHING}
+            </span>
+            <span className="max-w-[30ch] text-right text-[0.75rem] leading-tight text-[var(--muted)]">
+              {t.command.criticalHeroHint}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between px-3.5 py-3 lg:col-span-2">
+          <span className="vk-pane-label">{t.command.totalIncidents}</span>
+          <span className="vk-mono vk-tabular mt-2 text-[1.5rem] leading-none font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+            {stats.total}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between px-3.5 py-3 lg:col-span-2">
+          <span className="vk-pane-label inline-flex items-center gap-1.5">
+            <span className="text-[var(--verdict-suspicious)]" aria-hidden="true">
+              <IconAlertTriangle size={12} />
+            </span>
+            <span>{t.command.suspiciousCount}</span>
+          </span>
+          <span
+            className="vk-mono vk-tabular mt-2 text-[1.5rem] leading-none font-semibold tracking-[-0.02em]"
+            style={{
+              color:
+                stats.counts.SUSPICIOUS > 0
+                  ? 'var(--verdict-suspicious)'
+                  : 'var(--foreground)',
+            }}
+          >
+            {stats.counts.SUSPICIOUS}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between px-3.5 py-3 lg:col-span-2">
+          <span className="vk-pane-label inline-flex items-center gap-1.5">
+            <span className="text-[var(--verdict-safe)]" aria-hidden="true">
+              <IconShieldCheck size={12} />
+            </span>
+            <span>{t.command.safeCount}</span>
+          </span>
+          <span
+            className="vk-mono vk-tabular mt-2 text-[1.5rem] leading-none font-semibold tracking-[-0.02em]"
+            style={{
+              color: stats.counts.SAFE > 0 ? 'var(--verdict-safe)' : 'var(--foreground)',
+            }}
+          >
+            {stats.counts.SAFE}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between px-3.5 py-3 lg:col-span-2">
+          <span className="vk-pane-label">{t.command.meanRisk}</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-1">
+            <span className="vk-mono vk-tabular text-[1.5rem] leading-none font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              {formatScore(stats.meanScore)}
+            </span>
+            <span className="vk-mono text-[0.75rem] text-[var(--muted)]">
+              {t.command.outOfHundred}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main 12-Column Split Ledger: 8-Col Inventory Table + 4-Col Breakdown Rail */}
+      <div
+        data-ui="console-workspace"
+        className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+      >
+        {/* Left 8 Columns: Endpoint & Incident Inventory Table */}
+        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-8">
+          <IncidentFeed
+            incidents={incidents}
+            status={feedStatus}
+            lastEventAt={lastEventAt}
+            error={feedError}
+            onRefresh={onRefreshFeed}
+          />
+        </div>
+
+        {/* Right 4 Columns: Classification Proportion + Honest Reporter Unit Ledger */}
+        <aside className="flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] bg-[var(--surface-0)] lg:col-span-4">
+          <div className="shrink-0 p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="vk-pane-label text-[var(--foreground)]">
                 {t.command.verdictDistribution}
-              </h3>
-              <span className="text-[0.8125rem] text-[var(--muted)]">
-                {t.command.verdictDistributionHint}
-              </span>
+              </h2>
+              <a
+                href={mitigationHref}
+                onClick={(e) => navigate(e, mitigationHref)}
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-[var(--accent-ink)] no-underline hover:underline"
+              >
+                <IconMitigation size={12} />
+                <span>{t.command.openMitigation}</span>
+              </a>
             </div>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">
+              {t.command.verdictDistributionHint}
+            </p>
 
             {stats.total === 0 ? (
-              <div className="mt-3 text-[0.875rem] text-[var(--muted)]">{t.feed.empty}</div>
+              <div className="mt-3 text-[0.8125rem] text-[var(--muted)]">{t.feed.empty}</div>
             ) : (
               <>
                 <div
                   role="img"
                   aria-label={t.command.verdictDistribution}
-                  className="mt-3 flex h-3.5 w-full gap-[2px] overflow-hidden rounded-md bg-[var(--surface-3)]"
+                  className="mt-3 flex h-2.5 w-full gap-[2px] overflow-hidden rounded-[2px] bg-[var(--surface-3)]"
                 >
                   {VERDICT_ORDER.map((v) => {
                     const count = stats.counts[v];
@@ -272,7 +303,7 @@ export function CommandPanel({
                     return (
                       <span
                         key={v}
-                        className="block h-full transition-[width] duration-200"
+                        className="block h-full transition-[width] duration-150"
                         style={{
                           width: `${pct}%`,
                           background: `var(${VERDICT_VAR[v]})`,
@@ -282,19 +313,23 @@ export function CommandPanel({
                   })}
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.8125rem]">
+                <div className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
                   {VERDICT_ORDER.map((v) => {
                     const count = stats.counts[v];
                     const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
                     const color = `var(${VERDICT_VAR[v]})`;
                     return (
-                      <div key={v} className="inline-flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 font-medium" style={{ color }}>
+                      <div
+                        key={v}
+                        className="flex items-center justify-between gap-2 px-3 py-1.5 text-[0.8125rem]"
+                      >
+                        <span className="inline-flex items-center gap-1.5 font-medium" style={{ color }}>
                           <VerdictIcon verdict={v} size={13} />
                           <span>{VERDICT_LABEL[v]}</span>
                         </span>
                         <span className="vk-mono vk-tabular text-[var(--foreground)]">
-                          {count} <span className="text-[var(--muted)]">({pct}%)</span>
+                          {count}{' '}
+                          <span className="text-[0.75rem] text-[var(--muted)]">({pct}%)</span>
                         </span>
                       </div>
                     );
@@ -304,63 +339,53 @@ export function CommandPanel({
             )}
           </div>
 
-          {/* Row 3: Honest Reporter Unit Ranking + Prominent Unmapped Counter */}
-          <div className="vk-bento flex min-h-0 min-w-0 flex-1 flex-col p-4">
-            <div className="flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                  {t.command.originTitle}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-[0.8125rem]">
-                  <span className="text-[var(--muted-strong)]">
-                    <span>{t.command.mappedUnits}: </span>
-                    <strong className="vk-mono vk-tabular font-semibold text-[var(--foreground)]">
-                      {stats.mapped}
-                    </strong>
-                  </span>
-                  <span className="text-[var(--muted)]">
-                    <span>{t.common.unmapped}: </span>
-                    <strong className="vk-mono vk-tabular font-medium text-[var(--muted-strong)]">
-                      {stats.unmapped}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-              <div className="text-[0.8125rem] leading-snug text-[var(--muted)]">
-                {t.command.originSubtitle}
+          <div className="flex min-h-0 flex-1 flex-col p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="vk-pane-label text-[var(--foreground)]">{t.command.originTitle}</h2>
+              <div className="vk-mono vk-tabular flex items-center gap-2.5 text-[0.72rem] text-[var(--muted)]">
+                <span>
+                  {t.command.mappedUnits}:{' '}
+                  <strong className="font-semibold text-[var(--foreground)]">{stats.mapped}</strong>
+                </span>
+                <span>
+                  {t.common.unmapped}:{' '}
+                  <strong className="font-semibold text-[var(--muted-strong)]">
+                    {stats.unmapped}
+                  </strong>
+                </span>
               </div>
             </div>
+            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--muted)]">
+              {t.command.originSubtitle}
+            </p>
 
             <div className="vk-scroll mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
               {rankingRows.length === 0 ? (
-                <div className="py-3 text-[0.875rem] text-[var(--muted)]">{t.feed.empty}</div>
+                <div className="py-3 text-[0.8125rem] text-[var(--muted)]">{t.feed.empty}</div>
               ) : (
-                <ul className="flex flex-col gap-2">
+                <ul className="divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
                   {rankingRows.map((bucket) => {
                     const widthPct = Math.max(4, (bucket.count / maxBucketCount) * 100);
                     return (
-                      <li
-                        key={bucket.key}
-                        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
-                      >
+                      <li key={bucket.key} className="px-3 py-2">
                         <div className="flex items-center justify-between gap-2 text-[0.8125rem]">
                           <span
                             className={
                               bucket.isUnmapped
-                                ? 'font-medium text-[var(--muted-strong)]'
-                                : 'font-medium text-[var(--foreground)]'
+                                ? 'truncate text-[var(--muted-strong)]'
+                                : 'truncate font-medium text-[var(--foreground)]'
                             }
                           >
                             {bucket.label}
                           </span>
-                          <span className="vk-mono vk-tabular shrink-0 text-[var(--foreground)]">
+                          <span className="vk-mono vk-tabular shrink-0 text-[0.75rem] text-[var(--foreground)]">
                             {bucket.count}{' '}
                             <span className="text-[var(--muted)]">{t.command.reportsSuffix}</span>
                           </span>
                         </div>
-                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-[1px] bg-[var(--surface-3)]">
                           <span
-                            className="block h-full rounded-full transition-[width] duration-200"
+                            className="block h-full transition-[width] duration-150"
                             style={{
                               width: `${widthPct}%`,
                               background: bucket.isUnmapped
@@ -378,24 +403,13 @@ export function CommandPanel({
               )}
 
               {stats.unitRanking.length === 0 && stats.total > 0 && (
-                <div className="mt-2.5 text-[0.8125rem] text-[var(--muted)]">
+                <div className="mt-2.5 text-[0.75rem] text-[var(--muted)]">
                   {t.command.noMappedUnits}
                 </div>
               )}
             </div>
           </div>
-        </div>
-
-        {/* Right 5 Columns: Live Incident Feed with Internal Scroll */}
-        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-5">
-          <IncidentFeed
-            incidents={incidents}
-            status={feedStatus}
-            lastEventAt={lastEventAt}
-            error={feedError}
-            onRefresh={onRefreshFeed}
-          />
-        </div>
+        </aside>
       </div>
     </section>
   );

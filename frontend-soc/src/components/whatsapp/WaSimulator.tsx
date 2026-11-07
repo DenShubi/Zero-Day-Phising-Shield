@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * WhatsApp "Simulasi Lapor Cepat" — authentic mobile chat thread on the left,
- * paired with a live SOC Pipeline Execution Telemetry inspector on the right so
- * conference spectators see the exact cause-and-effect behind every message.
+ * WhatsApp "Simulasi Lapor Cepat": dual-theme messaging terminal on the left,
+ * paired with a live SOC Pipeline Execution Ledger on the right so operators
+ * and conference spectators see the exact cause-and-effect behind every report.
  */
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -58,7 +58,7 @@ interface Message {
 const SAFE_CONTROL = { label: t.whatsapp.safeControlLabel, url: 'https://tniad.mil.id' } as const;
 
 function decoyLabel(filename: string): string {
-  return filename.replace(/\.html$/, '').replace(/_/g, ' ');
+  return filename.replace(/\.html$/, '').replace(/_/g, '-');
 }
 
 function extractHost(raw: string | null | undefined): string | null {
@@ -68,6 +68,10 @@ function extractHost(raw: string | null | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+function sanitizeBotText(raw: string): string {
+  return raw.replace(/\s*\u2014\s*/g, ': ');
 }
 
 let seq = 0;
@@ -240,7 +244,9 @@ export function WaSimulator({
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === ackId ? { ...m, pending: false, text: formatReport(scan), scan } : m,
+          m.id === ackId
+            ? { ...m, pending: false, text: sanitizeBotText(formatReport(scan)), scan }
+            : m,
         ),
       );
       setPipelinePhase('complete');
@@ -294,28 +300,37 @@ export function WaSimulator({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {/* Simulation Honesty Callout */}
-      <div className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-suspicious)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-        <span className="text-[var(--verdict-suspicious)]">
-          <IconAlertTriangle size={15} />
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Flush Simulation Honesty Bar */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[0.75rem] text-[var(--muted-strong)] sm:px-5">
+        <span className="shrink-0 text-[var(--verdict-suspicious)]" aria-hidden="true">
+          <IconAlertTriangle size={14} />
         </span>
         <span>{t.whatsapp.simulationBanner}</span>
       </div>
 
-      {/* Two-Column Cause & Effect Bento */}
-      <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-        {/* LEFT COLUMN (6 cols): Authentic WhatsApp Thread */}
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[#0b141a] lg:col-span-6">
-          <div className="flex items-center gap-3 border-b border-white/10 bg-[#1f2c33] px-4 py-2.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#111b21]">
-              <VisiKartikaMark size={22} />
+      {/* Two-Column Split Workbench */}
+      <div className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0">
+        {/* LEFT COLUMN (6 cols): Theme-Aware Messaging Terminal */}
+        <div
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:col-span-6"
+          style={{ background: 'var(--wa-canvas)', color: 'var(--wa-ink)' }}
+        >
+          <div
+            className="flex shrink-0 items-center gap-3 border-b px-4 py-2.5"
+            style={{ background: 'var(--wa-header)', borderColor: 'var(--wa-border)' }}
+          >
+            <span
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-[3px] border text-[var(--foreground)]"
+              style={{ borderColor: 'var(--wa-border)', background: 'var(--surface-1)' }}
+            >
+              <VisiKartikaMark size={18} />
             </span>
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-[0.875rem] font-semibold text-[#e9edef]">
+              <div className="truncate text-[0.875rem] font-semibold text-[var(--wa-ink)]">
                 {t.whatsapp.botTitle}
               </div>
-              <div className="truncate text-[0.8125rem] text-[#9bb0ba]">
+              <div className="vk-mono truncate text-[0.72rem] text-[var(--wa-muted)]">
                 {busy ? t.whatsapp.statusTyping : t.whatsapp.statusOnline}
                 {triageLane && ` · ${t.whatsapp.lanePrefix} ${triageLane}`}
               </div>
@@ -351,12 +366,11 @@ export function WaSimulator({
                   className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className="max-w-[88%] rounded-lg px-3 py-2 text-[0.875rem] leading-relaxed"
+                    className="max-w-[88%] rounded-[4px] border px-3 py-2 text-[0.8125rem] leading-relaxed"
                     style={{
-                      background: mine ? '#005c4b' : '#202c33',
-                      color: '#e9edef',
-                      borderTopRightRadius: mine ? 2 : undefined,
-                      borderTopLeftRadius: mine ? undefined : 2,
+                      background: mine ? 'var(--wa-bubble-out)' : 'var(--wa-bubble-in)',
+                      borderColor: 'var(--wa-border)',
+                      color: 'var(--wa-ink)',
                     }}
                   >
                     {m.imageUrl && (
@@ -364,7 +378,7 @@ export function WaSimulator({
                       <img
                         src={m.imageUrl}
                         alt={t.whatsapp.attachmentAlt}
-                        className="mb-2 max-h-48 rounded-md"
+                        className="mb-2 max-h-48 rounded-[3px] border border-[var(--wa-border)]"
                       />
                     )}
                     {m.text && (
@@ -375,35 +389,38 @@ export function WaSimulator({
                     {m.pending && (
                       <span
                         aria-hidden="true"
-                        className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[#9bb0ba]"
+                        className="ml-2 inline-block h-2 w-2 animate-pulse rounded-[1px] bg-[var(--accent-ink)]"
                       />
                     )}
 
-                    {/* Seamless cross-panel actions directly inside completed bot scan bubble */}
+                    {/* Cross-panel actions directly inside completed bot scan bubble */}
                     {m.scan && (
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
+                      <div
+                        className="mt-2.5 flex flex-wrap gap-1.5 border-t pt-2"
+                        style={{ borderColor: 'var(--wa-border)' }}
+                      >
                         <button
                           type="button"
                           onClick={() => openForensics(m.scan!)}
-                          className="vk-btn h-7 rounded-md border border-white/15 bg-[#111b21] px-2.5 text-[0.8125rem] text-[#e9edef] hover:border-[var(--accent-ink)]"
+                          className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
                         >
                           <span>{t.whatsapp.openInForensics}</span>
-                          <IconArrowRight size={13} />
+                          <IconArrowRight size={12} />
                         </button>
                         {host && m.scan.verdict !== 'SAFE' && (
                           <button
                             type="button"
                             onClick={() => openMitigation(m.scan!)}
-                            className="vk-btn h-7 rounded-md border border-[var(--verdict-critical)]/45 bg-[#111b21] px-2.5 text-[0.8125rem] text-[var(--verdict-critical)]"
+                            className="vk-btn h-7 border border-[var(--verdict-critical)] bg-[var(--surface-1)] px-2.5 text-[0.75rem] text-[var(--verdict-critical)]"
                           >
-                            <IconMitigation size={13} />
+                            <IconMitigation size={12} />
                             <span>{t.whatsapp.sendHostMitigation}</span>
                           </button>
                         )}
                       </div>
                     )}
 
-                    <span className="vk-mono vk-tabular mt-1 block text-right text-[0.75rem] text-[#9bb0ba]">
+                    <span className="vk-mono vk-tabular mt-1 block text-right text-[0.6875rem] text-[var(--wa-muted)]">
                       {mounted ? formatTimeWib(m.at || initIso).replace(' WIB', '') : '--:--:--'}
                       {mine ? ` · ${t.whatsapp.readReceipt}` : ''}
                     </span>
@@ -415,9 +432,12 @@ export function WaSimulator({
           </div>
 
           {/* Preset Quick Scenarios + Composer */}
-          <div className="flex flex-col gap-2 border-t border-white/10 bg-[#1f2c33] px-3 py-2.5">
+          <div
+            className="flex shrink-0 flex-col gap-2 border-t px-3.5 py-2.5"
+            style={{ background: 'var(--wa-header)', borderColor: 'var(--wa-border)' }}
+          >
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[0.8125rem] text-[#9bb0ba]">{t.whatsapp.presetsLabel}</span>
+              <span className="vk-pane-label text-[var(--wa-muted)]">{t.whatsapp.presetsLabel}</span>
               {[
                 ...decoys.map((d) => ({ label: decoyLabel(d.filename), url: d.url })),
                 SAFE_CONTROL,
@@ -427,23 +447,23 @@ export function WaSimulator({
                   type="button"
                   disabled={busy}
                   onClick={() => setInput(q.url)}
-                  className="rounded-md border border-white/15 bg-[#2a3942] px-2 py-0.5 text-[0.8125rem] text-[#e9edef] transition-colors hover:border-[var(--accent-ink)] disabled:opacity-40"
+                  className="vk-btn h-6 border border-[var(--wa-border)] bg-[var(--surface-1)] px-2 text-[0.72rem] text-[var(--foreground)] hover:border-[var(--accent-ink)] disabled:opacity-40"
                 >
-                  {q.label}
+                  <span className="vk-mono">{q.label}</span>
                 </button>
               ))}
             </div>
 
             {image && (
-              <div className="flex items-center gap-2.5 rounded-md bg-[#2a3942] px-2.5 py-1.5">
+              <div className="flex items-center gap-2.5 rounded-[3px] border border-[var(--wa-border)] bg-[var(--surface-1)] px-2.5 py-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
                 <img
                   src={image.previewUrl}
                   alt={t.whatsapp.previewAlt}
-                  className="h-10 w-10 rounded object-cover"
+                  className="h-9 w-9 rounded-[2px] object-cover"
                 />
-                <span className="vk-mono vk-tabular flex-1 text-[0.8125rem] text-[#e9edef]">
-                  {image.dimensions.width}×{image.dimensions.height} {t.whatsapp.readyToSendSuffix}
+                <span className="vk-mono vk-tabular flex-1 text-[0.75rem] text-[var(--foreground)]">
+                  {image.dimensions.width}x{image.dimensions.height} {t.whatsapp.readyToSendSuffix}
                 </span>
                 <button
                   type="button"
@@ -452,7 +472,7 @@ export function WaSimulator({
                     previewUrlRef.current = null;
                     setImage(null);
                   }}
-                  className="text-[0.8125rem] text-[#9bb0ba] underline hover:text-white"
+                  className="text-[0.75rem] text-[var(--muted-strong)] underline hover:text-[var(--foreground)]"
                 >
                   {t.whatsapp.removeAttachment}
                 </button>
@@ -464,7 +484,7 @@ export function WaSimulator({
                 id="vk-wa-file"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
+                className="visually-hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) void acceptFile(f);
@@ -474,49 +494,51 @@ export function WaSimulator({
                 htmlFor="vk-wa-file"
                 title={t.whatsapp.attachTitle}
                 aria-label={t.whatsapp.attachTitle}
-                className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-white/10 bg-[#2a3942] text-[#e9edef] transition-colors hover:border-[var(--accent-ink)]"
+                className="vk-btn vk-btn-secondary h-9 w-9 shrink-0 p-0"
               >
-                <IconPaperclip size={17} />
+                <IconPaperclip size={16} />
               </label>
 
+              <label htmlFor="vk-wa-msg" className="visually-hidden">
+                {t.whatsapp.inputPlaceholder}
+              </label>
               <input
+                id="vk-wa-msg"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void send()}
                 placeholder={t.whatsapp.inputPlaceholder}
                 spellCheck={false}
-                className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-[#2a3942] px-3 text-[0.875rem] text-[#e9edef] placeholder:text-[#9bb0ba]"
+                className="h-9 min-w-0 flex-1 rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
               />
 
               <button
                 type="button"
                 onClick={() => void send()}
                 disabled={busy || (!input.trim() && !image)}
-                className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.875rem]"
+                className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
               >
-                <IconSend size={15} />
+                <IconSend size={14} />
                 <span>{busy ? t.whatsapp.sending : t.whatsapp.send}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN (6 cols): SOC Pipeline Cause-and-Effect Telemetry */}
-        <div className="vk-bento vk-scroll flex min-h-0 min-w-0 flex-col justify-between gap-3.5 overflow-y-auto p-4 lg:col-span-6">
-          <div>
+        {/* RIGHT COLUMN (6 cols): SOC Pipeline Execution Ledger + Last Ticket */}
+        <aside className="vk-scroll flex min-h-0 min-w-0 flex-col justify-between divide-y divide-[var(--border)] overflow-y-auto bg-[var(--surface-0)] lg:col-span-6">
+          <div className="p-4 sm:p-5">
             <div className="flex items-center gap-2">
-              <span className="text-[var(--accent-ink)]">
-                <IconPipeline size={18} />
+              <span className="text-[var(--accent-ink)]" aria-hidden="true">
+                <IconPipeline size={16} />
               </span>
-              <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                {t.whatsapp.pipelineTitle}
-              </h3>
+              <h2 className="vk-pane-label text-[var(--foreground)]">{t.whatsapp.pipelineTitle}</h2>
             </div>
-            <div className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--muted)]">
+            <p className="mt-1 text-[0.75rem] leading-relaxed text-[var(--muted)]">
               {t.whatsapp.pipelineSubtitle}
-            </div>
+            </p>
 
-            <ol className="mt-3.5 flex flex-col gap-2.5">
+            <ol className="mt-3 divide-y divide-[var(--border)] overflow-hidden rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
               {[
                 {
                   idx: 1 as const,
@@ -553,41 +575,35 @@ export function WaSimulator({
                 return (
                   <li
                     key={step.idx}
-                    className="rounded-lg border px-3.5 py-2.5 transition-colors"
+                    className="px-3.5 py-2.5 transition-colors"
                     style={{
-                      borderColor:
-                        status === 'active'
-                          ? 'var(--accent-border)'
-                          : status === 'done'
-                            ? 'color-mix(in srgb, var(--verdict-safe) 35%, transparent)'
-                            : status === 'warn'
-                              ? 'color-mix(in srgb, var(--verdict-suspicious) 40%, transparent)'
-                              : 'var(--border)',
-                      background:
-                        status === 'active' ? 'var(--accent-tint)' : 'var(--surface-2)',
+                      background: status === 'active' ? 'var(--accent-tint)' : undefined,
                     }}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--foreground)]">
+                      <h3 className="vk-mono text-[0.75rem] font-semibold tracking-[0.02em] text-[var(--foreground)]">
                         {step.title}
-                      </h4>
+                      </h3>
                       {status === 'done' && (
-                        <span className="text-[var(--verdict-safe)]">
-                          <IconCheck size={15} />
+                        <span className="text-[var(--verdict-safe)]" aria-hidden="true">
+                          <IconCheck size={14} />
                         </span>
                       )}
                       {status === 'active' && (
-                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--accent-ink)]" />
+                        <span
+                          aria-hidden="true"
+                          className="h-2 w-2 animate-pulse rounded-[1px] bg-[var(--accent-ink)]"
+                        />
                       )}
                       {status === 'warn' && (
-                        <span className="text-[var(--verdict-suspicious)]">
-                          <IconAlertTriangle size={15} />
+                        <span className="text-[var(--verdict-suspicious)]" aria-hidden="true">
+                          <IconAlertTriangle size={14} />
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 text-[0.8125rem] leading-snug text-[var(--muted-strong)]">
+                    <p className="mt-1 text-[0.8125rem] leading-snug text-[var(--muted-strong)]">
                       {step.desc}
-                    </div>
+                    </p>
                   </li>
                 );
               })}
@@ -595,17 +611,15 @@ export function WaSimulator({
           </div>
 
           {/* Last Executed Scan Breakdown */}
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
-            <h4 className="text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
-              {t.whatsapp.lastResultTitle}
-            </h4>
+          <div className="p-4 sm:p-5">
+            <h3 className="vk-pane-label text-[var(--foreground)]">{t.whatsapp.lastResultTitle}</h3>
 
             {!lastScan ? (
-              <div className="mt-1.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
+              <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
                 {t.whatsapp.noScanYet}
-              </div>
+              </p>
             ) : (
-              <div className="mt-2 flex flex-col gap-2.5">
+              <div className="mt-2.5 flex flex-col gap-2.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <VerdictBadge verdict={lastScan.verdict} size="md" />
                   <span className="vk-mono vk-tabular text-[1.125rem] font-bold text-[var(--foreground)]">
@@ -614,7 +628,7 @@ export function WaSimulator({
                 </div>
 
                 {lastScan.ticket && (
-                  <div className="vk-mono text-[0.8125rem] text-[var(--muted-strong)]">
+                  <div className="vk-mono text-[0.75rem] text-[var(--muted-strong)]">
                     {t.common.ticket}: {lastScan.ticket}
                   </div>
                 )}
@@ -623,19 +637,19 @@ export function WaSimulator({
                   <button
                     type="button"
                     onClick={() => openForensics(lastScan)}
-                    className="vk-btn vk-btn-primary h-8 px-3 text-[0.8125rem]"
+                    className="vk-btn vk-btn-primary h-8 px-3 text-[0.75rem]"
                   >
                     <span>{t.whatsapp.openInForensics}</span>
-                    <IconArrowRight size={14} />
+                    <IconArrowRight size={13} />
                   </button>
                   {extractHost(lastScan.finalUrl ?? lastScan.submittedUrl) &&
                     lastScan.verdict !== 'SAFE' && (
                       <button
                         type="button"
                         onClick={() => openMitigation(lastScan)}
-                        className="vk-btn vk-btn-secondary h-8 px-3 text-[0.8125rem]"
+                        className="vk-btn vk-btn-secondary h-8 px-3 text-[0.75rem]"
                       >
-                        <IconMitigation size={14} />
+                        <IconMitigation size={13} />
                         <span>{t.whatsapp.sendHostMitigation}</span>
                       </button>
                     )}
@@ -643,7 +657,7 @@ export function WaSimulator({
               </div>
             )}
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

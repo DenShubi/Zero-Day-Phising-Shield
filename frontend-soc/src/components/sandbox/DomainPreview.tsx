@@ -67,7 +67,7 @@ export function DomainPreview({ url }: { url: string }) {
 
   if (!result) {
     return !isCurrent ? (
-      <div className="mt-2.5 text-[0.8125rem] text-[var(--muted)]">{t.scan.checkingDomain}</div>
+      <div className="mt-2 text-[0.75rem] text-[var(--muted)]">{t.scan.checkingDomain}</div>
     ) : null;
   }
 
@@ -76,7 +76,7 @@ export function DomainPreview({ url }: { url: string }) {
   const activeFlags = FLAG_KEYS.filter(({ key }) => result[key] === true);
 
   return (
-    <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
+    <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.8125rem]">
         <span className="vk-mono font-semibold text-[var(--foreground)]">{result.host}</span>
 
@@ -84,7 +84,7 @@ export function DomainPreview({ url }: { url: string }) {
           className="vk-mono vk-tabular inline-flex items-center gap-1.5 font-semibold"
           style={{ color: bandColor }}
         >
-          <VerdictIcon verdict={band} size={14} />
+          <VerdictIcon verdict={band} size={13} />
           <span>
             {t.scan.telemetryPrefix} {formatScore(result.risk_score)}
           </span>
@@ -92,7 +92,7 @@ export function DomainPreview({ url }: { url: string }) {
 
         {result.is_official && (
           <span className="inline-flex items-center gap-1 font-medium text-[var(--verdict-safe)]">
-            <IconShieldCheck size={14} />
+            <IconShieldCheck size={13} />
             <span>{t.scan.officialWhitelist}</span>
           </span>
         )}
@@ -111,13 +111,13 @@ export function DomainPreview({ url }: { url: string }) {
           {activeFlags.map(({ key, label }) => (
             <span
               key={key}
-              className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-3)] px-2 py-0.5 text-[0.8125rem] text-[var(--muted-strong)]"
+              className="vk-mono rounded-[2px] border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.72rem] text-[var(--muted-strong)]"
             >
               {label}
             </span>
           ))}
           {result.bait_tokens.length > 0 && (
-            <span className="text-[0.8125rem] text-[var(--muted-strong)]">
+            <span className="text-[0.75rem] text-[var(--muted-strong)]">
               {t.scan.baitTokensPrefix} {result.bait_tokens.join(', ')}
             </span>
           )}
@@ -125,9 +125,9 @@ export function DomainPreview({ url }: { url: string }) {
       )}
 
       {result.reasons.length > 0 && (
-        <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.8125rem] text-[var(--muted)]">
+        <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.75rem] text-[var(--muted)]">
           {result.reasons.slice(0, 3).map((reason) => (
-            <li key={reason}>• {reason}</li>
+            <li key={reason}>· {reason}</li>
           ))}
         </ul>
       )}

@@ -1,11 +1,8 @@
 'use client';
 
 /**
- * Engine + database reachability, and the runtime backend-URL override.
- *
- * Placed in the permanent sidebar footer. Uses useSyncExternalStore so static
- * prerendering (`next build` / `output: 'export'`) stays deterministic without
- * synchronous setState inside effects.
+ * Engine API + Supabase reachability ledger and runtime backend-URL override.
+ * Placed in the sidebar footer with deterministic SSR via useSyncExternalStore.
  */
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -23,21 +20,21 @@ function ProbeStatusIcon({ state }: { state: Probe }) {
   if (state === 'up') {
     return (
       <span className="inline-flex text-[var(--verdict-safe)]" aria-hidden="true">
-        <IconCheck size={13} />
+        <IconCheck size={12} />
       </span>
     );
   }
   if (state === 'down') {
     return (
       <span className="inline-flex text-[var(--verdict-critical)]" aria-hidden="true">
-        <IconAlertTriangle size={13} />
+        <IconAlertTriangle size={12} />
       </span>
     );
   }
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--muted)]"
+      className="inline-block h-1.5 w-1.5 shrink-0 bg-[var(--muted)]"
     />
   );
 }
@@ -126,14 +123,14 @@ export function HealthStrip({ collapsed = false }: { collapsed?: boolean }) {
 
   if (!mounted) {
     return (
-      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-2.5 py-2 text-[0.8125rem] text-[var(--muted)]">
-        {collapsed ? '…' : id.health.checking}
+      <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-2.5 py-1.5 text-[0.75rem] text-[var(--muted)]">
+        {collapsed ? '...' : id.health.checking}
       </div>
     );
   }
 
   return (
-    <div data-ui="health-telemetry" className="relative">
+    <div data-ui="health-telemetry" className="relative w-full">
       {collapsed ? (
         <button
           type="button"
@@ -141,23 +138,23 @@ export function HealthStrip({ collapsed = false }: { collapsed?: boolean }) {
           aria-expanded={open}
           aria-label={`${id.health.engine}: ${label(engine)}, ${id.health.database}: ${label(db)}`}
           title={`${id.health.engine}: ${label(engine)} · ${id.health.database}: ${label(db)}`}
-          className="vk-btn vk-btn-secondary h-10 w-10 p-0"
+          className="vk-btn vk-btn-secondary mx-auto flex h-8 w-8 p-0"
         >
           <ProbeStatusIcon state={engine === 'up' && db === 'up' ? 'up' : engine} />
         </button>
       ) : (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-2.5">
-          <div className="flex flex-col gap-1.5 text-[0.8125rem]">
-            <div className="flex items-center justify-between gap-2">
+        <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)]">
+          <div className="divide-y divide-[var(--border-subtle)] text-[0.75rem]">
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
               <span className="text-[var(--muted)]">{id.health.engine}</span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--muted-strong)]">
+              <span className="vk-mono inline-flex items-center gap-1 font-medium text-[var(--foreground)]">
                 <ProbeStatusIcon state={engine} />
                 <span>{label(engine)}</span>
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
               <span className="text-[var(--muted)]">{id.health.database}</span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--muted-strong)]">
+              <span className="vk-mono inline-flex items-center gap-1 font-medium text-[var(--foreground)]">
                 <ProbeStatusIcon state={db} />
                 <span>{label(db)}</span>
               </span>
@@ -168,22 +165,29 @@ export function HealthStrip({ collapsed = false }: { collapsed?: boolean }) {
             type="button"
             onClick={toggleOpen}
             aria-expanded={open}
-            className="vk-btn vk-btn-secondary mt-2.5 h-8 w-full px-2.5 text-[0.8125rem]"
+            className="flex h-7 w-full items-center justify-center gap-1.5 border-t border-[var(--border)] bg-[var(--surface-2)] px-2 text-[0.75rem] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-3)]"
           >
-            <IconSliders size={14} />
+            <IconSliders size={12} />
             <span>{id.health.backendUrl}</span>
           </button>
         </div>
       )}
 
       {open && (
-        <div className="absolute bottom-full left-0 z-40 mb-2 w-[20rem] rounded-xl border border-[var(--border-strong)] bg-[var(--surface-4)] p-3.5">
-          <div className="text-[0.8125rem] font-semibold text-[var(--foreground)]">
+        <div
+          role="dialog"
+          aria-labelledby="vk-backend-dialog-title"
+          className="absolute bottom-full left-0 z-40 mb-2 w-[19rem] rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-4)] p-3"
+        >
+          <label
+            id="vk-backend-dialog-title"
+            htmlFor="vk-backend-url"
+            className="block text-[0.75rem] font-semibold text-[var(--foreground)]"
+          >
             {id.health.backendUrlLabel}
-          </div>
+          </label>
           <input
             id="vk-backend-url"
-            aria-label={id.health.backendUrlLabel}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -191,27 +195,27 @@ export function HealthStrip({ collapsed = false }: { collapsed?: boolean }) {
               if (e.key === 'Escape') setOpen(false);
             }}
             spellCheck={false}
-            className="vk-mono mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--canvas)] px-2.5 py-2 text-[0.8125rem] text-[var(--foreground)]"
+            className="vk-mono mt-1.5 h-8 w-full rounded-[4px] border border-[var(--border-strong)] bg-[var(--canvas)] px-2.5 text-[0.75rem] text-[var(--foreground)]"
             placeholder={id.health.backendUrlPlaceholder}
           />
-          <div className="mt-2 text-[0.8125rem] leading-snug text-[var(--muted)]">
+          <p className="mt-1.5 text-[0.75rem] leading-snug text-[var(--muted)]">
             {id.health.backendUrlHint}
-          </div>
-          <div className="vk-mono mt-1.5 truncate text-[0.8125rem] text-[var(--muted-strong)]">
+          </p>
+          <div className="vk-mono mt-1 truncate text-[0.6875rem] text-[var(--muted-strong)]">
             {id.health.activePrefix} {current}
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-2.5 flex gap-1.5">
             <button
               type="button"
               onClick={apply}
-              className="vk-btn vk-btn-primary h-8 flex-1 px-3 text-[0.8125rem]"
+              className="vk-btn vk-btn-primary h-7 flex-1 px-2.5 text-[0.75rem]"
             >
               {id.health.save}
             </button>
             <button
               type="button"
               onClick={reset}
-              className="vk-btn vk-btn-secondary h-8 px-3 text-[0.8125rem]"
+              className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
             >
               {id.health.reset}
             </button>

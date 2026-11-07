@@ -28,24 +28,22 @@ export function LatencyWaterfall({ latencyMs }: { latencyMs: Record<string, numb
   const statusColor = overSla ? 'var(--verdict-suspicious)' : 'var(--verdict-safe)';
 
   return (
-    <div className="vk-bento min-w-0 p-4">
+    <div className="min-w-0 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-          {t.forensics.latency}
-        </h3>
+        <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.latency}</h2>
         <span
-          className="vk-mono vk-tabular inline-flex items-center gap-1.5 text-[0.875rem] font-semibold"
+          className="vk-mono vk-tabular inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold"
           style={{ color: statusColor }}
         >
-          {overSla ? <IconAlertTriangle size={14} /> : <IconShieldCheck size={14} />}
+          {overSla ? <IconAlertTriangle size={13} /> : <IconShieldCheck size={13} />}
           <span>
             {(total / 1000).toFixed(2)} {t.scan.elapsedUnit}
           </span>
         </span>
       </div>
 
-      <div className="mt-1 text-[0.8125rem] text-[var(--muted)]">
-        {t.forensics.slaTargetPrefix} {SLA_MS / 1000} {t.scan.elapsedUnit} —{' '}
+      <div className="mt-1 text-[0.75rem] text-[var(--muted)]">
+        {t.forensics.slaTargetPrefix} {SLA_MS / 1000} {t.scan.elapsedUnit}:{' '}
         <span style={{ color: statusColor }}>
           {overSla ? t.forensics.slaExceeded : t.forensics.slaMet}
         </span>
@@ -58,7 +56,7 @@ export function LatencyWaterfall({ latencyMs }: { latencyMs: Record<string, numb
           return (
             <li
               key={key}
-              className="grid grid-cols-[1fr_4.5rem] gap-x-2 gap-y-1 text-[0.8125rem]"
+              className="grid grid-cols-[1fr_4.5rem] gap-x-2 gap-y-1 text-[0.75rem]"
             >
               <span className="truncate text-[var(--muted-strong)]">
                 {STAGE_LABELS[key] ?? key}
@@ -68,9 +66,9 @@ export function LatencyWaterfall({ latencyMs }: { latencyMs: Record<string, numb
                   ? `${(ms / 1000).toFixed(2)} ${t.audit.secShort}`
                   : `${Math.round(ms)} ${t.audit.msShort}`}
               </span>
-              <span className="col-span-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]">
+              <span className="col-span-2 h-1.5 overflow-hidden rounded-[1px] bg-[var(--surface-3)]">
                 <span
-                  className="block h-full rounded-full"
+                  className="block h-full"
                   style={{
                     width: `${pct}%`,
                     background: isNetwork ? 'var(--muted)' : 'var(--accent-ink)',
@@ -83,7 +81,7 @@ export function LatencyWaterfall({ latencyMs }: { latencyMs: Record<string, numb
       </ul>
 
       {latencyMs.supabase_sync_ms > 0 && (
-        <div className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted)]">
+        <div className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.75rem] leading-relaxed text-[var(--muted)]">
           {t.forensics.networkSyncNote}
         </div>
       )}

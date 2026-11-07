@@ -47,18 +47,18 @@ function ComponentRow({
       <div className="flex items-baseline justify-between gap-2 text-[0.8125rem]">
         <span className="font-medium text-[var(--muted-strong)]">
           {label}
-          <span className="vk-mono ml-1.5 text-[var(--muted)]">×{weight}</span>
+          <span className="vk-mono ml-1.5 text-[0.75rem] text-[var(--muted)]">x{weight}</span>
         </span>
         <span className="vk-mono vk-tabular font-semibold text-[var(--foreground)]">
           {formatScore(value)}
         </span>
       </div>
       <div
-        className="h-2 overflow-hidden rounded-full bg-[var(--surface-3)]"
+        className="h-1.5 overflow-hidden rounded-[1px] bg-[var(--surface-3)]"
         aria-hidden="true"
       >
         <div
-          className="h-full rounded-full"
+          className="h-full"
           style={{ width: `${Math.max(2, value)}%`, background: colorVar }}
         />
       </div>
@@ -78,41 +78,39 @@ export function ScoreBreakdownPanel({
   const finalColor = `var(${VERDICT_VAR[finalBand]})`;
 
   return (
-    <div className="vk-bento min-w-0 p-4">
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-3.5">
+    <div className="min-w-0 p-4">
+      <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
         <div>
-          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-            {id.score.total}
-          </h3>
-          <div className="mt-1 text-[0.8125rem] text-[var(--muted)]">
-            {id.score.thresholdHintPrefix} ≥{THRESHOLD_CRITICAL} {id.score.thresholdCritical} · ≥
-            {THRESHOLD_SUSPICIOUS} {id.score.thresholdSuspicious}
+          <h2 className="vk-pane-label text-[var(--foreground)]">{id.score.total}</h2>
+          <div className="vk-mono mt-1 text-[0.72rem] text-[var(--muted)]">
+            {id.score.thresholdHintPrefix} &gt;={THRESHOLD_CRITICAL} {id.score.thresholdCritical} ·
+            &gt;={THRESHOLD_SUSPICIOUS} {id.score.thresholdSuspicious}
           </div>
         </div>
         <div className="text-right">
           <div
-            className="vk-tabular inline-flex items-center gap-1.5 text-[2.5rem] leading-none font-semibold tracking-[-0.03em]"
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 text-[2.25rem] leading-none font-bold tracking-[-0.03em]"
             style={{ color: finalColor }}
           >
-            <VerdictIcon verdict={finalBand} size={22} />
+            <VerdictIcon verdict={finalBand} size={20} />
             <span>{formatScore(scores.total)}</span>
           </div>
-          <div className="vk-mono mt-0.5 text-[0.8125rem] text-[var(--muted)]">/ 100</div>
+          <div className="vk-mono mt-0.5 text-[0.72rem] text-[var(--muted)]">/ 100</div>
         </div>
       </div>
 
-      <div className="mt-3.5 flex flex-col gap-3">
+      <div className="mt-3 flex flex-col gap-3">
         <ComponentRow label={id.score.visual} value={scores.visual} weight={RISK_WEIGHTS.visual} />
         <ComponentRow label={id.score.dom} value={scores.dom} weight={RISK_WEIGHTS.dom} />
         <ComponentRow label={id.score.domain} value={scores.domain} weight={RISK_WEIGHTS.domain} />
       </div>
 
-      <dl className="mt-3.5 border-t border-[var(--border-subtle)] pt-3 text-[0.875rem]">
+      <dl className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.8125rem]">
         <div className="flex justify-between py-0.5">
           <dt className="text-[var(--muted)]">
             {id.score.weightedBase}
             {!scores.baseFromEngine && (
-              <span className="ml-1 text-[0.8125rem]">{id.score.recomputedNote}</span>
+              <span className="ml-1 text-[0.75rem]">{id.score.recomputedNote}</span>
             )}
           </dt>
           <dd className="vk-mono vk-tabular text-[var(--muted-strong)]">
@@ -137,21 +135,21 @@ export function ScoreBreakdownPanel({
         )}
       </dl>
 
-      <div className="mt-3.5 border-t border-[var(--border-subtle)] pt-3">
-        <h4 className="mb-2 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
-          {id.score.appliedRules}
-        </h4>
+      <div className="mt-3 border-t border-[var(--border-subtle)] pt-2.5">
+        <h3 className="vk-pane-label mb-2">{id.score.appliedRules}</h3>
         {appliedRules.length === 0 ? (
-          <div className="text-[0.8125rem] text-[var(--muted)]">{id.score.noRules}</div>
+          <div className="text-[0.75rem] text-[var(--muted)]">{id.score.noRules}</div>
         ) : (
-          <ul className="flex flex-col gap-1.5">
-            {appliedRules.map((rule) => (
+          <ul className="divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)]">
+            {appliedRules.map((rule, idx) => (
               <li
                 key={rule}
-                className="rounded-md border-l-2 bg-[var(--surface-2)] px-2.5 py-1.5 text-[0.8125rem] leading-snug text-[var(--muted-strong)]"
-                style={{ borderLeftColor: 'var(--verdict-suspicious)' }}
+                className="flex items-start gap-2 px-2.5 py-1.5 text-[0.75rem] leading-snug text-[var(--muted-strong)]"
               >
-                {rule}
+                <span className="vk-mono vk-tabular shrink-0 text-[var(--verdict-suspicious)]">
+                  0{idx + 1}
+                </span>
+                <span className="min-w-0 flex-1">{rule}</span>
               </li>
             ))}
           </ul>

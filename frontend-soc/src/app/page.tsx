@@ -57,12 +57,17 @@ function ConsoleWorkspace() {
     case 'pemindaian':
       return (
         <section className="vk-panel-section">
-          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <header className="vk-page-header">
             <div>
-              <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              <div className="vk-kicker">{t.scan.sectionIndex}</div>
+              <h1
+                id="vk-main-heading"
+                tabIndex={-1}
+                className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+              >
                 {t.scan.title}
               </h1>
-              <p className="mt-0.5 max-w-[68ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
+              <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
                 {t.scan.subtitle}
               </p>
             </div>
@@ -70,16 +75,16 @@ function ConsoleWorkspace() {
             <button
               type="button"
               onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
-              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.875rem] font-medium"
+              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.8125rem]"
             >
-              <IconForensics size={16} />
+              <IconForensics size={15} />
               <span>{t.command.openForensicsAction}</span>
             </button>
-          </div>
+          </header>
 
           <div
             data-ui="console-workspace"
-            className="vk-scroll min-h-0 flex-1 overflow-y-auto pr-0.5"
+            className="vk-scroll min-h-0 flex-1 overflow-y-auto"
           >
             <ScanConsole onScanComplete={handleScanComplete} />
           </div>
@@ -109,12 +114,17 @@ function ConsoleWorkspace() {
     case 'lapor-cepat':
       return (
         <section className="vk-panel-section">
-          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <header className="vk-page-header">
             <div>
-              <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              <div className="vk-kicker">{t.whatsapp.sectionIndex}</div>
+              <h1
+                id="vk-main-heading"
+                tabIndex={-1}
+                className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+              >
                 {t.whatsapp.headline}
               </h1>
-              <p className="mt-0.5 max-w-[68ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
+              <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
                 {t.whatsapp.subtitle}
               </p>
             </div>
@@ -122,12 +132,12 @@ function ConsoleWorkspace() {
             <button
               type="button"
               onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
-              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.875rem] font-medium"
+              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.8125rem]"
             >
-              <IconForensics size={16} />
+              <IconForensics size={15} />
               <span>{t.command.openForensicsAction}</span>
             </button>
-          </div>
+          </header>
 
           <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col">
             <WaSimulator onScanComplete={handleScanComplete} />

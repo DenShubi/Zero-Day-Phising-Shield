@@ -3,12 +3,6 @@
 /**
  * Visual diff comparator between the suspect artifact and the genuine .mil.id
  * portal it impersonates.
- *
- * Designed as an authentic diff tool:
- *   1. Interactive pointer-drag split curtain ("Tirai Diff Geser") with top
- *      provenance badges and instant 0% / 25% / 50% / 75% / 100% split presets.
- *   2. Dual-frame side-by-side diff ("Sandingkan Dua Panel") with top header bars
- *      (never captions below images).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -87,48 +81,44 @@ export function SideBySide({
 
   if (!impersonatedTarget) {
     return (
-      <div className="vk-bento min-w-0 p-4">
+      <div className="min-w-0 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-            {t.forensics.reference}
-          </h3>
+          <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.reference}</h2>
           <span
-            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.8125rem] font-semibold"
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[0.75rem] font-semibold"
             style={{
               color: scoreColor,
-              borderColor: `color-mix(in srgb, ${scoreColor} 35%, transparent)`,
+              borderColor: `color-mix(in srgb, ${scoreColor} 38%, transparent)`,
               background: `color-mix(in srgb, ${scoreColor} 10%, transparent)`,
             }}
           >
-            <VerdictIcon verdict={scoreBand} size={13} />
+            <VerdictIcon verdict={scoreBand} size={12} />
             <span>
               {t.forensics.maxSimilarityPrefix} {formatScore(visualScore)}%
             </span>
           </span>
         </div>
-        <div className="mt-2.5 text-[0.875rem] leading-relaxed text-[var(--muted-strong)]">
+        <p className="mt-2 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
           {t.forensics.noReference}
-        </div>
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="vk-bento min-w-0 p-4">
+    <div className="min-w-0 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-            {t.forensics.reference}
-          </h3>
+          <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.reference}</h2>
           <span
-            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-[0.8125rem] font-semibold"
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[0.75rem] font-semibold"
             style={{
               color: scoreColor,
-              borderColor: `color-mix(in srgb, ${scoreColor} 38%, transparent)`,
+              borderColor: `color-mix(in srgb, ${scoreColor} 40%, transparent)`,
               background: `color-mix(in srgb, ${scoreColor} 11%, transparent)`,
             }}
           >
-            <VerdictIcon verdict={scoreBand} size={14} />
+            <VerdictIcon verdict={scoreBand} size={13} />
             <span>
               {t.forensics.similarityBadgePrefix}: {formatScore(visualScore)}%
             </span>
@@ -136,7 +126,7 @@ export function SideBySide({
         </div>
 
         {referenceUrl && (
-          <div className="vk-no-print flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+          <div className="vk-no-print flex items-center gap-0.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
             {(['curtain', 'side'] as const).map((m) => {
               const active = mode === m;
               return (
@@ -146,7 +136,7 @@ export function SideBySide({
                   onClick={() => setMode(m)}
                   aria-pressed={active}
                   className={[
-                    'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
+                    'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
                     active
                       ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
                       : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
@@ -160,7 +150,7 @@ export function SideBySide({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-1.5 text-[0.8125rem]">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-1.5 text-[0.8125rem]">
         <span className="text-[var(--muted)]">{t.forensics.impersonatingPrefix}</span>
         <span className="font-semibold text-[var(--foreground)]">{impersonatedTarget}</span>
         {portal && (
@@ -169,15 +159,14 @@ export function SideBySide({
       </div>
 
       {!referenceUrl ? (
-        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-3 text-[0.875rem] text-[var(--muted-strong)]">
+        <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-3 text-[0.8125rem] text-[var(--muted-strong)]">
           {failed ? t.forensics.failedReference : t.forensics.loadingReference}
         </div>
       ) : mode === 'curtain' ? (
-        <div className="mt-3 flex flex-col gap-2.5">
-          {/* Top Diff Header Strip + Split Presets (zero range inputs, zero captions below) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem]">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-critical)]">
-              <IconOctagonAlert size={14} />
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2 text-[0.75rem]">
+            <span className="vk-mono inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-critical)]">
+              <IconOctagonAlert size={13} />
               <span>{t.forensics.suspectFrameLabel}</span>
             </span>
 
@@ -190,7 +179,7 @@ export function SideBySide({
                   onClick={() => setWipe(preset)}
                   aria-pressed={wipe === preset}
                   className={[
-                    'vk-mono vk-tabular rounded border px-2 py-0.5 text-[0.8125rem] font-medium transition-colors',
+                    'vk-mono vk-tabular rounded-[2px] border px-2 py-0.5 text-[0.75rem] font-medium transition-colors',
                     wipe === preset
                       ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] text-[var(--accent-ink)]'
                       : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--muted-strong)] hover:text-[var(--foreground)]',
@@ -201,8 +190,8 @@ export function SideBySide({
               ))}
             </div>
 
-            <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-safe)]">
-              <IconShieldCheck size={14} />
+            <span className="vk-mono inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-safe)]">
+              <IconShieldCheck size={13} />
               <span>{t.forensics.officialFrameLabel}</span>
             </span>
           </div>
@@ -231,9 +220,8 @@ export function SideBySide({
             }}
             onPointerUp={() => setDragging(false)}
             onPointerCancel={() => setDragging(false)}
-            className="relative cursor-ew-resize select-none overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--canvas)]"
+            className="relative cursor-ew-resize select-none overflow-hidden rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)]"
           >
-            {/* Base layer: genuine official reference portal */}
             {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}
             <img
               src={referenceUrl}
@@ -244,7 +232,6 @@ export function SideBySide({
               onError={() => setFailedTarget(impersonatedTarget)}
             />
 
-            {/* Clipped top layer: suspect phishing page */}
             {evidenceUrl && (
               <div
                 className="absolute inset-0"
@@ -261,23 +248,22 @@ export function SideBySide({
               </div>
             )}
 
-            {/* Optical Curtain Seam & Reticle Handle */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-y-0 w-[2px] bg-[var(--accent-ink)]"
               style={{ left: `${wipe}%` }}
             >
-              <span className="absolute top-1/2 left-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[var(--accent-ink)] bg-[var(--surface-0)] text-[var(--accent-ink)]">
-                <IconSplitDiff size={15} />
+              <span className="absolute top-1/2 left-1/2 grid h-7 w-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[3px] border border-[var(--accent-ink)] bg-[var(--surface-0)] text-[var(--accent-ink)]">
+                <IconSplitDiff size={14} />
               </span>
             </div>
           </div>
         </div>
       ) : (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="overflow-hidden rounded-lg border border-[var(--verdict-critical)]/45 bg-[var(--canvas)]">
-            <div className="flex items-center gap-1.5 border-b border-[var(--verdict-critical)]/35 bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--verdict-critical)]">
-              <IconOctagonAlert size={14} />
+          <div className="overflow-hidden rounded-[3px] border border-[var(--verdict-critical)]/45 bg-[var(--canvas)]">
+            <div className="vk-mono flex items-center gap-1.5 border-b border-[var(--verdict-critical)]/35 bg-[var(--surface-0)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--verdict-critical)]">
+              <IconOctagonAlert size={13} />
               <span>{t.forensics.suspectFrameLabel}</span>
             </div>
             {evidenceUrl ? (
@@ -295,9 +281,9 @@ export function SideBySide({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-[var(--verdict-safe)]/45 bg-[var(--canvas)]">
-            <div className="flex items-center gap-1.5 border-b border-[var(--verdict-safe)]/35 bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--verdict-safe)]">
-              <IconShieldCheck size={14} />
+          <div className="overflow-hidden rounded-[3px] border border-[var(--verdict-safe)]/45 bg-[var(--canvas)]">
+            <div className="vk-mono flex items-center gap-1.5 border-b border-[var(--verdict-safe)]/35 bg-[var(--surface-0)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--verdict-safe)]">
+              <IconShieldCheck size={13} />
               <span>{t.forensics.officialFrameLabel}</span>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}

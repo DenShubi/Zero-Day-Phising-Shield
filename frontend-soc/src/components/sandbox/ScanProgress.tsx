@@ -1,11 +1,8 @@
 'use client';
 
 /**
- * Horizontal 5-stage scan progress stepper designed for 5-meter conference
- * projector legibility.
- *
- * Also supports `active={false}` standby display so the Scan Console always
- * shows the deterministic multimodal pipeline architecture without empty ground.
+ * Horizontal 5-stage scan progress ledger designed for conference projector
+ * legibility and calm operational telemetry.
  */
 
 import { useEffect, useState } from 'react';
@@ -89,32 +86,30 @@ export function ScanProgress({
 
   return (
     <div
-      className="vk-bento min-w-0 p-4"
+      className="min-w-0 bg-[var(--surface-0)] p-4 sm:p-5"
       role={active ? 'status' : undefined}
       aria-live={active ? 'polite' : undefined}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-            {t.scan.pipelineReadyTitle}
-          </h3>
-          <div className="mt-0.5 text-[0.875rem] text-[var(--muted-strong)]">
+          <h2 className="vk-pane-label text-[var(--foreground)]">{t.scan.pipelineReadyTitle}</h2>
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--muted-strong)]">
             {active && currentStage
               ? kind === 'URL'
                 ? currentStage.urlDetail
                 : currentStage.imageDetail
               : t.scan.autoOpenNotice}
-          </div>
+          </p>
         </div>
 
         {active && (
           <div className="flex items-center gap-3">
             <div
-              className="vk-mono vk-tabular text-[1.75rem] leading-none font-semibold tracking-[-0.025em]"
+              className="vk-mono vk-tabular text-[1.5rem] leading-none font-semibold tracking-[-0.025em]"
               style={{ color: overSla ? 'var(--verdict-suspicious)' : 'var(--accent-ink)' }}
             >
               {elapsed.toFixed(1)}
-              <span className="ml-1 text-[0.875rem] font-normal text-[var(--muted)]">
+              <span className="ml-1 text-[0.75rem] font-normal text-[var(--muted)]">
                 {t.scan.elapsedUnit}
               </span>
             </div>
@@ -122,16 +117,16 @@ export function ScanProgress({
             <button
               type="button"
               onClick={onCancel}
-              className="vk-btn vk-btn-secondary h-9 px-3 text-[0.875rem]"
+              className="vk-btn vk-btn-secondary h-8 px-3 text-[0.8125rem]"
             >
-              <IconClose size={14} />
+              <IconClose size={13} />
               <span>{t.scan.cancel}</span>
             </button>
           </div>
         )}
       </div>
 
-      <ol className="mt-3.5 grid gap-2.5 sm:grid-cols-5">
+      <ol className="mt-3 grid divide-y divide-[var(--border)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] sm:grid-cols-5 sm:divide-x sm:divide-y-0">
         {STAGES.map((stage, idx) => {
           const isDone = active && idx < currentIdx;
           const isCurrent = active && idx === currentIdx;
@@ -139,18 +134,18 @@ export function ScanProgress({
             <li
               key={stage.title}
               className={[
-                'flex flex-col justify-between rounded-lg border px-3 py-2.5 transition-colors duration-150',
+                'flex flex-col justify-between px-3 py-2.5 transition-colors duration-100',
                 isCurrent
-                  ? 'border-[var(--accent-border)] bg-[var(--accent-tint)]'
+                  ? 'bg-[var(--accent-tint)]'
                   : isDone
-                    ? 'border-[var(--border-strong)] bg-[var(--surface-2)]'
-                    : 'border-[var(--border-subtle)] bg-[var(--surface-2)]/60',
+                    ? 'bg-[var(--surface-2)]'
+                    : 'bg-[var(--surface-1)]',
               ].join(' ')}
             >
               <div className="flex items-center justify-between gap-2">
                 <span
                   className={[
-                    'vk-mono vk-tabular text-[0.8125rem] font-semibold',
+                    'vk-mono vk-tabular text-[0.75rem] font-semibold',
                     isCurrent
                       ? 'text-[var(--accent-ink)]'
                       : isDone
@@ -161,8 +156,8 @@ export function ScanProgress({
                   0{idx + 1}
                 </span>
                 {isDone && (
-                  <span className="text-[var(--verdict-safe)]">
-                    <IconCheck size={14} />
+                  <span className="text-[var(--verdict-safe)]" aria-hidden="true">
+                    <IconCheck size={13} />
                   </span>
                 )}
                 {isCurrent && (
@@ -174,7 +169,7 @@ export function ScanProgress({
               </div>
               <div
                 className={[
-                  'mt-1.5 text-[0.875rem] font-semibold leading-snug',
+                  'mt-1.5 text-[0.8125rem] font-medium leading-snug',
                   isCurrent || isDone ? 'text-[var(--foreground)]' : 'text-[var(--muted-strong)]',
                 ].join(' ')}
               >
@@ -186,7 +181,7 @@ export function ScanProgress({
       </ol>
 
       {overSla && (
-        <div className="mt-2.5 text-[0.8125rem] text-[var(--muted)]">{t.scan.overSlaNote}</div>
+        <p className="mt-2.5 text-[0.75rem] text-[var(--muted)]">{t.scan.overSlaNote}</p>
       )}
     </div>
   );

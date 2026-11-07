@@ -70,7 +70,7 @@ export function ScanConsole({
     void getMockTargets(ac.signal)
       .then((r) => !ac.signal.aborted && setTargets(r.targets))
       .catch(() => {
-        /* presets are optional convenience chips */
+        /* presets are optional convenience buttons */
       });
 
     let warmed = true;
@@ -109,7 +109,7 @@ export function ScanConsole({
       setMode('IMAGE');
       setNotice(
         prepared.downscaled
-          ? `${t.scan.downscaledNoticePrefix} ${prepared.dimensions.width}×${prepared.dimensions.height} ${t.scan.downscaledNoticeSuffix}`
+          ? `${t.scan.downscaledNoticePrefix} ${prepared.dimensions.width}x${prepared.dimensions.height} ${t.scan.downscaledNoticeSuffix}`
           : null,
       );
     } catch (e) {
@@ -225,20 +225,17 @@ export function ScanConsole({
   );
 
   return (
-    <div className="flex flex-col gap-3.5">
-      {/* HERO: Dominant URL Input + Single Primary Action + Optional Judge Chips */}
-      <div className="vk-bento min-w-0 p-5">
+    <div className="flex flex-col divide-y divide-[var(--border)] border-b border-[var(--border)] bg-[var(--surface-1)]">
+      {/* SECTION 1: Dominant URL Command Input + Pre-Flight Domain Telemetry + Simulation Presets */}
+      <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <label
-            htmlFor="vk-url"
-            className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]"
-          >
+          <label htmlFor="vk-url" className="vk-pane-label text-[var(--foreground)]">
             {t.scan.urlLabel}
           </label>
-          <span className="text-[0.8125rem] text-[var(--muted)]">{t.scan.urlPrimaryHint}</span>
+          <span className="text-[0.75rem] text-[var(--muted)]">{t.scan.urlPrimaryHint}</span>
         </div>
 
-        <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
+        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
           <input
             id="vk-url"
             value={url}
@@ -252,27 +249,25 @@ export function ScanConsole({
             spellCheck={false}
             autoComplete="off"
             placeholder={t.scan.urlPlaceholder}
-            className="vk-mono h-[54px] min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--canvas)] px-4 text-[1.125rem] tracking-[-0.01em] text-[var(--foreground)] placeholder:text-[var(--ink-disabled)]"
+            className="vk-mono h-12 min-w-0 flex-1 rounded-[4px] border border-[var(--border-strong)] bg-[var(--canvas)] px-3.5 text-[1rem] tracking-[-0.01em] text-[var(--foreground)] placeholder:text-[var(--ink-disabled)]"
           />
 
           <button
             type="button"
             disabled={scanning}
             onClick={() => void runScan(image && mode === 'IMAGE' ? 'IMAGE' : 'URL')}
-            className="vk-btn vk-btn-primary h-[54px] shrink-0 px-6 text-[0.9375rem] font-semibold"
+            className="vk-btn vk-btn-primary h-12 shrink-0 px-5 text-[0.875rem]"
           >
-            <IconScan size={18} />
+            <IconScan size={16} />
             <span>{image && mode === 'IMAGE' ? t.scan.submitImage : t.scan.submit}</span>
           </button>
         </div>
 
         <DomainPreview url={url} />
 
-        {/* Optional Judge Presets Strip */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3.5">
-          <span className="text-[0.8125rem] font-medium text-[var(--muted)]">
-            {t.scan.judgeTest}:
-          </span>
+        {/* Simulation Targets Strip */}
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
+          <span className="vk-pane-label mr-1">{t.scan.judgeTest}:</span>
 
           {targets.map((target) => (
             <button
@@ -284,12 +279,14 @@ export function ScanConsole({
                 setUrl(target.url);
                 setError(null);
               }}
-              className="vk-btn h-7 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.8125rem] text-[var(--foreground)] hover:border-[var(--verdict-critical)]"
+              className="vk-btn h-7 border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.75rem] text-[var(--foreground)] hover:border-[var(--verdict-critical)]"
             >
-              <span className="text-[var(--verdict-critical)]">
-                <IconOctagonAlert size={13} />
+              <span className="text-[var(--verdict-critical)]" aria-hidden="true">
+                <IconOctagonAlert size={12} />
               </span>
-              <span>{target.filename.replace(/\.html$/, '').replace(/_/g, ' ')}</span>
+              <span className="vk-mono">
+                {target.filename.replace(/\.html$/, '').replace(/_/g, '-')}
+              </span>
             </button>
           ))}
 
@@ -301,36 +298,39 @@ export function ScanConsole({
               setUrl(SAFE_CONTROL);
               setError(null);
             }}
-            className="vk-btn h-7 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.8125rem] text-[var(--foreground)] hover:border-[var(--verdict-safe)]"
+            className="vk-btn h-7 border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.75rem] text-[var(--foreground)] hover:border-[var(--verdict-safe)]"
           >
-            <span className="text-[var(--verdict-safe)]">
-              <IconShieldCheck size={13} />
+            <span className="text-[var(--verdict-safe)]" aria-hidden="true">
+              <IconShieldCheck size={12} />
             </span>
             <span>{t.scan.safeControl}</span>
           </button>
 
           {targets.length === 0 && (
-            <span className="text-[0.8125rem] text-[var(--muted)]">{t.scan.judgeOffline}</span>
+            <span className="text-[0.75rem] text-[var(--muted)]">{t.scan.judgeOffline}</span>
           )}
         </div>
 
         {notice && (
-          <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
+          <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
             {notice}
           </div>
         )}
         {error && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-critical)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[0.875rem] text-[var(--foreground)]">
+          <div
+            role="alert"
+            className="mt-3 flex items-start gap-2 rounded-[3px] border border-[var(--verdict-critical)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--foreground)]"
+          >
             <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
-              <IconOctagonAlert size={15} />
+              <IconOctagonAlert size={14} />
             </span>
             <span>{error}</span>
           </div>
         )}
       </div>
 
-      {/* SECONDARY ROW: Compact Image Dropzone Affordance + Reporter Unit */}
-      <div className="grid gap-3.5 lg:grid-cols-[1.35fr_1fr]">
+      {/* SECTION 2: Split Ledger - Multimodal Poster/QR Dropzone (7 cols) + Reporter Unit (5 cols) */}
+      <div className="grid divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0">
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -343,11 +343,10 @@ export function ScanConsole({
             const file = imageFromDrop(e.nativeEvent);
             if (file) void acceptFile(file);
           }}
-          className="vk-bento flex min-w-0 flex-col justify-between p-4 transition-colors"
+          className="flex min-w-0 flex-col justify-between p-4 transition-colors sm:p-5 lg:col-span-7"
           style={
             dragging
               ? {
-                  borderColor: 'var(--accent-ink)',
                   background: 'var(--accent-tint)',
                 }
               : undefined
@@ -355,17 +354,15 @@ export function ScanConsole({
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                {t.scan.imageLabel}
-              </h3>
-              <div className="text-[0.8125rem] text-[var(--muted)]">{t.scan.imageSubLabel}</div>
+              <h2 className="vk-pane-label text-[var(--foreground)]">{t.scan.imageLabel}</h2>
+              <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">{t.scan.imageSubLabel}</p>
             </div>
 
             <input
               id="vk-file"
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="sr-only"
+              className="visually-hidden"
               disabled={scanning}
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -374,44 +371,46 @@ export function ScanConsole({
             />
             <label
               htmlFor="vk-file"
-              className="vk-btn vk-btn-secondary h-9 px-3 text-[0.875rem]"
+              className="vk-btn vk-btn-secondary h-8 px-3 text-[0.8125rem]"
             >
-              <IconUpload size={15} />
+              <IconUpload size={14} />
               <span>{t.scan.chooseFile}</span>
             </label>
           </div>
 
           {image ? (
-            <div className="mt-3 flex flex-col gap-3 rounded-lg border border-[var(--accent-border)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center">
+            <div className="mt-3 flex flex-col gap-3 rounded-[3px] border border-[var(--accent-border)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center">
               {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
               <img
                 src={image.previewUrl}
                 alt={t.scan.previewAlt}
-                className="h-16 w-24 shrink-0 rounded-md border border-[var(--border)] object-cover"
+                className="h-16 w-24 shrink-0 rounded-[2px] border border-[var(--border)] object-cover"
               />
               <div className="min-w-0 flex-1">
-                <div className="vk-mono vk-tabular text-[0.8125rem] font-medium text-[var(--foreground)]">
-                  {image.dimensions.width}×{image.dimensions.height} px ·{' '}
+                <div className="vk-mono vk-tabular text-[0.75rem] font-medium text-[var(--foreground)]">
+                  {image.dimensions.width}x{image.dimensions.height} px ·{' '}
                   {formatBytes(image.file.size)}
                   {image.downscaled &&
                     ` (${t.scan.originalPrefix} ${formatBytes(image.originalBytes)})`}
                 </div>
+                <label htmlFor="vk-caption" className="visually-hidden">
+                  {t.scan.captionLabel}
+                </label>
                 <input
                   id="vk-caption"
-                  aria-label={t.scan.captionLabel}
                   value={caption}
                   disabled={scanning}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder={t.scan.captionPlaceholder}
-                  className="mt-1.5 w-full rounded-md border border-[var(--border)] bg-[var(--canvas)] px-2.5 py-1.5 text-[0.8125rem] text-[var(--foreground)]"
+                  className="mt-1.5 h-8 w-full rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)] px-2.5 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
                 />
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   disabled={scanning}
                   onClick={() => void runScan('IMAGE')}
-                  className="vk-btn vk-btn-primary h-9 px-3 text-[0.8125rem]"
+                  className="vk-btn vk-btn-primary h-8 px-3 text-[0.8125rem]"
                 >
                   {t.scan.submitImage}
                 </button>
@@ -425,33 +424,32 @@ export function ScanConsole({
                     setMode('URL');
                     setNotice(null);
                   }}
-                  className="vk-btn vk-btn-secondary h-9 px-2.5 text-[0.8125rem]"
+                  className="vk-btn vk-btn-secondary h-8 px-2.5 text-[0.8125rem]"
                 >
                   {t.scan.replaceImage}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="mt-3 rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 px-4 py-3.5 text-[0.875rem] text-[var(--muted-strong)]">
+            <div className="mt-3 rounded-[3px] border border-dashed border-[var(--border-strong)] bg-[var(--surface-0)] px-4 py-3.5 text-[0.8125rem] text-[var(--muted-strong)]">
               {t.scan.imageHint}
             </div>
           )}
         </div>
 
-        <div className="vk-bento flex min-w-0 flex-col justify-between p-4">
+        <div className="flex min-w-0 flex-col justify-between bg-[var(--surface-0)] p-4 sm:p-5 lg:col-span-5">
           <div>
-            <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+            <label htmlFor="vk-unit" className="vk-pane-label block text-[var(--foreground)]">
               {t.scan.unitLabel}
-            </h3>
-            <div className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">{t.scan.unitHint}</div>
+            </label>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">{t.scan.unitHint}</p>
 
             <select
               id="vk-unit"
-              aria-label={t.scan.unitLabel}
               value={unit}
               disabled={scanning}
               onChange={(e) => setUnit(e.target.value)}
-              className="mt-3 h-10 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--canvas)] px-3 text-[0.875rem] text-[var(--foreground)]"
+              className="mt-3 h-9 w-full rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)]"
             >
               {UNIT_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -461,13 +459,13 @@ export function ScanConsole({
             </select>
           </div>
 
-          <div className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted)]">
+          <p className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.75rem] leading-relaxed text-[var(--muted)]">
             {t.scan.judgeTestHint}
-          </div>
+          </p>
         </div>
       </div>
 
-      {/* HORIZONTAL STEPPER (5-meter legible in both standby and active scanning) */}
+      {/* SECTION 3: Flush 5-Stage Pipeline Ledger */}
       <ScanProgress kind={mode} startedAt={startedAt} onCancel={cancel} active={scanning} />
     </div>
   );

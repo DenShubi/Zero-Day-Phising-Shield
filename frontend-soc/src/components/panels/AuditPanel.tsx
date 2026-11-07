@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Audit Akurasi panel: Hero Confusion Matrix + sticky-header Baseline Ablation
- * & Slice tables, backed strictly by measured phase3_benchmark_results.json.
+ * Audit Akurasi panel: Architectural Confusion Matrix + sticky-header Baseline
+ * Ablation & Slice tables, backed strictly by measured phase3_benchmark_results.json.
  */
 
 import { useEffect, useState } from 'react';
@@ -40,7 +40,7 @@ const TARGETS = {
   auc: 0.95,
 } as const;
 
-function AuditKpiTile({
+function AuditKpiCell({
   label,
   value,
   target,
@@ -59,35 +59,33 @@ function AuditKpiTile({
     pass === null ? 'var(--foreground)' : pass ? 'var(--verdict-safe)' : 'var(--verdict-critical)';
 
   return (
-    <div className="vk-bento flex min-w-0 flex-col justify-between px-3.5 py-2.5">
+    <div className="flex min-w-0 flex-col justify-between px-4 py-3">
       <div className="flex items-center justify-between gap-1.5">
-        <span className="text-[0.8125rem] font-medium leading-tight text-[var(--muted)]">
-          {label}
-        </span>
+        <span className="vk-pane-label">{label}</span>
         {pass !== null && (
-          <span className="shrink-0" style={{ color }}>
-            {pass ? <IconShieldCheck size={14} /> : <IconOctagonAlert size={14} />}
+          <span className="shrink-0" style={{ color }} aria-hidden="true">
+            {pass ? <IconShieldCheck size={13} /> : <IconOctagonAlert size={13} />}
           </span>
         )}
       </div>
 
       <div
-        className="vk-mono vk-tabular mt-1 text-[1.5rem] leading-[1.1] font-bold tracking-[-0.02em]"
+        className="vk-mono vk-tabular mt-1.5 text-[1.5rem] leading-none font-bold tracking-[-0.025em]"
         style={{ color }}
       >
         {suffix === '%' ? `${value.toFixed(2)}%` : value.toFixed(4)}
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 text-[0.75rem] text-[var(--muted)]">
+      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 text-[0.72rem] text-[var(--muted)]">
         {ci ? (
           <span className="vk-mono vk-tabular">
-            {t.audit.ciPrefix} {ci[0].toFixed(1)}–{ci[1].toFixed(1)}
+            {t.audit.ciPrefix} {ci[0].toFixed(1)}..{ci[1].toFixed(1)}
           </span>
         ) : (
           <span />
         )}
         {target !== undefined && (
-          <span style={{ color }}>
+          <span className="vk-mono vk-tabular" style={{ color }}>
             {t.audit.targetPrefix} {suffix === '%' ? `${target}%` : target.toFixed(2)}
           </span>
         )}
@@ -96,7 +94,7 @@ function AuditKpiTile({
   );
 }
 
-function CompactLatencyCard({
+function LatencyLedgerCell({
   title,
   latency,
   slaSec,
@@ -110,20 +108,15 @@ function CompactLatencyCard({
   const statusColor = pass ? 'var(--verdict-safe)' : 'var(--verdict-suspicious)';
 
   return (
-    <div className="vk-bento flex min-w-0 flex-col justify-between p-3.5">
+    <div className="flex min-w-0 flex-col justify-between p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h4 className="text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--foreground)]">
-          {title}
-        </h4>
-        <span className="vk-mono vk-tabular text-[0.75rem] text-[var(--muted)]">
+        <h2 className="vk-pane-label text-[var(--foreground)]">{title}</h2>
+        <span className="vk-mono vk-tabular text-[0.72rem] text-[var(--muted)]">
           {latency.count} {t.audit.samplesSuffix}
         </span>
       </div>
 
-      {/* Two columns below 1280px: at 1024 a 4-up split leaves each cell too
-          narrow for "Maksimum" + a 5-char duration, and the text runs out of
-          its box. Four across returns at xl, which covers the 1440x900 demo. */}
-      <dl className="mt-2 grid grid-cols-2 gap-2 text-[0.8125rem] xl:grid-cols-4">
+      <dl className="mt-2.5 grid grid-cols-2 divide-x divide-y divide-[var(--border)] overflow-hidden rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] text-[0.75rem] xl:grid-cols-4 xl:divide-y-0">
         {(
           [
             ['mean', t.audit.meanLabel],
@@ -132,13 +125,10 @@ function CompactLatencyCard({
             ['max', t.audit.maxLabel],
           ] as const
         ).map(([k, label]) => (
-          <div
-            key={k}
-            className="min-w-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1"
-          >
-            <dt className="text-[0.75rem] text-[var(--muted)]">{label}</dt>
+          <div key={k} className="min-w-0 px-2.5 py-1.5">
+            <dt className="vk-mono text-[0.6875rem] uppercase text-[var(--muted)]">{label}</dt>
             <dd
-              className="vk-mono vk-tabular font-semibold"
+              className="vk-mono vk-tabular mt-0.5 font-semibold"
               style={{
                 color: latency[k] > slaSec ? 'var(--verdict-suspicious)' : 'var(--foreground)',
               }}
@@ -150,10 +140,10 @@ function CompactLatencyCard({
       </dl>
 
       <div
-        className="mt-2 inline-flex items-center gap-1.5 text-[0.8125rem] font-medium"
+        className="mt-2 inline-flex items-center gap-1.5 text-[0.75rem] font-medium"
         style={{ color: statusColor }}
       >
-        {pass ? <IconShieldCheck size={13} /> : <IconAlertTriangle size={13} />}
+        {pass ? <IconShieldCheck size={12} /> : <IconAlertTriangle size={12} />}
         <span>
           {latency.sla_pass_pct.toFixed(1)}% {t.audit.underSlaSuffix} {slaSec}{' '}
           {t.audit.secondsUnit}
@@ -196,17 +186,24 @@ export function AuditPanel() {
   if (state.phase === 'loading') {
     return (
       <section className="vk-panel-section">
-        <div className="shrink-0">
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            {t.audit.headline}
-          </h1>
-          <p className="mt-0.5 max-w-[66ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
-            {t.audit.baselineSubtitle}
-          </p>
-        </div>
+        <header className="vk-page-header">
+          <div>
+            <div className="vk-kicker">{t.audit.sectionIndex}</div>
+            <h1
+              id="vk-main-heading"
+              tabIndex={-1}
+              className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+            >
+              {t.audit.headline}
+            </h1>
+            <p className="mt-0.5 max-w-[66ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
+              {t.audit.baselineSubtitle}
+            </p>
+          </div>
+        </header>
         <div
           data-ui="console-workspace"
-          className="vk-bento flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]"
+          className="flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]"
         >
           <span
             aria-hidden="true"
@@ -225,104 +222,108 @@ export function AuditPanel() {
     const serverNote = state.phase === 'ready' ? state.data.message : null;
     return (
       <section className="vk-panel-section">
-        <div className="shrink-0">
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            {t.audit.headline}
-          </h1>
-          <p className="mt-0.5 max-w-[66ch] text-[1rem] leading-[1.5] text-[var(--muted-strong)]">
-            {t.audit.baselineSubtitle}
-          </p>
+        <header className="vk-page-header">
+          <div>
+            <div className="vk-kicker">{t.audit.sectionIndex}</div>
+            <h1
+              id="vk-main-heading"
+              tabIndex={-1}
+              className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+            >
+              {t.audit.headline}
+            </h1>
+            <p className="mt-0.5 max-w-[66ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
+              {t.audit.baselineSubtitle}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={triggerReload}
+            className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
+          >
+            <IconRefresh size={14} />
+            <span>{t.audit.ctaRefresh}</span>
+          </button>
+        </header>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[0.8125rem] text-[var(--muted-strong)] sm:px-5">
+          <span className="inline-flex items-center gap-2">
+            <span className="text-[var(--verdict-suspicious)]" aria-hidden="true">
+              <IconAlertTriangle size={14} />
+            </span>
+            <span>{state.phase === 'error' ? state.message : t.audit.unavailableTitle}</span>
+          </span>
         </div>
 
-        <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col gap-3.5">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2.5 rounded-lg border border-[var(--border)] border-l-2 border-l-[var(--verdict-suspicious)] bg-[var(--surface-1)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-            <span className="inline-flex items-center gap-2">
-              <span className="text-[var(--verdict-suspicious)]">
-                <IconAlertTriangle size={15} />
-              </span>
-              <span>{state.phase === 'error' ? state.message : t.audit.unavailableTitle}</span>
-            </span>
-            <button
-              type="button"
-              onClick={triggerReload}
-              className="vk-btn vk-btn-secondary h-8 shrink-0 px-3 text-[0.8125rem]"
-            >
-              <IconRefresh size={14} />
-              <span>{t.feed.refresh}</span>
-            </button>
+        <div
+          data-ui="console-workspace"
+          className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+        >
+          <div className="flex min-w-0 flex-col justify-between p-5 lg:col-span-7">
+            <div>
+              <h2 className="text-[1.0625rem] font-semibold text-[var(--foreground)]">
+                {t.audit.unavailableTitle}
+              </h2>
+              <p className="mt-2 max-w-[62ch] text-[0.875rem] leading-[1.55] text-[var(--muted-strong)]">
+                {t.audit.unavailableBody}
+              </p>
+
+              {serverNote && (
+                <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted)]">
+                  {serverNote}
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)] px-3.5 py-2.5">
+                <code className="vk-mono break-all text-[0.8125rem] text-[var(--accent-ink)]">
+                  {t.audit.benchmarkCommand}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyCommand}
+                  className="vk-btn vk-btn-secondary h-8 shrink-0 px-2.5 text-[0.75rem]"
+                >
+                  {copiedCmd ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                  <span>{copiedCmd ? t.common.copied : t.common.copy}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-[0.75rem] text-[var(--muted)]">
+              {t.audit.benchmarkFileNote}
+            </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-            <div className="vk-bento flex min-w-0 flex-col justify-between p-5 lg:col-span-7">
-              <div>
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                  {t.audit.unavailableTitle}
-                </h3>
-                <p className="mt-2 max-w-[62ch] text-[0.9375rem] leading-[1.55] text-[var(--muted-strong)]">
-                  {t.audit.unavailableBody}
-                </p>
+          <aside className="flex min-w-0 flex-col justify-between bg-[var(--surface-0)] p-5 lg:col-span-5">
+            <div>
+              <h2 className="vk-pane-label text-[var(--foreground)]">{t.audit.targetSpecTitle}</h2>
+              <p className="mt-1 text-[0.75rem] leading-relaxed text-[var(--muted)]">
+                {t.audit.targetSpecNote}
+              </p>
 
-                {serverNote && (
-                  <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[0.8125rem] text-[var(--muted)]">
-                    {serverNote}
+              <dl className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] text-[0.8125rem]">
+                {[
+                  [t.audit.kpiAccuracy, `>= ${TARGETS.accuracy}%`],
+                  [t.audit.kpiF1, `>= ${TARGETS.f1_score}%`],
+                  [t.audit.kpiRecall, `>= ${TARGETS.recall}%`],
+                  [t.audit.kpiSpecificity, `>= ${TARGETS.specificity}%`],
+                  [t.audit.kpiAuc, `>= ${TARGETS.auc.toFixed(2)}`],
+                ].map(([name, threshold]) => (
+                  <div key={name} className="flex items-center justify-between px-3.5 py-2">
+                    <dt className="font-medium text-[var(--foreground)]">{name}</dt>
+                    <dd className="vk-mono vk-tabular font-semibold text-[var(--accent-ink)]">
+                      {threshold}
+                    </dd>
                   </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--canvas)] px-4 py-3">
-                  <code className="vk-mono break-all text-[0.875rem] text-[var(--accent-ink)]">
-                    {t.audit.benchmarkCommand}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={copyCommand}
-                    className="vk-btn vk-btn-secondary h-8 shrink-0 px-2.5 text-[0.8125rem]"
-                  >
-                    {copiedCmd ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                    <span>{copiedCmd ? t.common.copied : t.common.copy}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-[0.8125rem] text-[var(--muted)]">
-                {t.audit.benchmarkFileNote}
-              </div>
+                ))}
+              </dl>
             </div>
 
-            <div className="vk-bento flex min-w-0 flex-col justify-between p-5 lg:col-span-5">
-              <div>
-                <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                  {t.audit.targetSpecTitle}
-                </h3>
-                <div className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--muted)]">
-                  {t.audit.targetSpecNote}
-                </div>
-
-                <dl className="mt-4 flex flex-col gap-2 text-[0.8125rem]">
-                  {[
-                    [t.audit.kpiAccuracy, `≥ ${TARGETS.accuracy}%`],
-                    [t.audit.kpiF1, `≥ ${TARGETS.f1_score}%`],
-                    [t.audit.kpiRecall, `≥ ${TARGETS.recall}%`],
-                    [t.audit.kpiSpecificity, `≥ ${TARGETS.specificity}%`],
-                    [t.audit.kpiAuc, `≥ ${TARGETS.auc.toFixed(2)}`],
-                  ].map(([name, threshold]) => (
-                    <div
-                      key={name}
-                      className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3.5 py-2.5"
-                    >
-                      <dt className="font-medium text-[var(--foreground)]">{name}</dt>
-                      <dd className="vk-mono vk-tabular font-semibold text-[var(--accent-ink)]">
-                        {threshold}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-[0.8125rem] leading-relaxed text-[var(--muted)]">
-                {t.audit.asymmetryNote}
-              </div>
+            <div className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-[0.75rem] leading-relaxed text-[var(--muted)]">
+              {t.audit.asymmetryNote}
             </div>
-          </div>
+          </aside>
         </div>
       </section>
     );
@@ -337,13 +338,18 @@ export function AuditPanel() {
 
   return (
     <section className="vk-panel-section">
-      {/* Title Row */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      {/* Flush Architectural Header */}
+      <header className="vk-page-header">
         <div>
-          <h1 className="text-[1.5rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          <div className="vk-kicker">{t.audit.sectionIndex}</div>
+          <h1
+            id="vk-main-heading"
+            tabIndex={-1}
+            className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+          >
             {t.audit.headline}
           </h1>
-          <p className="mt-0.5 max-w-[68ch] text-[0.875rem] text-[var(--muted-strong)]">
+          <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
             {t.audit.subtitlePrefix} {m.total} {t.audit.subtitleSuffix}
             {d.generated_at ? ` ${t.audit.measuredAtPrefix} ${formatWib(d.generated_at)}.` : ''}
           </p>
@@ -351,154 +357,159 @@ export function AuditPanel() {
         <button
           type="button"
           onClick={triggerReload}
-          className="vk-btn vk-btn-primary h-9 px-3.5 text-[0.875rem]"
+          className="vk-btn vk-btn-primary h-9 shrink-0 px-3.5 text-[0.8125rem]"
         >
-          <IconRefresh size={15} />
+          <IconRefresh size={14} />
           <span>{t.audit.ctaRefresh}</span>
         </button>
+      </header>
+
+      {/* Flush 5-Column KPI Telemetry Strip */}
+      <div className="grid shrink-0 grid-cols-2 divide-x divide-y divide-[var(--border)] border-b border-[var(--border)] bg-[var(--surface-1)] md:grid-cols-5 md:divide-y-0">
+        <AuditKpiCell
+          label={t.audit.kpiAccuracy}
+          value={m.accuracy}
+          target={TARGETS.accuracy}
+          ci={ci.accuracy_ci95}
+        />
+        <AuditKpiCell
+          label={t.audit.kpiF1}
+          value={m.f1_score}
+          target={TARGETS.f1_score}
+          ci={ci.f1_ci95}
+        />
+        <AuditKpiCell
+          label={t.audit.kpiRecall}
+          value={m.recall}
+          target={TARGETS.recall}
+          ci={ci.recall_ci95}
+        />
+        <AuditKpiCell
+          label={t.audit.kpiSpecificity}
+          value={m.specificity}
+          target={TARGETS.specificity}
+        />
+        <AuditKpiCell
+          label={t.audit.kpiAuc}
+          value={m.roc_auc}
+          target={TARGETS.auc}
+          suffix=""
+        />
       </div>
 
-      {/* Interactive Audit Workspace */}
-      <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col gap-3">
-        {/* Top KPI Row */}
-        <div className="grid shrink-0 grid-cols-2 gap-2.5 md:grid-cols-5">
-          <AuditKpiTile
-            label={t.audit.kpiAccuracy}
-            value={m.accuracy}
-            target={TARGETS.accuracy}
-            ci={ci.accuracy_ci95}
-          />
-          <AuditKpiTile
-            label={t.audit.kpiF1}
-            value={m.f1_score}
-            target={TARGETS.f1_score}
-            ci={ci.f1_ci95}
-          />
-          <AuditKpiTile
-            label={t.audit.kpiRecall}
-            value={m.recall}
-            target={TARGETS.recall}
-            ci={ci.recall_ci95}
-          />
-          <AuditKpiTile
-            label={t.audit.kpiSpecificity}
-            value={m.specificity}
-            target={TARGETS.specificity}
-          />
-          <AuditKpiTile
-            label={t.audit.kpiAuc}
-            value={m.roc_auc}
-            target={TARGETS.auc}
-            suffix=""
-          />
+      {/* Main 12-Col Split Ledger: Confusion Matrix (Left 5) + SLA Latency & Ablation Tables (Right 7) */}
+      <div
+        data-ui="console-workspace"
+        className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
+      >
+        <div className="flex min-h-0 min-w-0 flex-col bg-[var(--surface-0)] lg:col-span-5">
+          <ConfusionMatrix metrics={m} />
         </div>
 
-        {/* Main 12-Col Bento: Hero Confusion Matrix + Latency & Sticky Baseline/Slice Tables */}
-        <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-12">
-          <div className="flex min-h-0 min-w-0 flex-col lg:col-span-5">
-            <ConfusionMatrix metrics={m} />
+        <div className="flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] bg-[var(--surface-1)] lg:col-span-7">
+          {/* Compact Ruled Latency Pair */}
+          <div className="grid shrink-0 divide-y divide-[var(--border)] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+            <LatencyLedgerCell
+              title={t.audit.latencyUrlTitle}
+              latency={d.playwright_url_latency_sec}
+              slaSec={slaSec}
+            />
+            <LatencyLedgerCell
+              title={t.audit.latencyImgTitle}
+              latency={d.multimodal_image_latency_sec}
+              slaSec={slaSec}
+            />
           </div>
 
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:col-span-7">
-            {/* Compact Latency Pair */}
-            <div className="grid shrink-0 gap-3 sm:grid-cols-2">
-              <CompactLatencyCard
-                title={t.audit.latencyUrlTitle}
-                latency={d.playwright_url_latency_sec}
-                slaSec={slaSec}
-              />
-              <CompactLatencyCard
-                title={t.audit.latencyImgTitle}
-                latency={d.multimodal_image_latency_sec}
-                slaSec={slaSec}
-              />
-            </div>
+          {/* Tabbed Sticky-Header Baseline / Slice Table */}
+          {hasBaselines && detailTab === 'baseline' && !hasSlices ? (
+            <BaselineTable baselines={d.baseline_comparison!} />
+          ) : (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="vk-pane-label text-[var(--foreground)]">
+                  {detailTab === 'baseline' ? t.audit.baselineTitle : t.audit.sliceTitle}
+                </h2>
 
-            {/* Tabbed Sticky-Header Baseline / Slice Table */}
-            {hasBaselines && detailTab === 'baseline' && !hasSlices ? (
-              <BaselineTable baselines={d.baseline_comparison!} />
-            ) : (
-              <div className="vk-bento flex min-h-0 min-w-0 flex-1 flex-col p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-[1.125rem] leading-[1.35] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-                    {detailTab === 'baseline' ? t.audit.baselineTitle : t.audit.sliceTitle}
-                  </h3>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {hasBaselines && hasSlices && (
+                    <div className="flex items-center gap-0.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab('baseline')}
+                        aria-pressed={detailTab === 'baseline'}
+                        className={[
+                          'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                          detailTab === 'baseline'
+                            ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
+                            : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                        ].join(' ')}
+                      >
+                        {t.audit.colApproach}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab('slices')}
+                        aria-pressed={detailTab === 'slices'}
+                        className={[
+                          'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                          detailTab === 'slices'
+                            ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
+                            : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                        ].join(' ')}
+                      >
+                        {t.audit.colSlice}
+                      </button>
+                    </div>
+                  )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {hasBaselines && hasSlices && (
-                      <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setDetailTab('baseline')}
-                          aria-pressed={detailTab === 'baseline'}
-                          className={[
-                            'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
-                            detailTab === 'baseline'
-                              ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
-                              : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                          ].join(' ')}
-                        >
-                          {t.audit.colApproach}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDetailTab('slices')}
-                          aria-pressed={detailTab === 'slices'}
-                          className={[
-                            'rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
-                            detailTab === 'slices'
-                              ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
-                              : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                          ].join(' ')}
-                        >
-                          {t.audit.colSlice}
-                        </button>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={triggerReload}
-                      className="vk-btn vk-btn-secondary h-8 px-2.5 text-[0.8125rem]"
-                    >
-                      <IconRefresh size={14} />
-                      <span>{t.feed.refresh}</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={triggerReload}
+                    className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
+                  >
+                    <IconRefresh size={13} />
+                    <span>{t.feed.refresh}</span>
+                  </button>
                 </div>
+              </div>
 
               {detailTab === 'baseline' && d.baseline_comparison ? (
-                <div className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--border)]">
+                <div
+                  role="region"
+                  aria-label={t.audit.baselineTitle}
+                  tabIndex={0}
+                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]"
+                >
                   <table className="w-full border-collapse text-[0.8125rem]">
                     <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
                       <tr className="border-b border-[var(--border)] text-left">
-                        <th className="px-3 py-2 font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-3 py-2">
                           {t.audit.colApproach}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colAccuracy}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colPrecision}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colRecall}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colF1}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colRocAuc}
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[var(--border-subtle)]">
                       {d.baseline_comparison.map((row, idx) => {
                         const isBest = idx === d.baseline_comparison!.length - 1;
                         return (
                           <tr
                             key={row.model}
-                            className="border-b border-[var(--border-subtle)] last:border-0"
                             style={isBest ? { background: 'var(--accent-tint)' } : undefined}
                           >
                             <td
@@ -511,19 +522,19 @@ export function AuditPanel() {
                               {row.model}
                             </td>
                             <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--foreground)]">
-                              {row.accuracy !== undefined ? `${row.accuracy.toFixed(2)}%` : '—'}
+                              {row.accuracy !== undefined ? `${row.accuracy.toFixed(2)}%` : '-'}
                             </td>
                             <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--muted-strong)]">
-                              {row.precision !== undefined ? `${row.precision.toFixed(2)}%` : '—'}
+                              {row.precision !== undefined ? `${row.precision.toFixed(2)}%` : '-'}
                             </td>
                             <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--muted-strong)]">
-                              {row.recall !== undefined ? `${row.recall.toFixed(2)}%` : '—'}
+                              {row.recall !== undefined ? `${row.recall.toFixed(2)}%` : '-'}
                             </td>
                             <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--foreground)]">
-                              {row.f1_score !== undefined ? `${row.f1_score.toFixed(2)}%` : '—'}
+                              {row.f1_score !== undefined ? `${row.f1_score.toFixed(2)}%` : '-'}
                             </td>
                             <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--muted-strong)]">
-                              {row.roc_auc !== undefined ? row.roc_auc.toFixed(4) : '—'}
+                              {row.roc_auc !== undefined ? row.roc_auc.toFixed(4) : '-'}
                             </td>
                           </tr>
                         );
@@ -532,36 +543,38 @@ export function AuditPanel() {
                   </table>
                 </div>
               ) : d.slice_summaries ? (
-                <div className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--border)]">
+                <div
+                  role="region"
+                  aria-label={t.audit.sliceTitle}
+                  tabIndex={0}
+                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]"
+                >
                   <table className="w-full border-collapse text-[0.8125rem]">
                     <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
                       <tr className="border-b border-[var(--border)] text-left">
-                        <th className="px-3 py-2 font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-3 py-2">
                           {t.audit.colSlice}
                         </th>
-                        <th className="px-2 py-2 font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2">
                           {t.audit.colModality}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colCount}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colAccuracy}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.meanLabel}
                         </th>
-                        <th className="px-2 py-2 text-right font-medium text-[var(--muted)]">
+                        <th scope="col" className="vk-pane-label px-2 py-2 text-right">
                           {t.audit.colP95}
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[var(--border-subtle)]">
                       {d.slice_summaries.map((s) => (
-                        <tr
-                          key={s.slice_name}
-                          className="border-b border-[var(--border-subtle)] last:border-0"
-                        >
+                        <tr key={s.slice_name}>
                           <td className="px-3 py-2 text-[var(--foreground)]">{s.slice_name}</td>
                           <td className="vk-mono px-2 py-2 text-[var(--muted)]">{s.modality}</td>
                           <td className="vk-mono vk-tabular px-2 py-2 text-right text-[var(--muted-strong)]">
@@ -592,7 +605,6 @@ export function AuditPanel() {
               ) : null}
             </div>
           )}
-          </div>
         </div>
       </div>
     </section>

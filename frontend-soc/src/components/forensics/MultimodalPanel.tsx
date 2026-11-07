@@ -33,12 +33,10 @@ export function MultimodalPanel({
   const show = (value: string) => (defanged ? defang(value) : value);
 
   return (
-    <div className="vk-bento min-w-0 p-4">
-      <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-        {t.forensics.multimodal}
-      </h3>
+    <div className="min-w-0 p-4">
+      <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.multimodal}</h2>
 
-      <dl className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1.5 text-[0.8125rem]">
+      <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1.5 text-[0.8125rem]">
         <div className="flex gap-1.5">
           <dt className="text-[var(--muted)]">{t.forensics.contentTypeLabel}</dt>
           <dd className="font-medium text-[var(--muted-strong)]">
@@ -56,10 +54,10 @@ export function MultimodalPanel({
       </dl>
 
       {image.qrCodes.length > 0 && (
-        <div className="mt-3.5">
-          <h4 className="mb-2 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+        <div className="mt-3">
+          <h3 className="vk-pane-label mb-1.5">
             {t.forensics.qrHeader} ({image.qrCodes.length})
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-1.5">
             {image.qrCodes.map((qr, i) => {
               const boxId = boxIdForQr(i);
@@ -69,19 +67,19 @@ export function MultimodalPanel({
                   key={boxId}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-lg border px-3 py-2 transition-colors"
+                  className="rounded-[3px] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-qr)' : 'var(--border)',
                     background: active
                       ? 'color-mix(in srgb, var(--layer-qr) 14%, transparent)'
-                      : 'var(--surface-2)',
+                      : 'var(--surface-0)',
                   }}
                 >
-                  <div className="vk-mono break-all text-[0.8125rem] text-[var(--foreground)]">
+                  <div className="vk-mono break-all text-[0.75rem] text-[var(--foreground)]">
                     {show(qr.payload)}
                   </div>
                   {qr.decoder && (
-                    <div className="mt-1 text-[0.8125rem] text-[var(--muted)]">
+                    <div className="vk-mono mt-1 text-[0.72rem] text-[var(--muted)]">
                       {t.forensics.decoderPrefix} {qr.decoder}
                     </div>
                   )}
@@ -93,30 +91,31 @@ export function MultimodalPanel({
       )}
 
       {image.extractedUrls.length > 0 && (
-        <div className="mt-3.5">
-          <h4 className="mb-1.5 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
+        <div className="mt-3">
+          <h3 className="vk-pane-label mb-1.5">
             {t.forensics.ocrUrlsHeader} ({image.extractedUrls.length})
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-1">
             {image.extractedUrls.map((link) => (
-              <li key={link} className="vk-mono break-all text-[0.8125rem] text-[var(--muted-strong)]">
+              <li
+                key={link}
+                className="vk-mono break-all text-[0.75rem] text-[var(--muted-strong)]"
+              >
                 {show(link)}
               </li>
             ))}
           </ul>
-          <div className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-[var(--verdict-suspicious)]">
-            <IconAlertTriangle size={13} />
+          <div className="mt-2 flex items-center gap-1.5 text-[0.75rem] text-[var(--verdict-suspicious)]">
+            <IconAlertTriangle size={12} />
             <span>{t.forensics.ocrCaveat.trim()}</span>
           </div>
         </div>
       )}
 
       {image.ocrTextSnippet && (
-        <div className="mt-3.5">
-          <h4 className="mb-1.5 text-[0.8125rem] font-medium tracking-[0.02em] text-[var(--muted)]">
-            {t.forensics.ocrSnippetHeader}
-          </h4>
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
+        <div className="mt-3">
+          <h3 className="vk-pane-label mb-1.5">{t.forensics.ocrSnippetHeader}</h3>
+          <div className="rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
             {truncateMiddle(image.ocrTextSnippet, 400)}
           </div>
         </div>

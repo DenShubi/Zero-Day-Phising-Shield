@@ -17,7 +17,7 @@ const STYLE: Record<Marker, string> = {
   '*': 'font-semibold',
   _: 'italic',
   '~': 'line-through',
-  '`': 'vk-mono rounded bg-black/25 px-1 py-0.5 text-[0.95em]',
+  '`': 'vk-mono rounded-[2px] border border-[var(--wa-border)] bg-[var(--surface-2)] px-1 py-0.5 text-[0.92em]',
 };
 
 /**
