@@ -214,19 +214,16 @@ pre,
 .vk-panel-section {
   display: flex;
   flex: 1 1 0%;
-  min-height: 100svh;
+  min-height: 0;
   min-width: 0;
   flex-direction: column;
   background: var(--surface-1);
-  padding-top: 3.5rem;
 }
 
 @media (min-width: 1024px) {
   .vk-panel-section {
-    height: 100svh;
-    min-height: 100svh;
+    height: 100%;
     overflow: hidden;
-    padding-top: 0;
   }
 }
 
@@ -616,6 +613,13 @@ pre,
     border-color: #94a3b8;
     background: #f8fafc;
     color: #0f172a;
+  }
+
+  .vk-overlay__box,
+  .vk-overlay__tag,
+  .vk-overlay__swatch {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   a[href]::after {

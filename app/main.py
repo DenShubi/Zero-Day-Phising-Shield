@@ -184,6 +184,8 @@ async def run_phase1_scan(payload: Phase1ScanRequest) -> Phase1ScanResponse:
     target_url = payload.url.strip()
     if not target_url:
         raise HTTPException(status_code=400, detail="Target URL must not be empty.")
+    if not target_url.lower().startswith(("http://", "https://", "file://")):
+        target_url = f"https://{target_url}"
     allowed, reason = security.validate_scan_target(target_url)
     if not allowed:
         raise HTTPException(status_code=400, detail=f"Target ditolak: {reason}")
@@ -207,6 +209,8 @@ async def run_phase2_scan(payload: Phase1ScanRequest) -> Phase2ScanResponse:
     target_url = payload.url.strip()
     if not target_url:
         raise HTTPException(status_code=400, detail="Target URL must not be empty.")
+    if not target_url.lower().startswith(("http://", "https://", "file://")):
+        target_url = f"https://{target_url}"
     allowed, reason = security.validate_scan_target(target_url)
     if not allowed:
         raise HTTPException(status_code=400, detail=f"Target ditolak: {reason}")

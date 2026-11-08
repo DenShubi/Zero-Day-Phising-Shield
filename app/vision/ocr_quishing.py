@@ -111,15 +111,37 @@ def detect_and_annotate_qr_codes(
 
     gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
     _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
 
     passes: list[tuple[np.ndarray, float]] = [
         (raw_img, 1.0),
         (gray, 1.0),
         (otsu, 1.0),
     ]
-    if max(img_h, img_w) < 900:
+    if lap_var < 260.0:
+        blur_g = cv2.GaussianBlur(gray, (0, 0), 1.5)
+        sharp_g = cv2.addWeighted(gray, 1.9, blur_g, -0.9, 0)
+        _, sharp_otsu = cv2.threshold(sharp_g, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        passes.append((sharp_g, 1.0))
+        passes.append((sharp_otsu, 1.0))
+
+    if max(img_h, img_w) < 900 or lap_var < 260.0:
         upscaled = cv2.resize(raw_img, (img_w * 2, img_h * 2), interpolation=cv2.INTER_CUBIC)
-        passes.append((upscaled, 0.5))
+        blur_up = cv2.GaussianBlur(upscaled, (0, 0), 1.4)
+        sharp_up = cv2.addWeighted(upscaled, 1.85, blur_up, -0.85, 0)
+        up_gray = cv2.cvtColor(sharp_up, cv2.COLOR_BGR2GRAY)
+        _, up_otsu = cv2.threshold(up_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        passes.append((sharp_up, 0.5))
+        passes.append((up_otsu, 0.5))
+
+    if max(img_h, img_w) < 480:
+        up3 = cv2.resize(raw_img, (img_w * 3, img_h * 3), interpolation=cv2.INTER_CUBIC)
+        blur_up3 = cv2.GaussianBlur(up3, (0, 0), 1.5)
+        sharp_up3 = cv2.addWeighted(up3, 1.9, blur_up3, -0.9, 0)
+        up3_gray = cv2.cvtColor(sharp_up3, cv2.COLOR_BGR2GRAY)
+        _, up3_otsu = cv2.threshold(up3_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        passes.append((sharp_up3, 1.0 / 3.0))
+        passes.append((up3_otsu, 1.0 / 3.0))
 
     prefer_pyzbar = os.environ.get("VK_QR_BACKEND", "").strip().lower() == "pyzbar"
     if prefer_pyzbar:

@@ -38,17 +38,23 @@ OCR_BARE_DOMAIN_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Military / defence institutional terms (word-boundary matched)
+# Military / defence institutional terms (word-boundary matched, with blurry-OCR I/l/1 glyph tolerance)
 MILITARY_CONTEXT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("tni", re.compile(r"\btni\b", re.IGNORECASE)),
-    ("tniad", re.compile(r"\btni[\s-]*ad\b", re.IGNORECASE)),
+    ("tni", re.compile(r"\btn[il1]\b", re.IGNORECASE)),
+    ("tniad", re.compile(r"(?:\b|pi)t(?:n[il1]|ill)[\s-]*ad\b", re.IGNORECASE)),
     ("angkatan darat", re.compile(r"\bangkatan\s+darat\b", re.IGNORECASE)),
     ("kartika eka paksi", re.compile(r"\bkartika\s+eka\s+paksi\b", re.IGNORECASE)),
     ("pussiberad", re.compile(r"\bpussiber(?:ad)?\b", re.IGNORECASE)),
     ("kemhan", re.compile(r"\b(?:kemhan|kementerian\s+pertahanan)\b", re.IGNORECASE)),
-    ("rekrutmen prajurit", re.compile(r"\b(?:penerimaan|rekrutmen)\s+(?:prajurit|bintara|tamtama|taruna|perwira|tni)\b", re.IGNORECASE)),
-    ("bintara/tamtama", re.compile(r"\b(?:cata|caba|bintara|tamtama|akmil|seskoad|unhan|kodam|koramil|korem)\b", re.IGNORECASE)),
+    ("rekrutmen prajurit", re.compile(r"\b(?:penerimaan|rekrutmen)\s+(?:prajurit|bintara|tamtama|taruna|perwira|tn[il1])\b", re.IGNORECASE)),
+    ("bintara/tamtama", re.compile(r"\b(?:cata|caba|bintara|tamtama|akmil|seskoad|unhan|kodam|kodim|makodim|koramil|korem|dirgahayu\s+tn[il1]|hut\s+tn[il1]|(?:patriot\s+)?nkr[il1]\b|(?:patriot\s+)?nkr')", re.IGNORECASE)),
     ("sisfopers/nrp", re.compile(r"\b(?:sisfopers|nrp)\b", re.IGNORECASE)),
+)
+
+# Landscape banner/poster event typography cues (used to distinguish graphic banners from web screenshots)
+POSTER_BANNER_OCR_RE = re.compile(
+    r"\b(?:dirgahayu|ikuti\s+dan\s+meriahkan|meriahkan\s+rangkaian|rangkaian\s+kegiatan|donor\s+darah|pasar\s+murah|olahraga\s+bersama|hut\s+tni)\b",
+    re.IGNORECASE,
 )
 
 # High-risk recruitment scam / calo / credential-phishing / APK malware phrases
@@ -140,6 +146,14 @@ def classify_image_layout(img_bgr: np.ndarray) -> tuple[str, float, bool]:
     mean_sat = float(np.mean(hsv[:, :, 1]))
 
     if ar >= 1.22:
+        if not has_browser_chrome:
+            gray_full = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+            row_stds = np.std(gray_full.astype(np.float32), axis=1)
+            uniform_row_ratio = float(np.mean(row_stds < 24.0))
+            edges_full = cv2.Canny(gray_full, 50, 150)
+            edge_density = float(np.mean(edges_full > 0))
+            if uniform_row_ratio < 0.12 and edge_density >= 0.125 and mean_sat >= 55.0:
+                return "POSTER_FLYER", ar, False
         return "WEB_SCREENSHOT", ar, has_browser_chrome
     if ar <= 0.62 and has_browser_chrome and mean_sat < 95.0:
         return "MOBILE_SCREENSHOT", ar, True
@@ -151,10 +165,10 @@ def classify_image_layout(img_bgr: np.ndarray) -> tuple[str, float, bool]:
 def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
     """
     Detect rectangular UI form input fields (`<input>` boxes) in static screenshots
-    using edge/contour geometry and vertical alignment clustering.
+    using edge/contour geometry and vertical alignment clustering. Supports low-res thumbnails.
     """
     h, w = img_bgr.shape[:2]
-    if h < 180 or w < 220:
+    if h < 110 or w < 140:
         return []
 
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
@@ -166,10 +180,10 @@ def detect_visual_input_boxes(img_bgr: np.ndarray) -> list[dict[str, int]]:
     contours, _ = cv2.findContours(closed, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     raw_boxes: list[dict[str, int]] = []
 
-    min_w = max(110, int(w * 0.14))
+    min_w = max(52, int(w * 0.14))
     max_w = int(w * 0.82)
-    min_h = max(22, int(h * 0.03))
-    max_h = min(76, int(h * 0.11))
+    min_h = max(12, int(h * 0.028))
+    max_h = min(76, int(h * 0.12))
 
     for cnt in contours:
         x, y, bw, bh = cv2.boundingRect(cnt)
@@ -531,16 +545,8 @@ def get_vision_capabilities() -> dict[str, object]:
     }
 
 
-def extract_ocr_text(image_path: Union[str, Path]) -> str:
-    """
-    Best-effort fast OCR across Windows (`Windows.Media.Ocr` persistent worker),
-    Linux (`tesseract` CLI), and Deep Learning `EasyOCR` (`easyocr.Reader(['id', 'en'])`).
-    """
-    if os.environ.get("VK_DISABLE_OCR", "").lower() in ("1", "true", "yes"):
-        return ""
-    p = Path(image_path)
-    if not p.exists():
-        return ""
+def _extract_ocr_single_pass(p: Path) -> str:
+    """Single-pass OCR execution on path `p`."""
     try:
         forced_backend = os.environ.get("VK_OCR_BACKEND", "").strip().lower()
         if forced_backend == "easyocr":
@@ -568,6 +574,88 @@ def extract_ocr_text(image_path: Union[str, Path]) -> str:
         return ""
     except Exception:
         return ""
+
+
+def _build_degraded_ocr_canvas(img_bgr: np.ndarray, max_dim: int) -> np.ndarray:
+    """
+    Build a sharpened super-resolution / scale-normalized canvas for degraded,
+    low-resolution, or heavily blurred/JPEG-compressed images so OCR engines can
+    read both tiny thumbnail text and wide soft-blurred headline strokes.
+    """
+    h, w = img_bgr.shape[:2]
+    if max_dim < 850:
+        scale = min(4.5, 1100.0 / float(max(1, max_dim)))
+        up = cv2.resize(
+            img_bgr,
+            (max(1, int(round(w * scale))), max(1, int(round(h * scale)))),
+            interpolation=cv2.INTER_CUBIC,
+        )
+        blur = cv2.GaussianBlur(up, (0, 0), 1.6)
+        return cv2.addWeighted(up, 1.8, blur, -0.8, 0)
+
+    # Normal/large dimensions but low Laplacian sharpness (pixelated / blurry upscaled image):
+    # Downscaling to 0.55x with INTER_AREA + unsharp mask collapses wide blurry edges into
+    # crisp 1-2px strokes for large headlines (primary_txt already ran at 1.0x).
+    dw = max(1, int(round(w * 0.55)))
+    dh = max(1, int(round(h * 0.55)))
+    down = cv2.resize(img_bgr, (dw, dh), interpolation=cv2.INTER_AREA)
+    blur_d = cv2.GaussianBlur(down, (0, 0), 1.4)
+    return cv2.addWeighted(down, 1.9, blur_d, -0.9, 0)
+
+
+def extract_ocr_text(image_path: Union[str, Path]) -> str:
+    """
+    Best-effort fast OCR across Windows (`Windows.Media.Ocr` persistent worker),
+    Linux (`tesseract` CLI), and Deep Learning `EasyOCR` (`easyocr.Reader(['id', 'en'])`),
+    with automatic unsharp-masked super-resolution recovery for low-resolution or blurry images.
+    """
+    if os.environ.get("VK_DISABLE_OCR", "").lower() in ("1", "true", "yes"):
+        return ""
+    p = Path(image_path)
+    if not p.exists():
+        return ""
+
+    primary_txt = _extract_ocr_single_pass(p)
+
+    try:
+        img_bgr = cv2.imread(str(p))
+        if img_bgr is None:
+            return primary_txt
+        h, w = img_bgr.shape[:2]
+        max_dim = max(h, w)
+        min_dim = min(h, w)
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        is_degraded = max_dim < 850 or min_dim < 480 or lap_var < 260.0
+        if not is_degraded:
+            return primary_txt
+
+        has_strong_signal = len(primary_txt) >= 95 and any(
+            pat.search(primary_txt)
+            for group in (MILITARY_CONTEXT_PATTERNS, SCAM_FRAUD_PATTERNS, LOGIN_CREDENTIAL_PATTERNS)
+            for _, pat in group
+        )
+        if has_strong_signal:
+            return primary_txt
+
+        import tempfile
+
+        enh_canvas = _build_degraded_ocr_canvas(img_bgr, max_dim)
+        tmp_path = Path(tempfile.gettempdir()) / f"vk_ocr_enh_{os.getpid()}_{threading.get_ident()}.png"
+        try:
+            cv2.imwrite(str(tmp_path), enh_canvas)
+            enh_txt = _extract_ocr_single_pass(tmp_path)
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        if enh_txt and enh_txt not in primary_txt:
+            return f"{primary_txt}\n{enh_txt}".strip() if primary_txt else enh_txt
+    except Exception:
+        pass
+    return primary_txt
 
 
 def _repair_ocr_domain_token(token: str) -> str:
@@ -640,6 +728,14 @@ def analyze_image_semantics(
     login_hits = [label for label, pat in LOGIN_CREDENTIAL_PATTERNS if pat.search(ocr_text)]
     has_wa_contact = bool(PERSONAL_CONTACT_RE.search(ocr_text))
     has_free_disclaimer = bool(OFFICIAL_DISCLAIMER_RE.search(ocr_text))
+
+    if (
+        layout_type == "WEB_SCREENSHOT"
+        and not has_chrome
+        and not input_boxes
+        and POSTER_BANNER_OCR_RE.search(ocr_text)
+    ):
+        layout_type = "POSTER_FLYER"
 
     analysis = ImageSemanticAnalysis(
         layout_type=layout_type,

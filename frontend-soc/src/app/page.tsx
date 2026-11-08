@@ -1,14 +1,5 @@
 'use client';
 
-/**
- * Single-route SOC Command Console (`/`).
- *
- * Switches client-side across all 6 operational panels without page reloads via
- * URL query parameters (`?view=komando|pemindaian|forensik|audit|mitigasi|lapor-cepat`,
- * `&insiden=<id>`, `&host=<hostname>`), preserving browser back/forward history
- * and direct deep-linking for conference demos.
- */
-
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuditPanel } from '@/components/panels/AuditPanel';
@@ -38,7 +29,6 @@ function ConsoleWorkspace() {
     });
   }, []);
 
-  // Merge fresh tab scans ahead of the realtime/polling feed without duplicates.
   const mergedIncidents = useMemo(() => {
     const seen = new Set<string>();
     const combined: NormalizedScan[] = [];
@@ -59,32 +49,29 @@ function ConsoleWorkspace() {
         <section className="vk-panel-section">
           <header className="vk-page-header">
             <div>
-              <div className="vk-kicker">{t.scan.sectionIndex}</div>
               <h1
                 id="vk-main-heading"
                 tabIndex={-1}
-                className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+                className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
               >
                 {t.scan.title}
               </h1>
-              <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
-                {t.scan.subtitle}
-              </p>
+              <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{t.scan.subtitle}</p>
             </div>
 
             <button
               type="button"
               onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
-              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.8125rem]"
+              className="vk-btn vk-btn-secondary h-8 shrink-0 px-3 text-[0.78rem]"
             >
-              <IconForensics size={15} />
-              <span>{t.command.openForensicsAction}</span>
+              <IconForensics size={14} />
+              <span>{t.command.openFullForensics}</span>
             </button>
           </header>
 
           <div
             data-ui="console-workspace"
-            className="vk-scroll min-h-0 flex-1 overflow-y-auto"
+            className="vk-scroll flex min-h-0 flex-1 flex-col overflow-y-auto"
           >
             <ScanConsole onScanComplete={handleScanComplete} />
           </div>
@@ -116,27 +103,17 @@ function ConsoleWorkspace() {
         <section className="vk-panel-section">
           <header className="vk-page-header">
             <div>
-              <div className="vk-kicker">{t.whatsapp.sectionIndex}</div>
               <h1
                 id="vk-main-heading"
                 tabIndex={-1}
-                className="mt-0.5 text-[1.25rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.375rem]"
+                className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
               >
-                {t.whatsapp.headline}
+                {t.whatsapp.pageTitle}
               </h1>
-              <p className="mt-0.5 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--muted-strong)]">
-                {t.whatsapp.subtitle}
+              <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">
+                {t.whatsapp.pageSubtitle}
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => router.replace(buildPanelHref('forensik'), { scroll: false })}
-              className="vk-btn vk-btn-secondary h-9 shrink-0 px-3.5 text-[0.8125rem]"
-            >
-              <IconForensics size={15} />
-              <span>{t.command.openForensicsAction}</span>
-            </button>
           </header>
 
           <div data-ui="console-workspace" className="flex min-h-0 flex-1 flex-col">
@@ -150,10 +127,11 @@ function ConsoleWorkspace() {
       return (
         <CommandPanel
           incidents={mergedIncidents}
-          feedStatus={feed.status}
+          status={feed.status}
           lastEventAt={feed.lastEventAt}
-          feedError={feed.error}
-          onRefreshFeed={feed.refresh}
+          error={feed.error}
+          onRefresh={feed.refresh}
+          onScanComplete={handleScanComplete}
         />
       );
   }

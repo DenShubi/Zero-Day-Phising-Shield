@@ -1,5 +1,6 @@
 import asyncio
 import atexit
+import base64
 import ipaddress
 import json
 import os
@@ -15,6 +16,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import cv2
+import numpy as np
 
 try:
     cv2.setNumThreads(max(1, int(os.environ.get("VK_OPENCV_THREADS", "2"))))
@@ -450,20 +452,47 @@ class HeadlessSandboxScanner:
         return await self._capture_and_extract_async(target_url, scan_id)
 
     @staticmethod
-    def _find_cached_official_portal(hostname: str) -> Optional[dict]:
+    def _find_cached_official_portal(hostname: str, target_url: str = "") -> Optional[dict]:
         """
-        Look up `app/reference_db/manifest.json` to see if `hostname` matches a
-        captured official reference portal (resilient fallback on transient network timeouts).
+        Look up `app/reference_db/manifest.json` to see if `hostname` (or `target_url` path /
+        parent official `.mil.id` / `.go.id` domain) matches a captured official reference
+        portal (resilient fallback on transient network timeouts or geo-fenced firewalls).
         """
         if not hostname:
             return None
         clean_host = hostname.lower().strip(".").removeprefix("www.")
+        parsed_u = urlparse(target_url) if target_url else None
+        clean_path = (parsed_u.path or "").strip("/").lower() if parsed_u else ""
+        host_with_path = f"{clean_host}/{clean_path}" if clean_path else clean_host
+
         ref_dir = Path(__file__).resolve().parent.parent / "reference_db"
         manifest_path = ref_dir / "manifest.json"
         if not manifest_path.exists():
             return None
         try:
             entries = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            def _resolve_entry(item: dict) -> Optional[dict]:
+                img_name = Path(item.get("screenshot", f"{item.get('id', '')}.png")).name
+                img_path = ref_dir / "portals" / img_name
+                if img_path.exists():
+                    return {
+                        **item,
+                        "name": item.get("title") or item.get("portal_name") or clean_host,
+                        "image_path": img_path,
+                    }
+                return None
+
+            # 1. Exact host+path match (e.g. kemhan.go.id/badiklat)
+            if clean_path:
+                for item in entries:
+                    raw_dom = str(item.get("official_domain", "")).lower().strip(".").removeprefix("www.").strip("/")
+                    if "/" in raw_dom and (host_with_path == raw_dom or host_with_path.startswith(raw_dom + "/")):
+                        res = _resolve_entry(item)
+                        if res:
+                            return res
+
+            # 2. Exact hostname match
             for item in entries:
                 entry_domain = (
                     str(item.get("official_domain", ""))
@@ -472,18 +501,189 @@ class HeadlessSandboxScanner:
                     .strip(".")
                     .removeprefix("www.")
                 )
-                if entry_domain == clean_host:
-                    img_name = Path(item.get("screenshot", f"{item.get('id', '')}.png")).name
-                    img_path = ref_dir / "portals" / img_name
-                    if img_path.exists():
-                        return {
-                            **item,
-                            "name": item.get("title") or item.get("portal_name") or clean_host,
-                            "image_path": img_path,
-                        }
+                if entry_domain == clean_host and "/" not in str(item.get("official_domain", "")).strip("/"):
+                    res = _resolve_entry(item)
+                    if res:
+                        return res
+
+            # 3. Subdomain / parent domain match in manifest (e.g. pussiberad.tniad.mil.id -> tniad.mil.id)
+            for item in entries:
+                entry_domain = (
+                    str(item.get("official_domain", ""))
+                    .split("/")[0]
+                    .lower()
+                    .strip(".")
+                    .removeprefix("www.")
+                )
+                if entry_domain and (clean_host.endswith("." + entry_domain) or entry_domain.endswith("." + clean_host)):
+                    res = _resolve_entry(item)
+                    if res:
+                        return res
+
+            # 4. General official .mil.id / defense domain fallback
+            if domain_guard.is_official_domain(clean_host):
+                fallback_id = "rekrutmen_ad_live" if "rekrutmen" in clean_host else "tniad_main"
+                for item in entries:
+                    if item.get("id") == fallback_id:
+                        res = _resolve_entry(item)
+                        if res:
+                            return res
         except Exception:
             return None
         return None
+
+    @staticmethod
+    async def _capture_viewport_screenshot_safe(page, screenshot_file: Path) -> None:
+        """
+        Capture a viewport screenshot with bounded timeout (`animations="disabled"`).
+        If Playwright's `page.screenshot()` stalls waiting for slow web fonts or hanging
+        stylesheets, halts pending network loads (`window.stop()`) and grabs the live
+        compositor frame directly via CDP `Page.captureScreenshot`.
+        """
+        try:
+            await page.screenshot(
+                path=str(screenshot_file),
+                full_page=False,
+                animations="disabled",
+                timeout=4500,
+            )
+            return
+        except Exception:
+            pass
+
+        try:
+            await asyncio.wait_for(
+                page.evaluate("() => { try { window.stop(); } catch (e) {} }"),
+                timeout=1.2,
+            )
+        except Exception:
+            pass
+
+        try:
+            cdp = await page.context.new_cdp_session(page)
+            try:
+                shot = await asyncio.wait_for(
+                    cdp.send("Page.captureScreenshot", {"format": "png", "fromSurface": True}),
+                    timeout=3.5,
+                )
+                data_b64 = shot.get("data", "") if isinstance(shot, dict) else ""
+                if data_b64:
+                    screenshot_file.write_bytes(base64.b64decode(data_b64))
+                    return
+            finally:
+                try:
+                    await cdp.detach()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        await page.screenshot(
+            path=str(screenshot_file),
+            full_page=False,
+            animations="disabled",
+            timeout=3500,
+        )
+
+    @staticmethod
+    def _render_unreachable_telemetry_canvas(
+        screenshot_file: Path,
+        target_url: str,
+        error_summary: str,
+    ) -> None:
+        """
+        Render a 1280x720 diagnostic telemetry card when an external URL times out or is
+        unreachable (e.g. dead/tarpitted phishing link or offline host), allowing the
+        pipeline to complete domain & URL telemetry scoring instead of failing with HTTP 500.
+        """
+        canvas = np.full((720, 1280, 3), (22, 26, 34), dtype=np.uint8)
+        cv2.rectangle(canvas, (40, 40), (1240, 680), (42, 48, 62), thickness=2)
+        cv2.rectangle(canvas, (40, 40), (1240, 118), (32, 38, 52), thickness=-1)
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(
+            canvas,
+            "VISIKARTIKA SHIELD - TELEMETRI JARINGAN & DOMAIN SANDBOX",
+            (68, 88),
+            font,
+            0.78,
+            (90, 200, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            canvas,
+            "STATUS KONEKSI: HOST TIDAK MERESPONS / BATAS WAKTU TERLAMPAUI (TIMEOUT)",
+            (68, 175),
+            font,
+            0.72,
+            (80, 180, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        short_url = target_url if len(target_url) <= 82 else target_url[:79] + "..."
+        cv2.putText(
+            canvas,
+            f"Target URL : {short_url}",
+            (68, 235),
+            font,
+            0.62,
+            (230, 235, 242),
+            1,
+            cv2.LINE_AA,
+        )
+        short_err = error_summary if len(error_summary) <= 88 else error_summary[:85] + "..."
+        cv2.putText(
+            canvas,
+            f"Diagnostik : {short_err}",
+            (68, 282),
+            font,
+            0.55,
+            (175, 185, 200),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            canvas,
+            "Server tujuan tidak mengembalikan halaman HTML tepat waktu (kemungkinan domain",
+            (68, 360),
+            font,
+            0.58,
+            (205, 212, 222),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            canvas,
+            "tidak aktif, diblokir firewall, atau link phishing/tunnel yang sudah kedaluwarsa).",
+            (68, 395),
+            font,
+            0.58,
+            (205, 212, 222),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            canvas,
+            "Analisis dilanjutkan secara otomatis menggunakan Telemetri Domain, DNS/TLD,",
+            (68, 445),
+            font,
+            0.58,
+            (130, 225, 170),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            canvas,
+            "dan Deteksi Typosquatting / Kata Kunci Atribut Militer pada struktur URL.",
+            (68, 480),
+            font,
+            0.58,
+            (130, 225, 170),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.imwrite(str(screenshot_file), canvas)
 
     async def _capture_and_extract_async(
         self,
@@ -570,70 +770,166 @@ class HeadlessSandboxScanner:
                 await page.route("**/*", _route_filter)
 
                 response: Optional[Response] = None
+                used_unreachable_fallback: Optional[str] = None
                 t_nav0 = time.perf_counter()
                 try:
-                    response = await page.goto(
-                        target_url,
-                        timeout=14000,
-                        wait_until="domcontentloaded",
-                    )
+                    try:
+                        response = await page.goto(
+                            target_url,
+                            timeout=10000,
+                            wait_until="domcontentloaded",
+                        )
+                    except PlaywrightTimeoutError:
+                        try:
+                            body_len = await asyncio.wait_for(
+                                page.evaluate("() => document.body ? document.body.innerHTML.length : 0"),
+                                timeout=1.5,
+                            )
+                        except Exception:
+                            body_len = 0
+                        if body_len <= 100:
+                            response = await page.goto(
+                                target_url,
+                                timeout=5500,
+                                wait_until="commit",
+                            )
+                            try:
+                                await page.wait_for_timeout(1200)
+                            except Exception:
+                                pass
+
                     navigation_dom_ms = round((time.perf_counter() - t_nav0) * 1000.0, 2)
 
                     t_settle0 = time.perf_counter()
-                    # Cap subresource 'load' wait at 2.2s so slow third-party widgets never stall capture
+                    # 1. Wait for initial window 'load' event (up to 2.5s)
                     try:
-                        await page.wait_for_load_state("load", timeout=2200)
+                        await page.wait_for_load_state("load", timeout=2500)
                     except Exception:
                         pass
 
-                    # Wait up to 1.0s for visible viewport <img> requests to complete (success OR 404)
+                    # 2. Wait briefly for SPA / XHR / fetch chunks to settle (networkidle capped at 1.4s)
                     try:
-                        await page.wait_for_function(
-                            """
-                            () => {
-                                const imgs = Array.from(document.querySelectorAll('img')).filter((el) => {
-                                    const r = el.getBoundingClientRect();
-                                    return r.width >= 24 && r.height >= 24 && r.top < 720;
-                                });
-                                return imgs.length === 0 || imgs.every((img) => img.complete);
-                            }
-                            """,
-                            timeout=1000,
-                        )
+                        await page.wait_for_load_state("networkidle", timeout=1400)
                     except Exception:
                         pass
 
-                    # Adaptive double-rAF + 140ms paint stabilization (replaces fixed 1500ms sleep)
+                    # 3. Force eager loading of lazy <img> / data-src attributes, fast-forward CSS fade-ins,
+                    #    and wait for visible <img> + CSS background-image URLs + web fonts to finish decoding.
                     try:
-                        await page.evaluate(
-                            "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 140))))"
+                        await asyncio.wait_for(
+                            page.evaluate(
+                                """
+                                async () => {
+                                    const timeoutAt = Date.now() + 2200;
+
+                                    // Fast-forward CSS entrance animations/transitions so elements aren't captured mid-fade
+                                    try {
+                                        const style = document.createElement('style');
+                                        style.setAttribute('data-vk-stabilize', '1');
+                                        style.textContent = '*, *::before, *::after { transition-duration: 0.01ms !important; animation-delay: 0.01ms !important; }';
+                                        document.head && document.head.appendChild(style);
+                                    } catch (e) {}
+
+                                    // Promote lazy-loaded images inside the viewport to eager load immediately
+                                    document.querySelectorAll('img').forEach((img) => {
+                                        if (img.getAttribute('loading') === 'lazy') {
+                                            img.setAttribute('loading', 'eager');
+                                        }
+                                        const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.getAttribute('data-original');
+                                        if (dataSrc && (!img.getAttribute('src') || img.getAttribute('src').startsWith('data:image/'))) {
+                                            img.setAttribute('src', dataSrc);
+                                        }
+                                    });
+
+                                    // Collect CSS background-image URLs in the viewport and pre-decode them
+                                    const bgUrls = new Set();
+                                    document.querySelectorAll('*').forEach((el) => {
+                                        const r = el.getBoundingClientRect();
+                                        if (r.width < 16 || r.height < 16 || r.top >= 760 || r.bottom <= 0) return;
+                                        const bg = window.getComputedStyle(el).backgroundImage || '';
+                                        const match = bg.match(/url\\(["']?(https?:\\/\\/[^"')]+|\\/[^"')]+)["']?\\)/i);
+                                        if (match && match[1]) {
+                                            bgUrls.add(match[1]);
+                                        }
+                                    });
+
+                                    const bgPromises = Array.from(bgUrls).slice(0, 18).map((u) => new Promise((resolve) => {
+                                        const probe = new Image();
+                                        probe.onload = () => resolve(true);
+                                        probe.onerror = () => resolve(false);
+                                        probe.src = u;
+                                    }));
+
+                                    // Wait for visible <img> elements + CSS backgrounds + web fonts
+                                    const checkReady = () => {
+                                        const imgs = Array.from(document.querySelectorAll('img')).filter((el) => {
+                                            const r = el.getBoundingClientRect();
+                                            return r.width >= 12 && r.height >= 12 && r.top < 760 && r.bottom > 0;
+                                        });
+                                        const imgsDone = imgs.length === 0 || imgs.every((img) => img.complete && img.naturalWidth > 0);
+                                        const busyEls = document.querySelectorAll('[aria-busy="true"], .skeleton, .shimmer, .placeholder-glow');
+                                        return imgsDone && busyEls.length === 0;
+                                    };
+
+                                    while (!checkReady() && Date.now() < timeoutAt) {
+                                        await new Promise((r) => setTimeout(r, 90));
+                                    }
+
+                                    await Promise.race([
+                                        Promise.all([
+                                            document.fonts ? document.fonts.ready : Promise.resolve(),
+                                            ...bgPromises,
+                                        ]),
+                                        new Promise((r) => setTimeout(r, Math.max(80, timeoutAt - Date.now()))),
+                                    ]);
+
+                                    // Decode visible images into the GPU/raster cache before screenshot
+                                    const visibleImgs = Array.from(document.querySelectorAll('img')).filter((el) => {
+                                        const r = el.getBoundingClientRect();
+                                        return r.width >= 12 && r.height >= 12 && r.top < 760 && el.complete && el.naturalWidth > 0;
+                                    });
+                                    await Promise.race([
+                                        Promise.allSettled(visibleImgs.map((img) => (img.decode ? img.decode() : Promise.resolve()))),
+                                        new Promise((r) => setTimeout(r, 400)),
+                                    ]);
+
+                                    // Final double-rAF + compositor paint flush
+                                    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 150))));
+                                }
+                                """
+                            ),
+                            timeout=3.0,
                         )
                     except Exception:
-                        await page.wait_for_timeout(140)
+                        await page.wait_for_timeout(150)
                     render_settle_ms = round((time.perf_counter() - t_settle0) * 1000.0, 2)
 
-                except PlaywrightTimeoutError:
+                except PlaywrightTimeoutError as pw_te:
                     navigation_dom_ms = round((time.perf_counter() - t_nav0) * 1000.0, 2)
                     try:
-                        body_len = await page.evaluate(
-                            "() => document.body ? document.body.innerHTML.length : 0"
+                        body_len = await asyncio.wait_for(
+                            page.evaluate("() => document.body ? document.body.innerHTML.length : 0"),
+                            timeout=1.5,
                         )
                     except Exception:
                         body_len = 0
 
                     if body_len <= 100:
-                        cached = self._find_cached_official_portal(initial_host)
+                        cached = self._find_cached_official_portal(initial_host, target_url)
                         if cached is not None:
                             used_cached_portal = cached
                         else:
-                            raise
-                except Exception:
+                            used_unreachable_fallback = (
+                                f"Timeout ({int(navigation_dom_ms)} ms) saat menghubungi '{initial_host or target_url}'"
+                            )
+                except Exception as nav_exc:
                     navigation_dom_ms = round((time.perf_counter() - t_nav0) * 1000.0, 2)
-                    cached = self._find_cached_official_portal(initial_host)
+                    cached = self._find_cached_official_portal(initial_host, target_url)
                     if cached is not None:
                         used_cached_portal = cached
                     else:
-                        raise
+                        err_line = (str(nav_exc) or repr(nav_exc)).splitlines()[0][:140]
+                        used_unreachable_fallback = f"{type(nav_exc).__name__}: {err_line}"
 
                 t_cap0 = time.perf_counter()
                 if used_cached_portal is not None:
@@ -647,6 +943,30 @@ class HeadlessSandboxScanner:
                         "inputs": [],
                         "images": [],
                         "detectedKeywords": ["tni", "angkatan darat"],
+                        "contextMenuDisabled": False,
+                        "hasFormlessSensitiveInput": False,
+                    }
+                elif used_unreachable_fallback is not None:
+                    self._render_unreachable_telemetry_canvas(
+                        screenshot_file=screenshot_file,
+                        target_url=target_url,
+                        error_summary=used_unreachable_fallback,
+                    )
+                    status_code = 504
+                    redirect_chain = [target_url]
+                    final_url = target_url
+                    page_title = f"[Host Tidak Merespons / Timeout] {initial_host or target_url}"
+                    url_norm = re.sub(r"[^a-z0-9]+", " ", target_url.lower())
+                    url_kws = [
+                        kw
+                        for kw in MILITARY_KEYWORDS
+                        if kw in url_norm or kw.replace(" ", "") in target_url.lower()
+                    ]
+                    dom_payload = {
+                        "forms": [],
+                        "inputs": [],
+                        "images": [],
+                        "detectedKeywords": url_kws,
                         "contextMenuDisabled": False,
                         "hasFormlessSensitiveInput": False,
                     }
@@ -664,12 +984,27 @@ class HeadlessSandboxScanner:
                         status_code = 200
                         redirect_chain = [target_url]
 
-                    final_url = page.url
-                    page_title = await page.title()
+                    final_url = page.url or target_url
+                    try:
+                        page_title = await asyncio.wait_for(page.title(), timeout=2.0)
+                    except Exception:
+                        page_title = initial_host or target_url
 
-                    await page.screenshot(path=str(screenshot_file), full_page=False)
+                    try:
+                        await self._capture_viewport_screenshot_safe(page, screenshot_file)
+                    except Exception as shot_exc:
+                        cached_shot = self._find_cached_official_portal(initial_host, target_url)
+                        if cached_shot is not None:
+                            shutil.copyfile(str(cached_shot["image_path"]), str(screenshot_file))
+                        else:
+                            used_unreachable_fallback = f"Screenshot timeout: {type(shot_exc).__name__}"
+                            self._render_unreachable_telemetry_canvas(
+                                screenshot_file=screenshot_file,
+                                target_url=final_url,
+                                error_summary=used_unreachable_fallback,
+                            )
 
-                    cached_official = self._find_cached_official_portal(initial_host)
+                    cached_official = self._find_cached_official_portal(initial_host, target_url)
                     if cached_official is not None:
                         live_img = cv2.imread(str(screenshot_file), cv2.IMREAD_GRAYSCALE)
                         ref_img = cv2.imread(str(cached_official["image_path"]), cv2.IMREAD_GRAYSCALE)
@@ -682,7 +1017,9 @@ class HeadlessSandboxScanner:
                                 if not page_title:
                                     page_title = str(cached_official.get("name", initial_host))
 
-                    dom_payload = await page.evaluate(
+                    try:
+                        dom_payload = await asyncio.wait_for(
+                            page.evaluate(
                         """
                         ({ sensitiveTokens, militaryKeywords }) => {
                             const isVisible = (el) => {
@@ -778,7 +1115,7 @@ class HeadlessSandboxScanner:
                             document.querySelectorAll('img').forEach((imgEl) => {
                                 if (!isVisible(imgEl)) return;
                                 const bbox = toBBox(imgEl);
-                                if (bbox.width < 30 || bbox.height < 30) return;
+                                if (bbox.width < 12 || bbox.height < 12) return;
                                 images.push({
                                     src: imgEl.currentSrc || imgEl.src || imgEl.getAttribute('src') || '',
                                     alt: imgEl.getAttribute('alt') || '',
@@ -821,7 +1158,18 @@ class HeadlessSandboxScanner:
                             "sensitiveTokens": SENSITIVE_INPUT_TOKENS,
                             "militaryKeywords": MILITARY_KEYWORDS,
                         },
-                    )
+                            ),
+                            timeout=3.5,
+                        )
+                    except Exception:
+                        dom_payload = {
+                            "forms": [],
+                            "inputs": [],
+                            "images": [],
+                            "detectedKeywords": [],
+                            "contextMenuDisabled": False,
+                            "hasFormlessSensitiveInput": False,
+                        }
                 screenshot_dom_extract_ms = round((time.perf_counter() - t_cap0) * 1000.0, 2)
             finally:
                 await context.close()
@@ -858,6 +1206,11 @@ class HeadlessSandboxScanner:
             context_menu_disabled=context_menu_disabled,
             has_formless_sensitive=has_formless_sensitive,
         )
+        if used_unreachable_fallback is not None:
+            risk_analysis.forensic_reasons.insert(
+                0,
+                f"Server tujuan tidak merespons tepat waktu ({used_unreachable_fallback}); penilaian dilanjutkan berbasis telemetri domain dan struktur URL.",
+            )
         dom_annotate_ms = round((time.perf_counter() - t_ann0) * 1000.0, 2)
 
         execution_time_sec = round(time.perf_counter() - start_time, 3)

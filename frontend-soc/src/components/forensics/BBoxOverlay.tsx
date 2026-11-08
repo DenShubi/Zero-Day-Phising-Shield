@@ -11,7 +11,7 @@
  * without ResizeObserver or hydration mismatch.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LAYER_LABEL,
   LAYER_VAR,
@@ -56,6 +56,14 @@ export function BBoxOverlay({
 }: BBoxOverlayProps) {
   const [hidden, setHidden] = useState<ReadonlySet<OverlayLayer>>(() => new Set());
   const [loadFailed, setLoadFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0 && el.naturalHeight > 0) {
+      onImageLoad?.({ width: el.naturalWidth, height: el.naturalHeight });
+    }
+  }, [imageUrl, onImageLoad]);
 
   // Only layers actually present get a toggle, so the legend reflects reality.
   const presentLayers = useMemo(() => {
@@ -135,6 +143,7 @@ export function BBoxOverlay({
           <>
             {/* eslint-disable-next-line @next/next/no-img-element -- evidence host varies at runtime */}
             <img
+              ref={imgRef}
               src={imageUrl}
               alt={alt}
               className="vk-overlay__image"
@@ -154,9 +163,13 @@ export function BBoxOverlay({
                 if (!style) return null;
                 const active = highlightedId === box.id;
                 const isNearRight = box.bbox.x / sourceSpace.width > 0.55;
-                const tagStyle: React.CSSProperties = isNearRight
-                  ? { right: '-2px', left: 'auto' }
-                  : { left: '-2px', right: 'auto' };
+                const isNearTop = box.bbox.y / sourceSpace.height < 0.045;
+                const tagStyle: React.CSSProperties = {
+                  ...(isNearRight
+                    ? { right: '-2px', left: 'auto' }
+                    : { left: '-2px', right: 'auto' }),
+                  ...(isNearTop ? { top: 'auto', bottom: '-1.4rem' } : {}),
+                };
 
                 return (
                   <div

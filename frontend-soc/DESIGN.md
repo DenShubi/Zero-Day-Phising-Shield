@@ -103,17 +103,18 @@ Seluruh token didefinisikan satu kali di `src/app/globals.css`. Setiap pasangan 
 
 ## 4. Arsitektur Ruang Kerja (`1440x900` Desktop, Tablet `768px`, Mobile `390px`)
 
-1. **Kerangka Satu Halaman (`/`)**:
-   - Navigasi sisi kiri rata (`236px` terbuka, `56px` ciut) dengan pengelompokan indeks bernomor (`01 / OPERASI`, `02 / ANALISIS`, `03 / TINDAKAN`), sakelar tema (`Gelap` / `Terang`), dan telemetri status mesin/basis data di bagian bawah.
-   - Di layar `>= 1024px`: tinggi terkunci `100svh` dengan scroll terisolasi per lajur (`.vk-scroll`) sehingga bilah kepala dan strip metrik tidak pernah hilang saat menggulir tabel panjang.
-   - Di layar `< 1024px`: bilah atas kompak dengan tombol sakelar tema langsung + laci navigasi penuh dan tabel adaptif tanpa pemotongan horizontal.
-2. **Enam Bidang Operasional**:
-   - **Inventaris Komando (`?view=komando`)**: Strip metrik sebaris berbatas `divide-x` di atas; bagian utama terbelah menjadi **Tabel Inventaris Insiden & Endpoint (8 kolom)** lengkap dengan pencarian instan + filter status, serta **Lajur Distribusi & Satuan Pelapor (4 kolom)** di kanan.
-   - **Konsol Pemindaian (`?view=pemindaian`)**: Bilah perintah URL *monospace* ber-kontras tinggi + tabel telemetri domain instan + lajur belah inspeksi gambar QR/OCR & parameter satuan + stepper 5 tahap rata di bagian bawah.
-   - **Forensik Artefak (`?view=forensik&insiden=<id>`)**: Bilah alat forensik rata di atas + panggung utama terbelah menjadi **Kanvas Bukti Visual & Diff Portal (`>= 64%`)** di kiri dan **Lajur Inspektur Skor, Temuan, & Latensi (`23rem`, dapat diciutkan)** di kanan.
-   - **Audit Akurasi (`?view=audit`)**: Strip 5 KPI evaluasi terukur di atas + panggung belah **Matriks Konfusi 2x2 berbingkai garis `1px` (5 kolom)** dan **Tabel SLA Latensi & Studi Ablasi ber-kepala *sticky* (7 kolom)**.
-   - **Mitigasi (`?view=mitigasi&host=<host>`)**: Bilah status simulasi tenang di atas + panggung belah **Tabel Seleksi IOC Host (7 kolom)** dan **Daftar 9 Format Infrastruktur + Pratinjau Kode (5 kolom)**.
-   - **Simulasi Lapor Cepat (`?view=lapor-cepat`)**: Panggung belah seimbang antara **Terminal Percakapan Pelapor (6 kolom, adaptif tema)** dan **Jejak Eksekusi Pipeline SOC 4 Tahap (6 kolom)**.
+1. **Kerangka Dek Komando Atas Dua Tingkat (`AppShell.tsx` pada `/`)**:
+   - **Nol Bilah Sisi Kiri (Zero Left Sidebar)**: Bilah navigasi vertikal `236px` dihapus sepenuhnya agar seluruh bidang kerja memperoleh lebar penuh `100vw`.
+   - **Tingkat 1 (Top Command Deck)**: Identitas sistem + node operasi `PUSSIBERAD // NODE-SOC-01` + telemetri mesin/basis data sebaris (`HealthStrip`) + sakelar tema instan (`ThemeToggle`: `Mode Gelap` / `Mode Proyektor`).
+   - **Tingkat 2 (Horizontal 6-Module Matrix Bar)**: Enam sel modul bernomor (`MOD-01` s.d. `MOD-06`) berbatas garis `1px` (`divide-x`) yang dapat diakses satu klik tanpa muat ulang halaman.
+   - Di layar `>= 1024px`: tinggi ruang kerja dikunci `100svh` dengan scroll terisolasi per lajur (`.vk-scroll`).
+2. **Enam Bidang Operasional Berstruktur Khusus**:
+   - **MOD-01 Inventaris & Triase (`?view=komando`)**: Pita telemetri kompak + **Omnibar Eksekusi Sandbox Sebaris** + **Master-Detail Split**: Tabel Inventaris Multi-Poros (`V / D / M`) di kiri (`7 kolom`) dan **Laci Inspektur Forensik Di-Tempat & Telemetri Satuan** di kanan (`5 kolom`).
+   - **MOD-02 Sandbox & QR (`?view=pemindaian`)**: Dek perintah terminal dua mode (`[01] URL Chromium` | `[02] Poster QR/OCR`) di atas **Matriks 3-Kolom (`4 | 4 | 4`)**: Katalog Target Simulasi Terisolasi (Kolom 01), Tabel Diagnostik 6-Bendera Domain (`FLG-01..06`) & Dropzone Citra (Kolom 02), serta Jejak Pipeline 5-Tahap Vertikal (Kolom 03).
+   - **MOD-03 IDE Forensik (`?view=forensik&insiden=<id>`)**: **Meja Kerja IDE 3-Lajur Tanpa Gulir Halaman (`15rem | minmax(0,1fr) | 21.5rem`)**: Antrean Tiket Insiden 1-Klik di lajur kiri, Panggung Bukti Visual/Diff di tengah atas + **Dok Telemetri Bertab Ala DevTools** (`DOM & Form`, `QR & OCR`, `Redirect HTTP`, `Waterfall SLA`) di tengah bawah, serta Rincian Skor Deterministik & Temuan Kunci di lajur kanan.
+   - **MOD-04 Kompiler Blokir (`?view=mitigasi&host=<host>`)**: **Pita Horizontal 9-Format Infrastruktur (`FMT-01..09`)** di bagian atas + belahan **Tabel Indikator IOC Tervalidasi RFC (6 kolom)** di kiri dan **Penampil Kode Aturan Terminal Penuh Bernomor Baris (`001..N`, 6 kolom)** di kanan.
+   - **MOD-05 Jembatan WA (`?view=lapor-cepat`)**: **Jembatan Triase Lapangan 3-Kolom (`3 | 5 | 4`)**: Dek Skenario & Dropzone Lampiran Prajurit di Kolom 01, Terminal Pesan Lapangan (`--wa-*`) di Kolom 02, dan Jejak Eksekusi Pipeline SOC 4-Tahap + Tiket Hasil Terakhir di Kolom 03.
+   - **MOD-06 Matriks Evaluasi (`?view=audit`)**: Belahan **Buku Besar Verifikasi Ambang Teknis (`MET-01..05`) & Tabel Distribusi Latensi SLA (4 kolom)** di kiri, dipasangkan dengan **Tabel Matriks Kebingungan Silang 2x2 (`Aktual \ Prediksi`) & Tabel Studi Ablasi Detektor (8 kolom)** di kanan.
 
 ## 5. Aturan Interaksi, Keyboard & Cetak
 

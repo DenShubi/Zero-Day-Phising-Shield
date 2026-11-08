@@ -162,20 +162,31 @@ async def execute_phase2_scan(
     annotated_abs: Path = BASE_DIR / p1.annotated_dom_path
 
     # 1. Compute SSIM + Edge + Palette Visual Similarity against Reference DB
+    #    (Skip visual/logo matching if status_code == 504 diagnostic telemetry canvas)
+    is_unreachable_fallback = p1.status_code == 504
     t_sim0 = time.perf_counter()
-    sim_result = compute_visual_similarity(screenshot_abs)
-    visual_similarity_ms = round((time.perf_counter() - t_sim0) * 1000.0, 2)
-    visual_score = float(sim_result["visual_similarity_score"] or 0.0)
-    impersonated_target = sim_result["impersonated_target"]
+    if is_unreachable_fallback:
+        visual_score = 0.0
+        impersonated_target = None
+        visual_similarity_ms = 0.0
+    else:
+        sim_result = compute_visual_similarity(screenshot_abs)
+        visual_similarity_ms = round((time.perf_counter() - t_sim0) * 1000.0, 2)
+        visual_score = float(sim_result["visual_similarity_score"] or 0.0)
+        impersonated_target = sim_result["impersonated_target"]
 
     # 2. Detect & Annotate TNI AD / Kartika Eka Paksi / Kemhan / Kotama Logos
     t_logo0 = time.perf_counter()
-    raw_logos = detect_and_annotate_logos(
-        screenshot_path=screenshot_abs,
-        annotated_path=annotated_abs,
-        dom_images=p1.images,
-    )
-    logo_detection_ms = round((time.perf_counter() - t_logo0) * 1000.0, 2)
+    if is_unreachable_fallback:
+        raw_logos = []
+        logo_detection_ms = 0.0
+    else:
+        raw_logos = detect_and_annotate_logos(
+            screenshot_path=screenshot_abs,
+            annotated_path=annotated_abs,
+            dom_images=p1.images,
+        )
+        logo_detection_ms = round((time.perf_counter() - t_logo0) * 1000.0, 2)
     detected_logos = [DetectedLogo(**lg) for lg in raw_logos]
 
     t_fuse0 = time.perf_counter()
@@ -203,6 +214,18 @@ async def execute_phase2_scan(
         has_credential_harvesting=p1.risk_analysis.has_credential_harvesting,
         has_generic_phishing_infra=(p1.risk_analysis.domain_telemetry_score >= 45.0),
     )
+    if (
+        is_unreachable_fallback
+        and not p1.risk_analysis.is_official_mil_domain
+        and p1.risk_analysis.domain_telemetry_score >= 55.0
+    ):
+        tel_floor = round(min(88.0, p1.risk_analysis.domain_telemetry_score), 2)
+        if decision.total_risk_score < tel_floor:
+            decision.total_risk_score = tel_floor
+            decision.verdict = scoring.classify(tel_floor)
+            decision.applied_rules.append(
+                f"UNREACHABLE_HIGH_RISK_DOMAIN: host timeout/tidak aktif namun telemetri domain berisiko tinggi (skor min {tel_floor:.0f})"
+            )
     total_risk = decision.total_risk_score
     verdict = decision.verdict
 
@@ -488,16 +511,18 @@ async def execute_image_scan(
         )
     elif detected_logos:
         top_logo_conf = max(lg.confidence for lg in detected_logos)
+        unique_brands = list(dict.fromkeys(lg.brand_name for lg in detected_logos))
+        brands_label = ", ".join(unique_brands)
         if has_threat_signal:
             visual_score = round(max(visual_score, top_logo_conf), 2)
             if not impersonated_target:
                 impersonated_target = detected_logos[0].brand_name
             forensic_reasons.append(
-                f"Terdeteksi pencatutan lambang resmi militer pada konten berisiko: {detected_logos[0].brand_name} ({top_logo_conf:.1f}% confidence)"
+                f"Terdeteksi pencatutan lambang resmi militer pada konten berisiko: {brands_label} ({top_logo_conf:.1f}% confidence)"
             )
         else:
             forensic_reasons.append(
-                f"Terdeteksi atribut resmi militer ({detected_logos[0].brand_name}) tanpa indikasi tautan eksternal berbahaya maupun permintaan kredensial."
+                f"Terdeteksi atribut resmi militer ({brands_label}, puncak {top_logo_conf:.1f}% confidence) dalam konteks publikasi informatif/komemoratif tanpa tautan berbahaya maupun permintaan kredensial."
             )
 
     if not has_mil_identity:
@@ -562,6 +587,10 @@ async def execute_image_scan(
         elif has_mil_identity:
             dom_score = 10.0
             domain_score = 10.0
+            if not forensic_reasons:
+                forensic_reasons.append(
+                    "Publikasi/poster kegiatan militer informatif tanpa tautan eksternal berbahaya, QR quishing, maupun formulir kredensial."
+                )
         else:
             dom_score = 10.0
             domain_score = 12.0

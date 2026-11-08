@@ -22,7 +22,7 @@ export const RISK_WEIGHTS = { visual: 0.45, dom: 0.3, domain: 0.25 } as const;
 export const VERDICT_LABEL: Record<Verdict, string> = {
   SAFE: 'AMAN',
   SUSPICIOUS: 'MENCURIGAKAN',
-  CRITICAL_PHISHING: 'PHISHING KRITIS',
+  CRITICAL_PHISHING: 'PHISHING',
 };
 
 /**
@@ -60,10 +60,10 @@ export const VERDICT_ORDER: readonly Verdict[] = [
 export type OverlayLayer = 'logo' | 'qr' | 'form' | 'input';
 
 export const LAYER_LABEL: Record<OverlayLayer, string> = {
-  logo: 'Logo dicatut',
-  qr: 'QR quishing',
-  form: 'Form eksfiltrasi',
-  input: 'Input kredensial',
+  logo: 'Logo Institusi',
+  qr: 'Kode QR',
+  form: 'Formulir Login',
+  input: 'Input Sensitif',
 };
 
 export const LAYER_VAR: Record<OverlayLayer, string> = {

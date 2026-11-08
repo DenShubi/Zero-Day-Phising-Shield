@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Live domain telemetry as the operator types.
+ * Pratinjau reputasi domain saat pengguna mengetik URL.
+ * Hanya muncul ketika ada URL yang diketik (tidak menampilkan tabel kosong).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -11,11 +12,10 @@ import { formatScore } from '@/lib/format';
 import { id as t } from '@/lib/i18n/id';
 import { IconShieldCheck, VerdictIcon } from '@/components/ui/icons';
 
-const DEBOUNCE_MS = 350;
+const DEBOUNCE_MS = 300;
 const MIN_LENGTH = 4;
 
-const FLAG_KEYS: { key: keyof DomainAssessment; label: string }[] = [
-  { key: 'is_official', label: t.domainFlags.is_official },
+const RISK_FLAGS: { key: keyof DomainAssessment; label: string }[] = [
   { key: 'is_shortener', label: t.domainFlags.is_shortener },
   { key: 'is_free_or_tunnel_host', label: t.domainFlags.is_free_or_tunnel_host },
   { key: 'is_high_abuse_tld', label: t.domainFlags.is_high_abuse_tld },
@@ -64,21 +64,34 @@ export function DomainPreview({ url }: { url: string }) {
 
   const isCurrent = resolved?.target === trimmed;
   const result = isCurrent ? resolved.assessment : null;
+  const isChecking = !isCurrent;
 
-  if (!result) {
-    return !isCurrent ? (
-      <div className="mt-2 text-[0.75rem] text-[var(--muted)]">{t.scan.checkingDomain}</div>
-    ) : null;
+  if (isChecking) {
+    return (
+      <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-2.5 text-[0.78rem] text-[var(--muted)]">
+        {t.scan.checkingDomain}
+      </div>
+    );
   }
+
+  if (!result) return null;
 
   const band = bandOf(result.risk_score);
   const bandColor = `var(${VERDICT_VAR[band]})`;
-  const activeFlags = FLAG_KEYS.filter(({ key }) => result[key] === true);
+  const activeFlags = RISK_FLAGS.filter((f) => result[f.key] === true);
 
   return (
-    <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.8125rem]">
-        <span className="vk-mono font-semibold text-[var(--foreground)]">{result.host}</span>
+    <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] p-3.5 text-[0.8125rem]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="vk-mono font-semibold text-[var(--foreground)]">{result.host}</span>
+          {result.is_official && (
+            <span className="inline-flex items-center gap-1 rounded-[3px] border border-[var(--verdict-safe)]/40 bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] font-semibold text-[var(--verdict-safe)]">
+              <IconShieldCheck size={12} />
+              <span>{t.scan.officialWhitelist}</span>
+            </span>
+          )}
+        </div>
 
         <span
           className="vk-mono vk-tabular inline-flex items-center gap-1.5 font-semibold"
@@ -89,47 +102,38 @@ export function DomainPreview({ url }: { url: string }) {
             {t.scan.telemetryPrefix} {formatScore(result.risk_score)}
           </span>
         </span>
-
-        {result.is_official && (
-          <span className="inline-flex items-center gap-1 font-medium text-[var(--verdict-safe)]">
-            <IconShieldCheck size={13} />
-            <span>{t.scan.officialWhitelist}</span>
-          </span>
-        )}
-
-        {result.lookalike_of && (
-          <span className="font-medium text-[var(--verdict-critical)]">
-            {t.scan.lookalikePrefix}{' '}
-            <span className="vk-mono">{result.lookalike_of}</span>
-            {result.lookalike_kind && ` (${result.lookalike_kind})`}
-          </span>
-        )}
       </div>
 
-      {(activeFlags.length > 0 || result.bait_tokens.length > 0) && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {activeFlags.map(({ key, label }) => (
-            <span
-              key={key}
-              className="vk-mono rounded-[2px] border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.72rem] text-[var(--muted-strong)]"
-            >
-              {label}
-            </span>
-          ))}
-          {result.bait_tokens.length > 0 && (
-            <span className="text-[0.75rem] text-[var(--muted-strong)]">
-              {t.scan.baitTokensPrefix} {result.bait_tokens.join(', ')}
-            </span>
+      {(result.lookalike_of || activeFlags.length > 0 || result.reasons.length > 0) && (
+        <div className="mt-2 flex flex-col gap-1.5 border-t border-[var(--border-subtle)] pt-2 text-[0.78rem]">
+          {result.lookalike_of && (
+            <div className="font-medium text-[var(--verdict-critical)]">
+              {t.scan.lookalikePrefix}{' '}
+              <span className="vk-mono font-semibold">{result.lookalike_of}</span>
+            </div>
+          )}
+
+          {activeFlags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {activeFlags.map((flag) => (
+                <span
+                  key={String(flag.key)}
+                  className="rounded-[3px] border border-[var(--verdict-critical)]/40 bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] text-[var(--verdict-critical)]"
+                >
+                  {flag.label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {result.reasons.length > 0 && (
+            <ul className="text-[var(--muted-strong)]">
+              {result.reasons.slice(0, 2).map((reason) => (
+                <li key={reason}>· {reason}</li>
+              ))}
+            </ul>
           )}
         </div>
-      )}
-
-      {result.reasons.length > 0 && (
-        <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.75rem] text-[var(--muted)]">
-          {result.reasons.slice(0, 3).map((reason) => (
-            <li key={reason}>· {reason}</li>
-          ))}
-        </ul>
       )}
     </div>
   );

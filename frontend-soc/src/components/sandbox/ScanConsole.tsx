@@ -1,21 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * Halaman Pindai Tautan atau Gambar.
+ * Fokus pada form input tanpa panel kosong atau jargon yang mengganggu.
+ */
+
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getMockTargets,
-  previewTriage,
-  scanImage,
-  scanUrl,
-  type MockTarget,
-} from '@/lib/api/endpoints';
 import { ApiAbortError, ApiError } from '@/lib/api/client';
-import type { NormalizedScan } from '@/lib/normalize';
-import { buildPanelHref } from '@/lib/panel-route';
-import { cacheScan, newScanId } from '@/lib/scan-store';
-import { UNIT_OPTIONS } from '@/lib/units-geo';
+import { getMockTargets, scanImage, scanUrl, type MockTarget } from '@/lib/api/endpoints';
 import { id as t } from '@/lib/i18n/id';
-import { formatBytes } from '@/lib/format';
 import {
   ImageRejected,
   imageFromClipboard,
@@ -23,6 +17,9 @@ import {
   prepareImage,
   type PreparedImage,
 } from '@/lib/image-prep';
+import type { NormalizedScan } from '@/lib/normalize';
+import { buildPanelHref } from '@/lib/panel-route';
+import { cacheScan, newScanId } from '@/lib/scan-store';
 import {
   IconOctagonAlert,
   IconScan,
@@ -32,72 +29,61 @@ import {
 import { DomainPreview } from './DomainPreview';
 import { ScanProgress } from './ScanProgress';
 
-type Mode = 'URL' | 'IMAGE';
+type Tab = 'url' | 'image';
 
-/** The safe control: a genuine .mil.id portal, to demonstrate the whitelist path. */
-const SAFE_CONTROL = 'https://tniad.mil.id';
-const WARMUP_FLAG = 'vk.warmedUp';
+const SAFE_PRESET = {
+  title: 'tniad.mil.id (Resmi)',
+  url: 'https://tniad.mil.id',
+} as const;
+
+function decoyLabel(filename: string): string {
+  return filename
+    .replace(/\.html$/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function ScanConsole({
   onScanComplete,
 }: {
   onScanComplete?: (scan: NormalizedScan) => void;
-} = {}) {
+}) {
   const router = useRouter();
+  const fileInputId = useId();
+  const urlInputId = useId();
+  const unitInputId = useId();
 
-  const [mode, setMode] = useState<Mode>('URL');
+  const [tab, setTab] = useState<Tab>('url');
   const [url, setUrl] = useState('');
+  const [unit, setUnit] = useState('');
   const [image, setImage] = useState<PreparedImage | null>(null);
-  const [caption, setCaption] = useState('');
-  const [unit, setUnit] = useState<string>(UNIT_OPTIONS[0] ?? 'Mabesad');
-
-  const [targets, setTargets] = useState<MockTarget[]>([]);
-  const [scanning, setScanning] = useState(false);
-  const [startedAt, setStartedAt] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const abortRef = useRef<AbortController | null>(null);
-  const submittingRef = useRef(false);
-  const previewUrlRef = useRef<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanRunKey, setScanRunKey] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [decoys, setDecoys] = useState<MockTarget[]>([]);
 
-  /* ----------------------------- initial load ---------------------------- */
+  const abortRef = useRef<AbortController | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
-
     void getMockTargets(ac.signal)
-      .then((r) => !ac.signal.aborted && setTargets(r.targets))
+      .then((r) => !ac.signal.aborted && setDecoys(r.targets))
       .catch(() => {
-        /* presets are optional convenience buttons */
+        /* Tetap berjalan meskipun contoh lokal belum dimuat */
       });
-
-    let warmed = true;
-    try {
-      warmed = sessionStorage.getItem(WARMUP_FLAG) === '1';
-    } catch {
-      /* ignore */
-    }
-    if (!warmed) {
-      try {
-        sessionStorage.setItem(WARMUP_FLAG, '1');
-      } catch {
-        /* ignore */
-      }
-      void scanUrl(
-        SAFE_CONTROL,
-        { scanId: newScanId(), reporterUnit: t.scan.warmup },
-        ac.signal,
-      ).catch(() => {
-        /* best effort warmup */
-      });
-    }
-
     return () => ac.abort();
   }, []);
 
-  /* ------------------------------- clipboard ----------------------------- */
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    [],
+  );
 
   const acceptFile = useCallback(async (file: File) => {
     setError(null);
@@ -106,15 +92,9 @@ export function ScanConsole({
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
       previewUrlRef.current = prepared.previewUrl;
       setImage(prepared);
-      setMode('IMAGE');
-      setNotice(
-        prepared.downscaled
-          ? `${t.scan.downscaledNoticePrefix} ${prepared.dimensions.width}x${prepared.dimensions.height} ${t.scan.downscaledNoticeSuffix}`
-          : null,
-      );
+      setTab('image');
     } catch (e) {
-      setImage(null);
-      setError(e instanceof ImageRejected ? e.message : t.scan.imageProcessError);
+      setError(e instanceof ImageRejected ? e.message : t.scan.dropInvalid);
     }
   }, []);
 
@@ -130,343 +110,353 @@ export function ScanConsole({
     return () => window.removeEventListener('paste', onPaste);
   }, [acceptFile]);
 
-  useEffect(
-    () => () => {
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  const navigateToResult = useCallback(
+    (scan: NormalizedScan) => {
+      cacheScan(scan);
+      onScanComplete?.(scan);
+      const id = scan.incidentId ?? scan.scanId;
+      router.replace(buildPanelHref('forensik', { insiden: id }), { scroll: false });
     },
-    [],
+    [onScanComplete, router],
   );
 
-  /* --------------------------------- scan -------------------------------- */
+  const runUrlScan = async (targetOverride?: string) => {
+    const target = (targetOverride ?? url).trim();
+    if (!target || scanning) return;
+    if (targetOverride) setUrl(targetOverride);
 
-  const cancel = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    submittingRef.current = false;
-    setScanning(false);
-  }, []);
+    setError(null);
+    setScanning(true);
+    setScanRunKey((k) => k + 1);
 
-  const runScan = useCallback(
-    async (explicitMode?: Mode) => {
-      if (submittingRef.current) return;
-      const activeMode = explicitMode ?? (image && mode === 'IMAGE' ? 'IMAGE' : 'URL');
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const scanId = newScanId();
 
-      const target = url.trim();
-      if (activeMode === 'URL' && target === '') {
-        setError(t.scan.emptyUrlError);
-        return;
+    try {
+      const result = await scanUrl(
+        target,
+        { scanId, reporterUnit: unit.trim() || undefined },
+        ac.signal,
+      );
+      navigateToResult(result);
+    } catch (e) {
+      if (e instanceof ApiAbortError) {
+        setError(t.scan.abortedError);
+      } else if (e instanceof ApiError) {
+        setError(e.detail);
+      } else {
+        setError(t.scan.genericError);
       }
-      if (activeMode === 'IMAGE' && !image) {
-        setError(t.scan.emptyImageError);
-        return;
+    } finally {
+      setScanning(false);
+      abortRef.current = null;
+    }
+  };
+
+  const runImageScan = async () => {
+    if (!image || scanning) return;
+
+    setError(null);
+    setScanning(true);
+    setScanRunKey((k) => k + 1);
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const scanId = newScanId();
+
+    try {
+      const result = await scanImage(
+        image.file,
+        {
+          scanId,
+          reporterUnit: unit.trim() || undefined,
+          measured: image.dimensions,
+        },
+        ac.signal,
+      );
+      navigateToResult(result);
+    } catch (e) {
+      if (e instanceof ApiAbortError) {
+        setError(t.scan.abortedError);
+      } else if (e instanceof ApiError) {
+        setError(e.detail);
+      } else {
+        setError(t.scan.genericError);
       }
+    } finally {
+      setScanning(false);
+      abortRef.current = null;
+    }
+  };
 
-      submittingRef.current = true;
-      setMode(activeMode);
-      setError(null);
-      setNotice(null);
-      setScanning(true);
-      setStartedAt(Date.now());
-
-      const ac = new AbortController();
-      abortRef.current = ac;
-      const scanId = newScanId();
-
-      try {
-        if (activeMode === 'URL') {
-          try {
-            const triage = await previewTriage(target, false, ac.signal);
-            if (triage.allowed === false) {
-              setError(
-                `${t.scan.refusedPrefix} ${triage.refusal_reason ?? t.scan.refusedFallback}`,
-              );
-              setScanning(false);
-              submittingRef.current = false;
-              return;
-            }
-          } catch {
-            // Advisory pre-flight only.
-          }
-        }
-
-        const scan =
-          activeMode === 'URL'
-            ? await scanUrl(target, { scanId, reporterUnit: unit }, ac.signal)
-            : await scanImage(
-                image!.file,
-                {
-                  scanId,
-                  reporterUnit: unit,
-                  caption: caption.trim() || undefined,
-                  measured: image!.dimensions,
-                },
-                ac.signal,
-              );
-
-        cacheScan(scan);
-        onScanComplete?.(scan);
-        const dest = buildPanelHref('forensik', { insiden: scan.incidentId ?? scan.scanId });
-        router.replace(dest, { scroll: false });
-      } catch (e) {
-        if (e instanceof ApiAbortError) {
-          if (e.timedOut) setError(t.scan.timeoutError);
-        } else if (e instanceof ApiError) {
-          setError(e.detail);
-        } else {
-          setError(e instanceof Error ? e.message : t.scan.genericScanError);
-        }
-        setScanning(false);
-      } finally {
-        submittingRef.current = false;
-        abortRef.current = null;
-      }
-    },
-    [image, mode, url, unit, caption, onScanComplete, router],
-  );
+  const cancel = () => abortRef.current?.abort();
 
   return (
-    <div className="flex flex-col divide-y divide-[var(--border)] border-b border-[var(--border)] bg-[var(--surface-1)]">
-      {/* SECTION 1: Dominant URL Command Input + Pre-Flight Domain Telemetry + Simulation Presets */}
-      <div className="p-4 sm:p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <label htmlFor="vk-url" className="vk-pane-label text-[var(--foreground)]">
-            {t.scan.urlLabel}
-          </label>
-          <span className="text-[0.75rem] text-[var(--muted)]">{t.scan.urlPrimaryHint}</span>
-        </div>
-
-        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
-          <input
-            id="vk-url"
-            value={url}
-            disabled={scanning}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              if (mode !== 'URL') setMode('URL');
-              setError(null);
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && void runScan('URL')}
-            spellCheck={false}
-            autoComplete="off"
-            placeholder={t.scan.urlPlaceholder}
-            className="vk-mono h-12 min-w-0 flex-1 rounded-[4px] border border-[var(--border-strong)] bg-[var(--canvas)] px-3.5 text-[1rem] tracking-[-0.01em] text-[var(--foreground)] placeholder:text-[var(--ink-disabled)]"
-          />
-
-          <button
-            type="button"
-            disabled={scanning}
-            onClick={() => void runScan(image && mode === 'IMAGE' ? 'IMAGE' : 'URL')}
-            className="vk-btn vk-btn-primary h-12 shrink-0 px-5 text-[0.875rem]"
-          >
-            <IconScan size={16} />
-            <span>{image && mode === 'IMAGE' ? t.scan.submitImage : t.scan.submit}</span>
-          </button>
-        </div>
-
-        <DomainPreview url={url} />
-
-        {/* Simulation Targets Strip */}
-        <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
-          <span className="vk-pane-label mr-1">{t.scan.judgeTest}:</span>
-
-          {targets.map((target) => (
-            <button
-              key={target.filename}
-              type="button"
-              disabled={scanning}
-              onClick={() => {
-                setMode('URL');
-                setUrl(target.url);
-                setError(null);
-              }}
-              className="vk-btn h-7 border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.75rem] text-[var(--foreground)] hover:border-[var(--verdict-critical)]"
-            >
-              <span className="text-[var(--verdict-critical)]" aria-hidden="true">
-                <IconOctagonAlert size={12} />
-              </span>
-              <span className="vk-mono">
-                {target.filename.replace(/\.html$/, '').replace(/_/g, '-')}
-              </span>
-            </button>
-          ))}
-
-          <button
-            type="button"
-            disabled={scanning}
-            onClick={() => {
-              setMode('URL');
-              setUrl(SAFE_CONTROL);
-              setError(null);
-            }}
-            className="vk-btn h-7 border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.75rem] text-[var(--foreground)] hover:border-[var(--verdict-safe)]"
-          >
-            <span className="text-[var(--verdict-safe)]" aria-hidden="true">
-              <IconShieldCheck size={12} />
-            </span>
-            <span>{t.scan.safeControl}</span>
-          </button>
-
-          {targets.length === 0 && (
-            <span className="text-[0.75rem] text-[var(--muted)]">{t.scan.judgeOffline}</span>
-          )}
-        </div>
-
-        {notice && (
-          <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[0.8125rem] text-[var(--muted-strong)]">
-            {notice}
-          </div>
-        )}
-        {error && (
-          <div
-            role="alert"
-            className="mt-3 flex items-start gap-2 rounded-[3px] border border-[var(--verdict-critical)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--foreground)]"
-          >
-            <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
-              <IconOctagonAlert size={14} />
-            </span>
-            <span>{error}</span>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 2: Split Ledger - Multimodal Poster/QR Dropzone (7 cols) + Reporter Unit (5 cols) */}
-      <div className="grid divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0">
+    <div className="vk-scroll flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-4 sm:p-6">
+      <div className="flex w-full max-w-2xl flex-col gap-4">
+        {/* Pilihan Mode: URL atau Gambar */}
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            const file = imageFromDrop(e.nativeEvent);
-            if (file) void acceptFile(file);
-          }}
-          className="flex min-w-0 flex-col justify-between p-4 transition-colors sm:p-5 lg:col-span-7"
-          style={
-            dragging
-              ? {
-                  background: 'var(--accent-tint)',
-                }
-              : undefined
-          }
+          role="tablist"
+          aria-label={t.scan.title}
+          className="grid grid-cols-2 gap-2 rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] p-1"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="vk-pane-label text-[var(--foreground)]">{t.scan.imageLabel}</h2>
-              <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">{t.scan.imageSubLabel}</p>
-            </div>
+          {(['url', 'image'] as const).map((k) => {
+            const active = tab === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                disabled={scanning}
+                onClick={() => {
+                  setTab(k);
+                  setError(null);
+                }}
+                className={[
+                  'vk-btn h-9 rounded-[3px] px-3 text-[0.8125rem]',
+                  active
+                    ? 'border border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
+                    : 'border border-transparent text-[var(--muted-strong)] hover:text-[var(--foreground)]',
+                ].join(' ')}
+              >
+                {k === 'url' ? <IconScan size={15} /> : <IconUpload size={15} />}
+                <span>{k === 'url' ? t.scan.tabUrl : t.scan.tabImage}</span>
+              </button>
+            );
+          })}
+        </div>
 
-            <input
-              id="vk-file"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="visually-hidden"
-              disabled={scanning}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void acceptFile(file);
+        {/* Kartu Form Pemindaian */}
+        <div className="flex flex-col gap-4 rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] p-4 sm:p-5">
+          {tab === 'url' ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runUrlScan();
               }}
-            />
-            <label
-              htmlFor="vk-file"
-              className="vk-btn vk-btn-secondary h-8 px-3 text-[0.8125rem]"
+              className="flex flex-col gap-3.5"
             >
-              <IconUpload size={14} />
-              <span>{t.scan.chooseFile}</span>
-            </label>
-          </div>
-
-          {image ? (
-            <div className="mt-3 flex flex-col gap-3 rounded-[3px] border border-[var(--accent-border)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
-              <img
-                src={image.previewUrl}
-                alt={t.scan.previewAlt}
-                className="h-16 w-24 shrink-0 rounded-[2px] border border-[var(--border)] object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="vk-mono vk-tabular text-[0.75rem] font-medium text-[var(--foreground)]">
-                  {image.dimensions.width}x{image.dimensions.height} px ·{' '}
-                  {formatBytes(image.file.size)}
-                  {image.downscaled &&
-                    ` (${t.scan.originalPrefix} ${formatBytes(image.originalBytes)})`}
+              <div>
+                <label
+                  htmlFor={urlInputId}
+                  className="block text-[0.8125rem] font-medium text-[var(--foreground)]"
+                >
+                  {t.scan.urlLabel}
+                </label>
+                <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id={urlInputId}
+                    type="text"
+                    inputMode="url"
+                    autoComplete="off"
+                    spellCheck={false}
+                    disabled={scanning}
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder={t.scan.urlPlaceholder}
+                    className="vk-mono h-10 min-w-0 flex-1 rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.875rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!url.trim() || scanning}
+                    className="vk-btn vk-btn-primary h-10 shrink-0 px-5 text-[0.875rem]"
+                  >
+                    <IconScan size={15} />
+                    <span>{scanning ? t.scan.scanning : t.scan.submitUrl}</span>
+                  </button>
                 </div>
-                <label htmlFor="vk-caption" className="visually-hidden">
-                  {t.scan.captionLabel}
+              </div>
+
+              {/* Pratinjau Domain (Hanya muncul saat URL diketik) */}
+              <DomainPreview url={url} />
+
+              <div>
+                <label
+                  htmlFor={unitInputId}
+                  className="block text-[0.78rem] text-[var(--muted-strong)]"
+                >
+                  {t.scan.unitLabel}
                 </label>
                 <input
-                  id="vk-caption"
-                  value={caption}
+                  id={unitInputId}
+                  type="text"
                   disabled={scanning}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder={t.scan.captionPlaceholder}
-                  className="mt-1.5 h-8 w-full rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)] px-2.5 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  placeholder={t.scan.unitPlaceholder}
+                  className="mt-1 h-9 w-full rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
                 />
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={scanning}
-                  onClick={() => void runScan('IMAGE')}
-                  className="vk-btn vk-btn-primary h-8 px-3 text-[0.8125rem]"
-                >
-                  {t.scan.submitImage}
-                </button>
-                <button
-                  type="button"
-                  disabled={scanning}
-                  onClick={() => {
-                    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-                    previewUrlRef.current = null;
-                    setImage(null);
-                    setMode('URL');
-                    setNotice(null);
-                  }}
-                  className="vk-btn vk-btn-secondary h-8 px-2.5 text-[0.8125rem]"
-                >
-                  {t.scan.replaceImage}
-                </button>
+
+              {/* Contoh Uji Cepat (1 Klik) */}
+              <div className="border-t border-[var(--border-subtle)] pt-3">
+                <div className="mb-2 text-[0.75rem] font-medium text-[var(--muted)]">
+                  {t.scan.presetsHeader}:
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {decoys.map((d) => (
+                    <button
+                      key={d.url}
+                      type="button"
+                      disabled={scanning}
+                      onClick={() => void runUrlScan(d.url)}
+                      className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
+                    >
+                      <span className="text-[var(--verdict-critical)]" aria-hidden="true">
+                        <IconOctagonAlert size={12} />
+                      </span>
+                      <span>{decoyLabel(d.filename)}</span>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={scanning}
+                    onClick={() => void runUrlScan(SAFE_PRESET.url)}
+                    className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
+                  >
+                    <span className="text-[var(--verdict-safe)]" aria-hidden="true">
+                      <IconShieldCheck size={12} />
+                    </span>
+                    <span>{SAFE_PRESET.title}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            </form>
           ) : (
-            <div className="mt-3 rounded-[3px] border border-dashed border-[var(--border-strong)] bg-[var(--surface-0)] px-4 py-3.5 text-[0.8125rem] text-[var(--muted-strong)]">
-              {t.scan.imageHint}
+            <div className="flex flex-col gap-3.5">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  const file = imageFromDrop(e.nativeEvent);
+                  if (file) void acceptFile(file);
+                }}
+                className="flex flex-col items-center justify-center rounded-[4px] border border-dashed p-6 text-center transition-colors"
+                style={{
+                  borderColor: dragging ? 'var(--accent-ink)' : 'var(--border-strong)',
+                  background: dragging ? 'var(--accent-tint)' : 'var(--surface-1)',
+                }}
+              >
+                <input
+                  id={fileInputId}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={scanning}
+                  className="visually-hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void acceptFile(file);
+                  }}
+                />
+
+                {image ? (
+                  <div className="flex w-full flex-col items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
+                    <img
+                      src={image.previewUrl}
+                      alt={image.file.name}
+                      className="max-h-52 rounded-[4px] border border-[var(--border)] object-contain"
+                    />
+                    <div className="vk-mono text-[0.78rem] text-[var(--muted-strong)]">
+                      {image.file.name} ({image.dimensions.width}x{image.dimensions.height} px ·{' '}
+                      {(image.file.size / 1024).toFixed(0)} KB)
+                    </div>
+                    <div className="flex gap-2">
+                      <label
+                        htmlFor={fileInputId}
+                        className="vk-btn vk-btn-secondary h-8 px-3 text-[0.78rem]"
+                      >
+                        {t.scan.changeFile}
+                      </label>
+                      <button
+                        type="button"
+                        disabled={scanning}
+                        onClick={() => {
+                          if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+                          previewUrlRef.current = null;
+                          setImage(null);
+                        }}
+                        className="vk-btn vk-btn-secondary h-8 px-3 text-[0.78rem]"
+                      >
+                        {t.scan.clearImage}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor={fileInputId}
+                    className="flex cursor-pointer flex-col items-center gap-2 py-4"
+                  >
+                    <span className="grid h-10 w-10 place-items-center rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--accent-ink)]">
+                      <IconUpload size={18} />
+                    </span>
+                    <span className="text-[0.875rem] font-medium text-[var(--foreground)]">
+                      {t.scan.dropPrompt}
+                    </span>
+                    <span className="text-[0.75rem] text-[var(--muted)]">{t.scan.dropHint}</span>
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor={unitInputId}
+                  className="block text-[0.78rem] text-[var(--muted-strong)]"
+                >
+                  {t.scan.unitLabel}
+                </label>
+                <input
+                  id={unitInputId}
+                  type="text"
+                  disabled={scanning}
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  placeholder={t.scan.unitPlaceholder}
+                  className="mt-1 h-9 w-full rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={!image || scanning}
+                onClick={() => void runImageScan()}
+                className="vk-btn vk-btn-primary h-10 w-full px-4 text-[0.875rem]"
+              >
+                <IconScan size={15} />
+                <span>{scanning ? t.scan.scanning : t.scan.submitImage}</span>
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-[4px] border border-[var(--verdict-critical)]/45 bg-[var(--surface-2)] p-3 text-[0.8125rem] text-[var(--foreground)]"
+            >
+              <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
+                <IconOctagonAlert size={15} />
+              </span>
+              <span>{error}</span>
             </div>
           )}
         </div>
 
-        <div className="flex min-w-0 flex-col justify-between bg-[var(--surface-0)] p-4 sm:p-5 lg:col-span-5">
-          <div>
-            <label htmlFor="vk-unit" className="vk-pane-label block text-[var(--foreground)]">
-              {t.scan.unitLabel}
-            </label>
-            <p className="mt-0.5 text-[0.75rem] text-[var(--muted)]">{t.scan.unitHint}</p>
-
-            <select
-              id="vk-unit"
-              value={unit}
-              disabled={scanning}
-              onChange={(e) => setUnit(e.target.value)}
-              className="mt-3 h-9 w-full rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)]"
-            >
-              {UNIT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <p className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[0.75rem] leading-relaxed text-[var(--muted)]">
-            {t.scan.judgeTestHint}
-          </p>
-        </div>
+        {/* Progres Pemindaian (Hanya tampil saat memindai) */}
+        <ScanProgress
+          key={scanRunKey}
+          kind={tab === 'url' ? 'URL' : 'IMAGE'}
+          onCancel={cancel}
+          active={scanning}
+        />
       </div>
-
-      {/* SECTION 3: Flush 5-Stage Pipeline Ledger */}
-      <ScanProgress kind={mode} startedAt={startedAt} onCancel={cancel} active={scanning} />
     </div>
   );
 }

@@ -27,60 +27,23 @@ function sanitizeTargetLabel(raw: string): string {
   return normalized.replace(/\s*\u2014\s*/g, ': ');
 }
 
-/**
- * Calm connection indicator: communicates socket/history state clearly with a
- * steady 6px square signal indicator and explicit text.
- */
-function StatusIndicator({
-  status,
-  lastEventAt,
-  mounted,
-}: {
-  status: FeedStatus;
-  lastEventAt: number | null;
-  mounted: boolean;
-}) {
-  const map: Record<FeedStatus, { label: string; color: string }> = {
-    connecting: { label: id.feed.connecting, color: 'var(--muted)' },
-    live: { label: id.feed.live, color: 'var(--verdict-safe)' },
-    reconnecting: { label: id.feed.reconnecting, color: 'var(--verdict-suspicious)' },
-    offline: { label: id.feed.offline, color: 'var(--verdict-critical)' },
-    unconfigured: { label: id.feed.historyOnly, color: 'var(--accent-ink)' },
-  };
-  const s = map[status];
-
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[0.75rem] text-[var(--muted)]">
-      <span
-        aria-hidden="true"
-        className="inline-block h-1.5 w-1.5 shrink-0 rounded-[1px]"
-        style={{ background: s.color }}
-      />
-      <span>{s.label}</span>
-      {mounted && lastEventAt !== null && status === 'live' && (
-        <span className="vk-mono vk-tabular">
-          · {id.feed.lastEventPrefix} {formatAge(lastEventAt)}
-        </span>
-      )}
-    </span>
-  );
-}
-
 export function IncidentFeed({
   incidents,
-  status,
-  lastEventAt,
   error,
   onRefresh,
-  limit = 50,
+  limit = 60,
+  selectedId,
+  onSelectIncident,
   onOpenIncident,
 }: {
   incidents: readonly NormalizedScan[];
-  status: FeedStatus;
-  lastEventAt: number | null;
+  status?: FeedStatus;
+  lastEventAt?: number | null;
   error: string | null;
   onRefresh: () => void;
   limit?: number;
+  selectedId?: string | null;
+  onSelectIncident?: (incidentId: string) => void;
   onOpenIncident?: (incidentId: string) => void;
 }) {
   const router = useRouter();
@@ -124,32 +87,30 @@ export function IncidentFeed({
     return base.slice(0, limit);
   }, [incidents, filter, search, limit]);
 
-  const navigateIncident = useCallback(
-    (href: string, targetId: string) => {
+  const openFullForensics = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>, href: string, targetId: string) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
       onOpenIncident?.(targetId);
       router.replace(href, { scroll: false });
     },
     [router, onOpenIncident],
   );
 
-  const handleAnchorClick = useCallback(
-    (e: MouseEvent<HTMLAnchorElement>, href: string, targetId: string) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      navigateIncident(href, targetId);
-    },
-    [navigateIncident],
-  );
-
-  const handleRowClick = useCallback(
+  const handleRowSelect = useCallback(
     (e: MouseEvent<HTMLTableRowElement>, href: string, targetId: string) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const selection = window.getSelection();
       if (selection && selection.toString().length > 0) return;
-      navigateIncident(href, targetId);
+      if (onSelectIncident) {
+        onSelectIncident(targetId);
+      } else {
+        onOpenIncident?.(targetId);
+        router.replace(href, { scroll: false });
+      }
     },
-    [navigateIncident],
+    [onSelectIncident, onOpenIncident, router],
   );
 
   const filterOptions: { key: FilterValue; label: string }[] = [
@@ -161,51 +122,10 @@ export function IncidentFeed({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--surface-1)]">
-      {/* Ruled Inventory Header & Filter Toolbar */}
-      <div className="shrink-0 border-b border-[var(--border)] bg-[var(--surface-0)] px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <h2 className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
-              {id.feed.title}
-            </h2>
-            <StatusIndicator status={status} lastEventAt={lastEventAt} mounted={mounted} />
-          </div>
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            className="vk-btn vk-btn-secondary h-7 px-2.5 text-[0.75rem]"
-          >
-            <IconRefresh size={13} />
-            <span>{id.feed.refresh}</span>
-          </button>
-        </div>
-
-        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex min-w-0 flex-1 items-center gap-1.5 sm:max-w-xs">
-            <label htmlFor="vk-feed-search" className="visually-hidden">
-              {id.feed.searchAria}
-            </label>
-            <input
-              id="vk-feed-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={id.feed.searchPlaceholder}
-              className="h-8 w-full min-w-0 rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-2.5 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
-            />
-            {search.trim().length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="vk-btn vk-btn-secondary h-8 shrink-0 px-2 text-[0.75rem]"
-              >
-                {id.feed.clearSearch}
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1" role="group" aria-label={id.feed.title}>
+      {/* Filter & Pencarian */}
+      <div className="shrink-0 border-b border-[var(--border)] bg-[var(--surface-0)] px-4 py-2.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={id.feed.title}>
             {filterOptions.map((opt) => {
               const active = filter === opt.key;
               return (
@@ -215,7 +135,7 @@ export function IncidentFeed({
                   onClick={() => setFilter(opt.key)}
                   aria-pressed={active}
                   className={[
-                    'vk-btn h-8 px-2.5 text-[0.75rem]',
+                    'vk-btn h-8 px-2.5 text-[0.78rem]',
                     active
                       ? 'border border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
                       : 'border border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted-strong)] hover:border-[var(--border-strong)]',
@@ -227,19 +147,45 @@ export function IncidentFeed({
               );
             })}
           </div>
+
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="vk-feed-search" className="visually-hidden">
+              {id.feed.searchAria}
+            </label>
+            <input
+              id="vk-feed-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={id.feed.searchPlaceholder}
+              className="h-8 w-full min-w-0 rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-2.5 text-[0.78rem] text-[var(--foreground)] placeholder:text-[var(--muted)] sm:w-56"
+            />
+            {search.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="vk-btn vk-btn-secondary h-8 shrink-0 px-2.5 text-[0.75rem]"
+              >
+                {id.feed.clearSearch}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onRefresh}
+              title={id.feed.refresh}
+              className="vk-btn vk-btn-secondary h-8 shrink-0 px-2.5 text-[0.75rem]"
+            >
+              <IconRefresh size={13} />
+              <span className="hidden sm:inline">{id.feed.refresh}</span>
+            </button>
+          </div>
         </div>
       </div>
-
-      {status === 'unconfigured' && (
-        <div className="shrink-0 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-1.5 text-[0.75rem] text-[var(--muted)]">
-          {id.feed.unconfigured}
-        </div>
-      )}
 
       {error && (
         <div
           role="alert"
-          className="flex shrink-0 items-start gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[0.8125rem] text-[var(--foreground)]"
+          className="flex shrink-0 items-start gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[0.78rem] text-[var(--foreground)]"
         >
           <span className="mt-0.5 shrink-0 text-[var(--verdict-critical)]" aria-hidden="true">
             <IconOctagonAlert size={14} />
@@ -250,7 +196,7 @@ export function IncidentFeed({
 
       {filtered.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-6">
-          <div className="max-w-md rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3.5 text-center text-[0.8125rem] text-[var(--muted-strong)]">
+          <div className="max-w-md rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-center text-[0.8125rem] text-[var(--muted-strong)]">
             {id.feed.empty}
           </div>
         </div>
@@ -267,19 +213,19 @@ export function IncidentFeed({
             </caption>
             <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-0)]">
               <tr>
-                <th scope="col" className="vk-pane-label px-4 py-2.5">
+                <th scope="col" className="vk-pane-label px-3.5 py-2">
+                  {id.common.ticket}
+                </th>
+                <th scope="col" className="vk-pane-label px-3.5 py-2">
                   {id.feed.colTarget}
                 </th>
-                <th scope="col" className="vk-pane-label px-3 py-2.5">
+                <th scope="col" className="vk-pane-label px-2.5 py-2">
                   {id.feed.colVerdict}
                 </th>
-                <th scope="col" className="vk-pane-label px-3 py-2.5 text-right">
+                <th scope="col" className="vk-pane-label px-2.5 py-2 text-right">
                   {id.feed.colScore}
                 </th>
-                <th scope="col" className="vk-pane-label px-3 py-2.5">
-                  {id.feed.colOrigin}
-                </th>
-                <th scope="col" className="vk-pane-label px-4 py-2.5 text-right">
+                <th scope="col" className="vk-pane-label px-3.5 py-2 text-right">
                   {id.feed.colAge}
                 </th>
               </tr>
@@ -291,9 +237,8 @@ export function IncidentFeed({
                 );
                 const targetId = incident.incidentId ?? incident.scanId;
                 const href = buildPanelHref('forensik', { insiden: targetId });
-                const originText = `${incident.reporterUnit ?? id.common.unmapped}${
-                  incident.reporterSource ? ` · ${incident.reporterSource}` : ''
-                }`;
+                const isSelected = selectedId === targetId;
+                const originText = incident.reporterUnit ?? id.common.unmapped;
                 const scoreColor =
                   incident.verdict === 'CRITICAL_PHISHING'
                     ? 'var(--verdict-critical)'
@@ -304,61 +249,70 @@ export function IncidentFeed({
                 return (
                   <tr
                     key={incident.scanId}
-                    onClick={(e) => handleRowClick(e, href, targetId)}
-                    className="group cursor-pointer transition-colors duration-100 hover:bg-[var(--surface-2)]"
+                    onClick={(e) => handleRowSelect(e, href, targetId)}
+                    className={[
+                      'group cursor-pointer transition-colors duration-100',
+                      isSelected ? 'bg-[var(--accent-tint)]' : 'hover:bg-[var(--surface-2)]',
+                    ].join(' ')}
                   >
-                    <td data-label={id.feed.colTarget} className="max-w-[22rem] px-4 py-2.5 align-middle">
-                      <a
-                        href={href}
-                        onClick={(e) => handleAnchorClick(e, href, targetId)}
-                        aria-label={`${id.feed.inspectRow}: ${rawTarget}`}
-                        className="block min-w-0 text-[var(--foreground)] no-underline"
+                    <td
+                      data-label={id.common.ticket}
+                      className="vk-mono whitespace-nowrap px-3.5 py-2.5 align-middle text-[0.75rem] text-[var(--muted-strong)]"
+                    >
+                      <span
+                        className={
+                          isSelected ? 'font-semibold text-[var(--accent-ink)]' : undefined
+                        }
                       >
-                        <div className="vk-mono truncate text-[0.8125rem] font-medium text-[var(--foreground)] group-hover:text-[var(--accent-ink)]">
-                          {truncateMiddle(rawTarget, 48)}
-                        </div>
-                        {incident.ticket && (
-                          <div className="vk-mono mt-0.5 text-[0.72rem] text-[var(--muted)]">
-                            {incident.ticket}
-                          </div>
-                        )}
-                      </a>
+                        {incident.ticket ?? targetId.slice(0, 8)}
+                      </span>
                     </td>
 
-                    <td data-label={id.feed.colVerdict} className="whitespace-nowrap px-3 py-2.5 align-middle">
+                    <td
+                      data-label={id.feed.colTarget}
+                      className="max-w-[22rem] px-3.5 py-2.5 align-middle"
+                    >
+                      <div className="vk-mono truncate text-[0.8125rem] font-medium text-[var(--foreground)] group-hover:text-[var(--accent-ink)]">
+                        {truncateMiddle(rawTarget, 48)}
+                      </div>
+                      <div className="truncate text-[0.72rem] text-[var(--muted)]">
+                        {truncateMiddle(originText, 36)}
+                      </div>
+                    </td>
+
+                    <td
+                      data-label={id.feed.colVerdict}
+                      className="whitespace-nowrap px-2.5 py-2.5 align-middle"
+                    >
                       <VerdictBadge verdict={incident.verdict} size="sm" />
                     </td>
 
                     <td
                       data-label={id.feed.colScore}
-                      className="vk-mono vk-tabular whitespace-nowrap px-3 py-2.5 text-right align-middle text-[0.875rem] font-semibold"
+                      className="vk-mono vk-tabular whitespace-nowrap px-2.5 py-2.5 text-right align-middle text-[0.875rem] font-semibold"
                       style={{ color: scoreColor }}
                     >
                       {formatScore(incident.scores.total)}
                     </td>
 
                     <td
-                      data-label={id.feed.colOrigin}
-                      className="max-w-[14rem] truncate px-3 py-2.5 align-middle text-[0.8125rem] text-[var(--muted-strong)]"
-                    >
-                      {truncateMiddle(originText, 34)}
-                    </td>
-
-                    <td
                       data-label={id.feed.colAge}
-                      className="whitespace-nowrap px-4 py-2.5 text-right align-middle"
+                      className="whitespace-nowrap px-3.5 py-2.5 text-right align-middle"
                     >
-                      <span className="inline-flex items-center justify-end gap-1.5 text-[0.75rem] text-[var(--muted)]">
-                        <span className="vk-mono vk-tabular">
+                      <div className="inline-flex items-center justify-end gap-2">
+                        <span className="vk-mono vk-tabular text-[0.75rem] text-[var(--muted)]">
                           {mounted ? formatAge(incident.createdAtMs) : '-'}
                         </span>
-                        <span
-                          aria-hidden="true"
-                          className="text-[var(--muted)] transition-transform duration-100 group-hover:translate-x-0.5 group-hover:text-[var(--accent-ink)]"
+                        <a
+                          href={href}
+                          onClick={(e) => openFullForensics(e, href, targetId)}
+                          aria-label={`${id.feed.inspectRow}: ${rawTarget}`}
+                          title={id.feed.inspectRow}
+                          className="vk-btn vk-btn-secondary h-6 px-1.5 text-[0.6875rem] no-underline"
                         >
-                          <IconArrowRight size={13} />
-                        </span>
-                      </span>
+                          <IconArrowRight size={11} />
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 );
