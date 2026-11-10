@@ -11,6 +11,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { VerdictTrend } from '@/components/charts/VerdictTrend';
 import { IncidentFeed } from '@/components/feed/IncidentFeed';
 import { ScanOmnibar } from '@/components/sandbox/ScanOmnibar';
 import { ScoreBreakdownPanel } from '@/components/ui/ScoreBreakdown';
@@ -42,19 +43,23 @@ function StatCell({
   value,
   total,
   color,
+  barColor,
   segments,
 }: {
   label: string;
   value: number;
   total: number;
+  /** Ink for the figure: the verdict text token, tuned for 4.5:1. */
   color?: string;
+  /** Fill for the bar: the verdict chart token, tuned as a mark. */
+  barColor?: string;
   /** Supplied for the total cell, where the bar shows the whole mix. */
   segments?: readonly { value: number; color: string }[];
 }) {
   const share = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 px-4 py-3 sm:px-5">
+    <div className="flex min-w-0 flex-col justify-center gap-2 px-4 py-3 sm:px-5">
       <span className="vk-pane-label">{label}</span>
       <div className="flex items-baseline gap-2">
         <span className="vk-metric" style={color ? { color } : undefined}>
@@ -88,7 +93,7 @@ function StatCell({
                 className="h-full rounded-[var(--r-pill)] transition-[width] duration-300"
                 style={{
                   width: `${Math.max(3, share)}%`,
-                  background: color ?? 'var(--accent)',
+                  background: barColor ?? color ?? 'var(--accent)',
                 }}
               />
             )}
@@ -156,36 +161,46 @@ export function OverviewPanel({
 
       <ScanOmnibar onScanComplete={onScanComplete} />
 
-      {/* Pita status: angka saja, tanpa kalimat yang mengulang angkanya. */}
-      <div className="grid shrink-0 grid-cols-2 border-b border-[var(--border)] bg-[var(--surface-1)] sm:grid-cols-4 sm:divide-x sm:divide-[var(--border-subtle)]">
-        <StatCell
-          label={id.command.statTotal}
-          value={incidents.length}
-          total={incidents.length}
-          segments={[
-            { value: counts.CRITICAL_PHISHING, color: 'var(--verdict-critical)' },
-            { value: counts.SUSPICIOUS, color: 'var(--verdict-suspicious)' },
-            { value: counts.SAFE, color: 'var(--verdict-safe)' },
-          ]}
-        />
-        <StatCell
-          label={id.command.statCritical}
-          value={counts.CRITICAL_PHISHING}
-          total={incidents.length}
-          color="var(--verdict-critical)"
-        />
-        <StatCell
-          label={id.command.statSuspicious}
-          value={counts.SUSPICIOUS}
-          total={incidents.length}
-          color="var(--verdict-suspicious)"
-        />
-        <StatCell
-          label={id.command.statSafe}
-          value={counts.SAFE}
-          total={incidents.length}
-          color="var(--verdict-safe)"
-        />
+      {/* Pita status: angka di kiri, tren harian di kanan. Keduanya membaca
+          data yang sama, jadi tidak ada kalimat yang mengulang angkanya. */}
+      <div className="grid shrink-0 border-b border-[var(--border)] bg-[var(--surface-1)] lg:grid-cols-12">
+        <div className="grid grid-cols-2 lg:col-span-5 [&>*:nth-child(2n)]:border-l [&>*:nth-child(n+3)]:border-t [&>*]:border-[var(--border-subtle)]">
+          <StatCell
+            label={id.command.statTotal}
+            value={incidents.length}
+            total={incidents.length}
+            segments={[
+              { value: counts.CRITICAL_PHISHING, color: 'var(--chart-critical)' },
+              { value: counts.SUSPICIOUS, color: 'var(--chart-suspicious)' },
+              { value: counts.SAFE, color: 'var(--chart-safe)' },
+            ]}
+          />
+          <StatCell
+            label={id.command.statCritical}
+            value={counts.CRITICAL_PHISHING}
+            total={incidents.length}
+            color="var(--verdict-critical)"
+            barColor="var(--chart-critical)"
+          />
+          <StatCell
+            label={id.command.statSuspicious}
+            value={counts.SUSPICIOUS}
+            total={incidents.length}
+            color="var(--verdict-suspicious)"
+            barColor="var(--chart-suspicious)"
+          />
+          <StatCell
+            label={id.command.statSafe}
+            value={counts.SAFE}
+            total={incidents.length}
+            color="var(--verdict-safe)"
+            barColor="var(--chart-safe)"
+          />
+        </div>
+
+        <div className="border-t border-[var(--border)] lg:col-span-7 lg:border-t-0 lg:border-l">
+          <VerdictTrend incidents={incidents} />
+        </div>
       </div>
 
       <div

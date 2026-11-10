@@ -92,7 +92,29 @@ setelah garis tebal ledger dihapus.
 | `--verdict-suspicious` | `#f7b955` | `MENCURIGAKAN` |
 | `--verdict-safe` | `#4ade80` | `AMAN` |
 
-### 2.3 Layer Anotasi Bukti (terkunci ke warna PNG dari backend OpenCV)
+### 2.3 Verdict sebagai Isian Grafik (`--chart-*`)
+
+Token `--verdict-*` adalah **tinta**: dipakai untuk teks dan ikon, jadi
+dikalibrasi ke 4.5:1. Sebagai **isian batang** syaratnya cuma 3:1, dan selisih
+itu yang dipakai untuk memisahkan amber dari merah. Sebagai tinta, pasangan
+amber-merah mode terang hanya berjarak OKLab dE 11.9 (penglihatan normal), di
+bawah ambang 15 - pembaca dengan deuteranopia tidak bisa membedakannya sama
+sekali. Karena itu grafik memakai set terpisah, divalidasi sebagai satu
+kesatuan dalam urutan tumpukan `[aman, mencurigakan, phishing]`: pita
+kecerahan, lantai chroma, pemisahan CVD, lantai penglihatan normal, dan kontras
+terhadap permukaan - semuanya lulus di kedua mode.
+
+| Token | Terang | Gelap |
+|---|---|---|
+| `--chart-safe` | `#157a47` | `#127946` |
+| `--chart-suspicious` | `#d97706` | `#c38824` |
+| `--chart-critical` | `#c02626` | `#c82d40` |
+
+Nilai gelap **dipilih ulang, bukan dibalik**: token tinta gelap duduk di OKLab
+L 0.74-0.84, jauh di atas pita 0.48-0.67 yang pantas untuk sebuah tanda di atas
+permukaan gelap.
+
+### 2.4 Layer Anotasi Bukti (terkunci ke warna PNG dari backend OpenCV)
 
 `--layer-logo: #ed1c24` &middot; `--layer-qr: #d228d2` &middot;
 `--layer-form: #ffa500` &middot; `--layer-input: #ef4444`
@@ -144,14 +166,38 @@ tidak mati; `?view=lapor-cepat` mendarat langsung di paruh WhatsApp, dan
    membuka dropzone sebaris, tombol `Pindai`. Di bawahnya chip contoh uji satu
    klik dan kolom satuan pelapor opsional. Pratinjau reputasi domain muncul
    sendiri saat URL diketik; progres lima tahap muncul saat pemindaian jalan.
-2. **Pita Verdict**: empat sel (`Dipindai`, `Phishing`, `Mencurigakan`, `Aman`).
-   Sel total memakai batang bertumpuk yang menunjukkan komposisi; sel lain
-   memakai batang porsi + persentase. Tidak ada kalimat yang mengulang angka.
+2. **Pita Verdict + Tren** (`5 | 7` kolom): di kiri empat sel metrik
+   (`Dipindai`, `Phishing`, `Mencurigakan`, `Aman`) dalam kisi `2x2` - sel total
+   memakai batang bertumpuk yang menunjukkan komposisi, sel lain batang porsi +
+   persentase. Di kanan `VerdictTrend`, grafik batang bertumpuk 14 hari.
+   Keduanya membaca angka yang sama, jadi tidak ada kalimat yang mengulangnya.
 3. **Tabel + Inspektur**: tabel riwayat (avatar inisial, target, status, skor,
    usia) di kiri; ringkasan baris terpilih (verdict, tiket, target, tangkapan
    layar, skor, temuan) di kanan.
 
-## 5. Komponen Bersama
+## 5. Grafik (`VerdictTrend`)
+
+Satu grafik di seluruh konsol, di Beranda: **batang bertumpuk per hari**, karena
+tugas datanya adalah "lihat komposisi berubah sepanjang waktu".
+
+- **Tanda**: batang dibatasi `22px`, radius `4px` hanya di ujung data (atas),
+  siku di garis dasar, jarak `2px` berwarna permukaan antar-segmen tumpukan.
+  Garis bantu `1px` solid, resesif. Tinggi bidang plot `136px`.
+- **Identitas tidak pernah bergantung warna saja**: verdict adalah palet status,
+  jadi legenda membawa ikon + nama tiap verdict, kartu hover menyebut ketiganya
+  dengan angkanya, dan di bawahnya ada **tabel `visually-hidden`** berisi seluruh
+  angka per hari. Tooltip memperkaya, tidak pernah menjadi satu-satunya jalan.
+- **Label hemat**: tidak ada angka di atas tiap batang. Sumbu Y memberi
+  `0 / tengah / maks` (dibulatkan ke 1/2/2.5/5 x 10^n), sumbu X hanya hari
+  pertama, tengah, dan terakhir.
+- **Jendela dijangkarkan ke pemindaian terbaru, bukan ke `Date.now()`** -
+  render harus murni, dan kepala grafik mencetak rentang tanggal yang benar-benar
+  dicakup, jadi masa sepi tampak sebagai tanggal lama di sumbu alih-alih jendela
+  yang diam-diam berbohong.
+- Keadaan kosong menggambar garis bantu saja, tanpa tanggal, sehingga render
+  server dan klien identik.
+
+## 6. Komponen Bersama
 
 | Kelas | Bentuk |
 |---|---|
@@ -162,7 +208,7 @@ tidak mati; `?view=lapor-cepat` mendarat langsung di paruh WhatsApp, dan
 | `.vk-nav-track` + `.vk-nav-tab` | *segmented control*; aktif = permukaan terangkat (`aria-current="page"`) |
 | `.vk-card` / `.vk-card-quiet` | blok lunak radius `14px` |
 
-## 6. Interaksi, Keyboard, Cetak
+## 7. Interaksi, Keyboard, Cetak
 
 - **Fokus**: `:focus-visible` dengan `outline: 2px solid var(--accent)` +
   `outline-offset: 2px`, didukung `forced-colors`, plus *skip link*.

@@ -47,10 +47,22 @@
   --accent-tint: rgba(91, 89, 214, 0.08);
   --accent-border: rgba(91, 89, 214, 0.32);
 
-  /* Verdict scale - the only semantic colour in the system */
+  /* Verdict scale - the only semantic colour in the system.
+     These are the INK values: they carry verdict text and icons, so they are
+     tuned for 4.5:1 against the surface. */
   --verdict-safe: #157a47;
   --verdict-suspicious: #92540a;
   --verdict-critical: #c02626;
+
+  /* The same three verdicts as chart FILLS. A mark only needs 3:1, which buys
+     the amber enough lightness to separate from the red - as ink they sit at
+     OKLab dE 11.9 (normal vision), below the 15 floor, and a reader with
+     deuteranopia cannot tell them apart at all. Validated as a set:
+     lightness band, chroma floor, CVD and normal-vision separation, and
+     contrast all pass for [safe, suspicious, critical] in stack order. */
+  --chart-safe: #157a47;
+  --chart-suspicious: #d97706;
+  --chart-critical: #c02626;
 
   /* Messaging terminal (Lapor WA) */
   --wa-canvas: #eceae4;
@@ -128,6 +140,14 @@
   --verdict-safe: #4ade80;
   --verdict-suspicious: #f7b955;
   --verdict-critical: #ff7a7a;
+
+  /* Dark chart fills are selected, not flipped: the ink values above sit at
+     OKLab L 0.74-0.84, far above the 0.48-0.67 band a mark wants on a dark
+     surface, and they fail CVD separation as a set. These were searched in
+     OKLCH until all five checks pass against #1a1b1f. */
+  --chart-safe: #127946;
+  --chart-suspicious: #c38824;
+  --chart-critical: #c82d40;
 
   --wa-canvas: #121418;
   --wa-header: #1f2126;

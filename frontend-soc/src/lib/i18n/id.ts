@@ -60,6 +60,15 @@ export const id = {
     recentTitle: 'Pemindaian Terakhir',
   },
 
+  chart: {
+    title: 'Aktivitas Pemindaian',
+    range: '14 hari terakhir',
+    empty: 'Belum ada aktivitas dalam 14 hari terakhir.',
+    tableCaption: 'Jumlah pemindaian per hari menurut status',
+    colDate: 'Tanggal',
+    colTotal: 'Total',
+  },
+
   response: {
     /** Judul tersembunyi; segmented control di bawah tab sudah menamai isinya. */
     pageTitle: 'Respons: daftar blokir dan lapor WhatsApp',
