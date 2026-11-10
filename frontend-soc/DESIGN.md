@@ -166,11 +166,15 @@ tidak mati; `?view=lapor-cepat` mendarat langsung di paruh WhatsApp, dan
    membuka dropzone sebaris, tombol `Pindai`. Di bawahnya chip contoh uji satu
    klik dan kolom satuan pelapor opsional. Pratinjau reputasi domain muncul
    sendiri saat URL diketik; progres lima tahap muncul saat pemindaian jalan.
-2. **Pita Verdict + Tren** (`5 | 7` kolom): di kiri empat sel metrik
-   (`Dipindai`, `Phishing`, `Mencurigakan`, `Aman`) dalam kisi `2x2` - sel total
-   memakai batang bertumpuk yang menunjukkan komposisi, sel lain batang porsi +
-   persentase. Di kanan `VerdictTrend`, grafik batang bertumpuk 14 hari.
-   Keduanya membaca angka yang sama, jadi tidak ada kalimat yang mengulangnya.
+2. **Pita Verdict + Tren** (`5 | 7` di `md`, `4 | 8` di `lg`): di kiri **angka
+   utama** jumlah pemindaian (`.vk-hero`, `48px`, angka proporsional - satu-
+   satunya di layar ini) di atas **daftar meter** tiga baris: nama, batang pada
+   garis dasar yang sama, lalu angka + persentase. Tiga rasio terhadap satu
+   keseluruhan terbaca lebih cepat begini daripada sebagai empat ubin terpisah,
+   dan batang yang sejajar membuat komposisinya bisa dibandingkan sekilas. Di
+   bawah `420px` batangnya disembunyikan dan baris menyisakan nama + angka.
+   Di kanan `VerdictTrend`, grafik batang bertumpuk 14 hari. Keduanya membaca
+   angka yang sama, jadi tidak ada kalimat yang mengulangnya.
 3. **Tabel + Inspektur**: tabel riwayat (avatar inisial, target, status, skor,
    usia) di kiri; ringkasan baris terpilih (verdict, tiket, target, tangkapan
    layar, skor, temuan) di kanan.
@@ -180,9 +184,18 @@ tidak mati; `?view=lapor-cepat` mendarat langsung di paruh WhatsApp, dan
 Satu grafik di seluruh konsol, di Beranda: **batang bertumpuk per hari**, karena
 tugas datanya adalah "lihat komposisi berubah sepanjang waktu".
 
-- **Tanda**: batang dibatasi `22px`, radius `4px` hanya di ujung data (atas),
+- **Tanda**: batang dibatasi `26px`, radius `5px` hanya di ujung data (atas),
   siku di garis dasar, jarak `2px` berwarna permukaan antar-segmen tumpukan.
-  Garis bantu `1px` solid, resesif. Tinggi bidang plot `136px`.
+  Garis bantu `1px` solid, resesif.
+- **Lajur latar**: tiap kolom duduk di atas lajur `--surface-2` setinggi penuh,
+  identik untuk semua hari dan lebih ringan dari garis bantu, jadi terbaca
+  sebagai tempat batang berdiri - bukan sebagai nilai tersendiri. Saat satu
+  kolom di-hover atau mendapat fokus keyboard, lajurnya naik ke `--surface-3`
+  dan kolom lain diredupkan.
+- **Tinggi ikut lebar layar**: bidang plot `.vk-plot` bernapas
+  `132 -> 150 -> 176 -> 200px`, dan tinggi batang dihitung sebagai persentase
+  dari lajur, bukan piksel mati, supaya tidak ada ukuran yang perlu
+  disinkronkan antara CSS dan komponen.
 - **Identitas tidak pernah bergantung warna saja**: verdict adalah palet status,
   jadi legenda membawa ikon + nama tiap verdict, kartu hover menyebut ketiganya
   dengan angkanya, dan di bawahnya ada **tabel `visually-hidden`** berisi seluruh
@@ -207,6 +220,8 @@ tugas datanya adalah "lihat komposisi berubah sepanjang waktu".
 | `.vk-pill` | tag status kapsul (verdict) |
 | `.vk-nav-track` + `.vk-nav-tab` | *segmented control*; aktif = permukaan terangkat (`aria-current="page"`) |
 | `.vk-card` / `.vk-card-quiet` | blok lunak radius `14px` |
+| `.vk-hero` | angka utama `48px`, **angka proporsional** (bukan `tabular-nums`, yang membuat `121` terbaca longgar di ukuran besar), sans yang sama dengan sisanya |
+| `.vk-plot` | kotak plot grafik; tingginya ikut lebar layar |
 
 ## 7. Interaksi, Keyboard, Cetak
 

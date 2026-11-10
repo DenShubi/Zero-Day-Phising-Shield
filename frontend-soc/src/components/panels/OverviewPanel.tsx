@@ -37,68 +37,55 @@ function cleanTarget(raw: string): string {
   return raw.replace(/\s*\u2014\s*/g, ': ');
 }
 
-/** One cell of the verdict strip: count, share bar, nothing else. */
-function StatCell({
+/**
+ * One row of the verdict meter list: a name, a bar on a shared baseline, and
+ * the figure. Three ratios against the same whole read faster stacked like
+ * this than as four separate tiles, and the bars line up so the mix is
+ * comparable at a glance.
+ */
+function MeterRow({
   label,
   value,
   total,
-  color,
-  barColor,
-  segments,
+  ink,
+  fill,
 }: {
   label: string;
   value: number;
   total: number;
-  /** Ink for the figure: the verdict text token, tuned for 4.5:1. */
-  color?: string;
-  /** Fill for the bar: the verdict chart token, tuned as a mark. */
-  barColor?: string;
-  /** Supplied for the total cell, where the bar shows the whole mix. */
-  segments?: readonly { value: number; color: string }[];
+  /** Verdict text token: carries the figure, tuned for 4.5:1. */
+  ink: string;
+  /** Verdict chart token: carries the bar, tuned as a mark. */
+  fill: string;
 }) {
   const share = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
-    <div className="flex min-w-0 flex-col justify-center gap-2 px-4 py-3 sm:px-5">
-      <span className="vk-pane-label">{label}</span>
-      <div className="flex items-baseline gap-2">
-        <span className="vk-metric" style={color ? { color } : undefined}>
-          {value}
-        </span>
-        {color && total > 0 && (
-          <span className="vk-tabular text-[0.78rem] text-[var(--muted)]">{share}%</span>
-        )}
-      </div>
+    <li className="flex items-center gap-2.5">
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-[2px]"
+          style={{ background: fill }}
+        />
+        <span className="truncate text-[0.8125rem] text-[var(--muted-strong)]">{label}</span>
+      </span>
 
-      <div
-        className="flex h-1 gap-0.5 overflow-hidden rounded-[var(--r-pill)] bg-[var(--surface-3)]"
+      <span
         aria-hidden="true"
+        className="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded-[var(--r-pill)] bg-[var(--surface-3)] min-[420px]:block lg:w-20 xl:w-24"
       >
-        {segments
-          ? segments
-              .filter((s) => s.value > 0)
-              .map((s) => (
-                <span
-                  key={s.color}
-                  className="h-full rounded-[var(--r-pill)]"
-                  style={{
-                    width: `${total > 0 ? (s.value / total) * 100 : 0}%`,
-                    background: s.color,
-                  }}
-                />
-              ))
-          : total > 0 &&
-            value > 0 && (
-              <span
-                className="h-full rounded-[var(--r-pill)] transition-[width] duration-300"
-                style={{
-                  width: `${Math.max(3, share)}%`,
-                  background: barColor ?? color ?? 'var(--accent)',
-                }}
-              />
-            )}
-      </div>
-    </div>
+        <span
+          className="block h-full rounded-[var(--r-pill)] transition-[width] duration-300"
+          style={{ width: `${value > 0 ? Math.max(4, share) : 0}%`, background: fill }}
+        />
+      </span>
+
+      <span className="vk-tabular w-14 shrink-0 text-right text-[0.875rem] font-semibold tracking-[-0.01em]">
+        <span style={{ color: ink }}>{value}</span>
+        <span className="ml-1 text-[0.72rem] font-normal text-[var(--muted)]">{share}%</span>
+      </span>
+    </li>
   );
 }
 
@@ -164,42 +151,39 @@ export function OverviewPanel({
 
       {/* Pita status: angka di kiri, tren harian di kanan. Keduanya membaca
           data yang sama, jadi tidak ada kalimat yang mengulang angkanya. */}
-      <div className="grid shrink-0 border-b border-[var(--border)] bg-[var(--surface-1)] lg:grid-cols-12">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:col-span-5 lg:grid-cols-2 [&>*]:border-[var(--border-subtle)] [&>*:nth-child(2n)]:border-l sm:[&>*:nth-child(n+2)]:border-l lg:[&>*:nth-child(2n+1)]:border-l-0 [&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(n+3)]:border-t-0 lg:[&>*:nth-child(n+3)]:border-t">
-          <StatCell
-            label={id.command.statTotal}
-            value={incidents.length}
-            total={incidents.length}
-            segments={[
-              { value: counts.CRITICAL_PHISHING, color: 'var(--chart-critical)' },
-              { value: counts.SUSPICIOUS, color: 'var(--chart-suspicious)' },
-              { value: counts.SAFE, color: 'var(--chart-safe)' },
-            ]}
-          />
-          <StatCell
-            label={id.command.statCritical}
-            value={counts.CRITICAL_PHISHING}
-            total={incidents.length}
-            color="var(--verdict-critical)"
-            barColor="var(--chart-critical)"
-          />
-          <StatCell
-            label={id.command.statSuspicious}
-            value={counts.SUSPICIOUS}
-            total={incidents.length}
-            color="var(--verdict-suspicious)"
-            barColor="var(--chart-suspicious)"
-          />
-          <StatCell
-            label={id.command.statSafe}
-            value={counts.SAFE}
-            total={incidents.length}
-            color="var(--verdict-safe)"
-            barColor="var(--chart-safe)"
-          />
+      <div className="grid shrink-0 border-b border-[var(--border)] bg-[var(--surface-1)] md:grid-cols-12">
+        <div className="flex min-w-0 flex-col justify-center gap-3 px-4 py-4 sm:px-5 md:col-span-5 lg:col-span-4">
+          <div>
+            <span className="vk-pane-label">{id.command.statTotal}</span>
+            <div className="vk-hero mt-0.5">{incidents.length}</div>
+          </div>
+
+          <ul className="flex flex-col gap-2 border-t border-[var(--border-subtle)] pt-3">
+            <MeterRow
+              label={id.command.statCritical}
+              value={counts.CRITICAL_PHISHING}
+              total={incidents.length}
+              ink="var(--verdict-critical)"
+              fill="var(--chart-critical)"
+            />
+            <MeterRow
+              label={id.command.statSuspicious}
+              value={counts.SUSPICIOUS}
+              total={incidents.length}
+              ink="var(--verdict-suspicious)"
+              fill="var(--chart-suspicious)"
+            />
+            <MeterRow
+              label={id.command.statSafe}
+              value={counts.SAFE}
+              total={incidents.length}
+              ink="var(--verdict-safe)"
+              fill="var(--chart-safe)"
+            />
+          </ul>
         </div>
 
-        <div className="border-t border-[var(--border)] lg:col-span-7 lg:border-t-0 lg:border-l">
+        <div className="min-w-0 border-t border-[var(--border)] md:col-span-7 md:border-t-0 md:border-l lg:col-span-8">
           <VerdictTrend incidents={incidents} />
         </div>
       </div>

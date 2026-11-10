@@ -26,8 +26,6 @@ import { VERDICT_LABEL, type Verdict } from '@/lib/verdict';
 import { VerdictIcon } from '@/components/ui/icons';
 
 const DAYS = 14;
-/** Plot height in px; the bar maths and both axis gutters key off this. */
-const PLOT_H = 136;
 const DAY_MS = 86_400_000;
 /** Buckets follow Jakarta days, like every other timestamp in the console. */
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -77,7 +75,7 @@ function niceMax(value: number): number {
 
 function EmptyPlot() {
   return (
-    <div className="relative" style={{ height: PLOT_H }} aria-hidden="true">
+    <div className="vk-plot relative" aria-hidden="true">
       {[0, 50, 100].map((top) => (
         <span
           key={top}
@@ -186,8 +184,7 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
           {/* Y axis: the ticks carry the values the marks are not labelled with. */}
           <div
             aria-hidden="true"
-            style={{ height: PLOT_H }}
-            className="vk-tabular flex w-6 shrink-0 flex-col justify-between text-right text-[0.6875rem] text-[var(--muted)]"
+            className="vk-plot vk-tabular flex w-6 shrink-0 flex-col justify-between text-right text-[0.6875rem] text-[var(--muted)]"
           >
             <span>{axisMax}</span>
             <span>{axisMax / 2}</span>
@@ -195,7 +192,7 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
           </div>
 
           <div className="relative min-w-0 flex-1">
-            <div className="relative" style={{ height: PLOT_H }} aria-hidden="true">
+            <div className="vk-plot relative" aria-hidden="true">
               {[0, 50, 100].map((top) => (
                 <span
                   key={top}
@@ -224,40 +221,47 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
                       onPointerEnter={() => setHovered(bucket.index)}
                       onFocus={() => setHovered(bucket.index)}
                       onBlur={() => setHovered(null)}
-                      onClick={() =>
-                        setHovered((prev) => (prev === bucket.index ? null : bucket.index))
-                      }
+                      // Select, never toggle. A real click arrives after
+                      // pointerenter has already selected this column, so a
+                      // toggle would close the card the click was meant to
+                      // open - which is also the only way a touch device
+                      // reaches it.
+                      onClick={() => setHovered(bucket.index)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          setHovered((prev) => (prev === bucket.index ? null : bucket.index));
+                          setHovered(bucket.index);
                         }
                       }}
-                      className="group relative flex h-full min-w-0 flex-1 cursor-pointer flex-col justify-end rounded-[4px] outline-offset-1"
+                      className="group relative flex h-full min-w-0 flex-1 cursor-pointer items-end justify-center rounded-[5px] outline-offset-1"
                     >
-                      {/* Faint slot track, below gridline weight: rhythm, not data. */}
+                      {/* Slot track. Identical under every column and lighter
+                          than the gridlines, so it reads as the lane the bar
+                          sits in and never as a value of its own. */}
                       <span
-                        className="absolute inset-x-0 inset-y-0 rounded-[4px] transition-colors duration-150"
+                        aria-hidden="true"
+                        className="absolute inset-y-0 w-full max-w-[26px] rounded-[5px] transition-colors duration-150"
                         style={{
-                          background: isHovered ? 'var(--surface-2)' : 'transparent',
+                          background: isHovered ? 'var(--surface-3)' : 'var(--surface-2)',
                         }}
                       />
 
-                      <div className="relative mx-auto flex w-full max-w-[22px] flex-col justify-end gap-[2px]">
+                      <div className="relative flex h-full w-full max-w-[26px] flex-col justify-end gap-[2px]">
                         {stack.map(({ verdict, fill }, depth) => (
                           <span
                             key={verdict}
-                            className={depth === 0 ? 'rounded-t-[4px]' : undefined}
+                            className={depth === 0 ? 'rounded-t-[5px]' : undefined}
                             style={{
-                              height: `${Math.max(3, (bucket.counts[verdict] / axisMax) * PLOT_H)}px`,
+                              height: `${(bucket.counts[verdict] / axisMax) * 100}%`,
+                              minHeight: '3px',
                               background: fill,
-                              opacity: hovered !== null && !isHovered ? 0.55 : 1,
-                              transition: 'opacity 150ms ease-out',
+                              opacity: hovered !== null && !isHovered ? 0.5 : 1,
+                              transition:
+                                'opacity 150ms ease-out, height 220ms var(--ease-out)',
                             }}
                           />
                         ))}
                       </div>
-
                     </div>
                   );
                 })}
@@ -318,7 +322,11 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
           pointer. The plot above is decoration as far as assistive tech is
           concerned. */}
       {hasData && (
-        <table className="visually-hidden">
+        // The clip lives on a wrapper, not on the <table>: a <caption> is laid
+        // out outside its table's box, so clipping the table left the caption
+        // painted over the chart heading.
+        <div className="visually-hidden">
+        <table>
           <caption>{t.chart.tableCaption}</caption>
           <thead>
             <tr>
@@ -343,6 +351,7 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );

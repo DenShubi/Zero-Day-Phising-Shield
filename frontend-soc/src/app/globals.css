@@ -416,6 +416,41 @@ pre,
   color: var(--foreground);
 }
 
+/* The one number the view leads with. Proportional figures on purpose:
+   tabular-nums gives every digit the width of a zero, which reads loose at
+   display sizes. Same sans as everything else - never a display face. */
+.vk-hero {
+  font-size: 3rem;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+}
+
+/* Plot box. The height lives here rather than in the component so it can
+   breathe with the viewport, and the bars are sized as a percentage of it. */
+.vk-plot {
+  height: 132px;
+}
+
+@media (min-width: 640px) {
+  .vk-plot {
+    height: 150px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .vk-plot {
+    height: 176px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .vk-plot {
+    height: 200px;
+  }
+}
+
 /* --------------------------------- Controls -------------------------------- */
 
 .vk-btn {
