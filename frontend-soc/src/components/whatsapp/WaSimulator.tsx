@@ -268,7 +268,7 @@ export function WaSimulator({
 
   const openMitigation = (scan: NormalizedScan) => {
     const host = extractHost(scan.finalUrl ?? scan.submittedUrl);
-    router.replace(buildPanelHref('mitigasi', { host }), { scroll: false });
+    router.replace(buildPanelHref('respons', { tab: 'blokir', host }), { scroll: false });
   };
 
   return (
@@ -289,7 +289,7 @@ export function WaSimulator({
               return (
                 <div
                   key={d.url}
-                  className="flex items-center justify-between gap-2 rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2"
+                  className="flex items-center justify-between gap-2 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-[0.78rem] font-medium text-[var(--foreground)]">
@@ -315,7 +315,7 @@ export function WaSimulator({
               );
             })}
 
-            <div className="flex items-center justify-between gap-2 rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2">
+            <div className="flex items-center justify-between gap-2 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-[0.78rem] font-medium text-[var(--foreground)]">
                   <span className="text-[var(--verdict-safe)]" aria-hidden="true">
@@ -367,13 +367,13 @@ export function WaSimulator({
           </div>
 
           {image ? (
-            <div className="mt-2.5 flex flex-col gap-2 rounded-[4px] border border-[var(--accent-border)] bg-[var(--surface-1)] p-3">
+            <div className="mt-2.5 flex flex-col gap-2 rounded-[var(--r-md)] border border-[var(--accent-border)] bg-[var(--surface-1)] p-3">
               <div className="flex items-center gap-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
                 <img
                   src={image.previewUrl}
                   alt={t.whatsapp.previewAlt}
-                  className="h-12 w-14 rounded-[3px] border border-[var(--border)] object-cover"
+                  className="h-12 w-14 rounded-[var(--r-sm)] border border-[var(--border)] object-cover"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="vk-mono vk-tabular text-[0.75rem] font-semibold text-[var(--foreground)]">
@@ -426,7 +426,7 @@ export function WaSimulator({
         >
           <div className="flex min-w-0 items-center gap-2.5">
             <span
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-[4px] border text-[var(--foreground)]"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-[var(--r-md)] border text-[var(--foreground)]"
               style={{ borderColor: 'var(--wa-border)', background: 'var(--surface-1)' }}
             >
               <VisiKartikaMark size={16} />
@@ -471,7 +471,7 @@ export function WaSimulator({
                 className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className="max-w-[85%] rounded-[4px] border px-3.5 py-2.5 text-[0.8125rem] leading-relaxed"
+                  className="max-w-[85%] rounded-[var(--r-md)] border px-3.5 py-2.5 text-[0.8125rem] leading-relaxed"
                   style={{
                     background: mine ? 'var(--wa-bubble-out)' : 'var(--wa-bubble-in)',
                     borderColor: 'var(--wa-border)',
@@ -483,7 +483,7 @@ export function WaSimulator({
                     <img
                       src={m.imageUrl}
                       alt={t.whatsapp.attachmentAlt}
-                      className="mb-2 max-h-48 rounded-[3px] border border-[var(--wa-border)]"
+                      className="mb-2 max-h-48 rounded-[var(--r-sm)] border border-[var(--wa-border)]"
                     />
                   )}
                   {m.text && (
@@ -559,7 +559,7 @@ export function WaSimulator({
             onKeyDown={(e) => e.key === 'Enter' && void send()}
             placeholder={t.whatsapp.inputPlaceholder}
             spellCheck={false}
-            className="h-9 min-w-0 flex-1 rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+            className="h-9 min-w-0 flex-1 rounded-[var(--r-md)] border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 text-[0.8125rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
           />
 
           <button

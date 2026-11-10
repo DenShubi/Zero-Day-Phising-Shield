@@ -67,7 +67,7 @@ export function MultimodalPanel({
                   key={boxId}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-[3px] border px-3 py-2 transition-colors"
+                  className="rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-qr)' : 'var(--border)',
                     background: active
@@ -115,7 +115,7 @@ export function MultimodalPanel({
       {image.ocrTextSnippet && (
         <div className="mt-3">
           <h3 className="vk-pane-label mb-1.5">{t.forensics.ocrSnippetHeader}</h3>
-          <div className="rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
+          <div className="rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2.5 text-[0.8125rem] leading-relaxed text-[var(--muted-strong)]">
             {truncateMiddle(image.ocrTextSnippet, 400)}
           </div>
         </div>

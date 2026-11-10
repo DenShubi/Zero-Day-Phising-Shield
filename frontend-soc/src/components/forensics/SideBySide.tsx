@@ -85,7 +85,7 @@ export function SideBySide({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.reference}</h2>
           <span
-            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[0.75rem] font-semibold"
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[var(--r-sm)] border px-2 py-0.5 text-[0.75rem] font-semibold"
             style={{
               color: scoreColor,
               borderColor: `color-mix(in srgb, ${scoreColor} 38%, transparent)`,
@@ -111,7 +111,7 @@ export function SideBySide({
         <div className="flex flex-wrap items-center gap-2.5">
           <h2 className="vk-pane-label text-[var(--foreground)]">{t.forensics.reference}</h2>
           <span
-            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[0.75rem] font-semibold"
+            className="vk-mono vk-tabular inline-flex items-center gap-1.5 rounded-[var(--r-sm)] border px-2 py-0.5 text-[0.75rem] font-semibold"
             style={{
               color: scoreColor,
               borderColor: `color-mix(in srgb, ${scoreColor} 40%, transparent)`,
@@ -126,7 +126,7 @@ export function SideBySide({
         </div>
 
         {referenceUrl && (
-          <div className="vk-no-print flex items-center gap-0.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+          <div className="vk-no-print flex items-center gap-0.5 rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
             {(['curtain', 'side'] as const).map((m) => {
               const active = mode === m;
               return (
@@ -136,7 +136,7 @@ export function SideBySide({
                   onClick={() => setMode(m)}
                   aria-pressed={active}
                   className={[
-                    'rounded-[2px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                    'rounded-[var(--r-xs)] px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
                     active
                       ? 'bg-[var(--accent-tint)] text-[var(--foreground)]'
                       : 'text-[var(--muted-strong)] hover:text-[var(--foreground)]',
@@ -150,7 +150,7 @@ export function SideBySide({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-1.5 text-[0.8125rem]">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-1.5 text-[0.8125rem]">
         <span className="text-[var(--muted)]">{t.forensics.impersonatingPrefix}</span>
         <span className="font-semibold text-[var(--foreground)]">{impersonatedTarget}</span>
         {portal && (
@@ -159,12 +159,12 @@ export function SideBySide({
       </div>
 
       {!referenceUrl ? (
-        <div className="mt-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-3 text-[0.8125rem] text-[var(--muted-strong)]">
+        <div className="mt-3 rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-3 text-[0.8125rem] text-[var(--muted-strong)]">
           {failed ? t.forensics.failedReference : t.forensics.loadingReference}
         </div>
       ) : mode === 'curtain' ? (
         <div className="mt-3 flex flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2 text-[0.75rem]">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)] px-3 py-2 text-[0.75rem]">
             <span className="vk-mono inline-flex items-center gap-1.5 font-semibold text-[var(--verdict-critical)]">
               <IconOctagonAlert size={13} />
               <span>{t.forensics.suspectFrameLabel}</span>
@@ -178,12 +178,7 @@ export function SideBySide({
                   type="button"
                   onClick={() => setWipe(preset)}
                   aria-pressed={wipe === preset}
-                  className={[
-                    'vk-mono vk-tabular rounded-[2px] border px-2 py-0.5 text-[0.75rem] font-medium transition-colors',
-                    wipe === preset
-                      ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] text-[var(--accent-ink)]'
-                      : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                  ].join(' ')}
+                  className="vk-chip vk-tabular h-7 px-2.5 text-[0.75rem]"
                 >
                   {preset}%
                 </button>
@@ -220,7 +215,7 @@ export function SideBySide({
             }}
             onPointerUp={() => setDragging(false)}
             onPointerCancel={() => setDragging(false)}
-            className="relative cursor-ew-resize select-none overflow-hidden rounded-[3px] border border-[var(--border-strong)] bg-[var(--canvas)]"
+            className="relative cursor-ew-resize select-none overflow-hidden rounded-[var(--r-sm)] border border-[var(--border-strong)] bg-[var(--canvas)]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}
             <img
@@ -253,7 +248,7 @@ export function SideBySide({
               className="pointer-events-none absolute inset-y-0 w-[2px] bg-[var(--accent-ink)]"
               style={{ left: `${wipe}%` }}
             >
-              <span className="absolute top-1/2 left-1/2 grid h-7 w-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[3px] border border-[var(--accent-ink)] bg-[var(--surface-0)] text-[var(--accent-ink)]">
+              <span className="absolute top-1/2 left-1/2 grid h-7 w-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[var(--r-sm)] border border-[var(--accent-ink)] bg-[var(--surface-0)] text-[var(--accent-ink)]">
                 <IconSplitDiff size={14} />
               </span>
             </div>
@@ -261,7 +256,7 @@ export function SideBySide({
         </div>
       ) : (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="overflow-hidden rounded-[3px] border border-[var(--verdict-critical)]/45 bg-[var(--canvas)]">
+          <div className="overflow-hidden rounded-[var(--r-sm)] border border-[var(--verdict-critical)]/45 bg-[var(--canvas)]">
             <div className="vk-mono flex items-center gap-1.5 border-b border-[var(--verdict-critical)]/35 bg-[var(--surface-0)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--verdict-critical)]">
               <IconOctagonAlert size={13} />
               <span>{t.forensics.suspectFrameLabel}</span>
@@ -281,7 +276,7 @@ export function SideBySide({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-[3px] border border-[var(--verdict-safe)]/45 bg-[var(--canvas)]">
+          <div className="overflow-hidden rounded-[var(--r-sm)] border border-[var(--verdict-safe)]/45 bg-[var(--canvas)]">
             <div className="vk-mono flex items-center gap-1.5 border-b border-[var(--verdict-safe)]/35 bg-[var(--surface-0)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--verdict-safe)]">
               <IconShieldCheck size={13} />
               <span>{t.forensics.officialFrameLabel}</span>

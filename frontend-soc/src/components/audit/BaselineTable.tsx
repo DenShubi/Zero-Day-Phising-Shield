@@ -39,7 +39,7 @@ export function BaselineTable({ baselines }: { baselines: readonly BenchmarkBase
         role="region"
         aria-label={t.audit.baselineTitle}
         tabIndex={0}
-        className="vk-scroll mt-3 min-h-0 flex-1 overflow-auto rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]"
+        className="vk-scroll mt-3 min-h-0 flex-1 overflow-auto rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)]"
       >
         <table className="w-full border-collapse text-[0.8125rem]">
           <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">

@@ -33,22 +33,22 @@ export const metadata: Metadata = {
   },
 };
 
-const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem('vk:theme');var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="color-scheme"]');if(m)m.setAttribute('content',t);}catch(e){document.documentElement.dataset.theme='dark';}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem('vk:theme');var t=(s==='light'||s==='dark')?s:'light';document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="color-scheme"]');if(m)m.setAttribute('content',t);}catch(e){document.documentElement.dataset.theme='light';}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="id"
       data-type="software"
-      data-theme="dark"
+      data-theme="light"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <head>
-        <meta name="color-scheme" content="dark light" />
+        <meta name="color-scheme" content="light dark" />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full bg-[var(--background)] text-[var(--foreground)] antialiased">
+      <body className="min-h-full bg-[var(--canvas)] text-[var(--foreground)] antialiased">
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -27,16 +27,16 @@ function ComponentRow({
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2 text-[0.8125rem]">
         <span className="text-[var(--muted-strong)]">{label}</span>
-        <span className="vk-mono vk-tabular font-semibold text-[var(--foreground)]">
+        <span className="vk-tabular font-semibold text-[var(--foreground)]">
           {formatScore(value)}
         </span>
       </div>
       <div
-        className="h-1.5 overflow-hidden rounded-[2px] bg-[var(--surface-3)]"
+        className="h-1.5 overflow-hidden rounded-[var(--r-pill)] bg-[var(--surface-3)]"
         aria-hidden="true"
       >
         <div
-          className="h-full"
+          className="h-full rounded-[var(--r-pill)]"
           style={{ width: `${Math.max(2, value)}%`, background: colorVar }}
         />
       </div>
@@ -57,11 +57,11 @@ export function ScoreBreakdownPanel({
   return (
     <div className="min-w-0 p-4">
       <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
-        <span className="text-[0.875rem] font-semibold text-[var(--foreground)]">
+        <span className="vk-section-title">
           {id.score.total}
         </span>
         <div
-          className="vk-mono vk-tabular inline-flex items-baseline gap-1.5 text-[1.75rem] leading-none font-bold tracking-[-0.02em]"
+          className="vk-metric inline-flex items-baseline gap-1.5"
           style={{ color: finalColor }}
         >
           <VerdictIcon verdict={finalBand} size={18} />
@@ -85,7 +85,7 @@ export function ScoreBreakdownPanel({
             {appliedRules.map((rule) => (
               <li
                 key={rule}
-                className="rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] px-2.5 py-1.5 text-[0.75rem] leading-snug text-[var(--muted-strong)]"
+                className="rounded-[var(--r-md)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[0.75rem] leading-snug text-[var(--muted-strong)]"
               >
                 {rule}
               </li>

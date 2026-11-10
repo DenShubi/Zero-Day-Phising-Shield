@@ -21,7 +21,7 @@ export default function RootError({
 
   return (
     <section className="vk-panel-section p-4 sm:p-6">
-      <div className="mx-auto my-auto w-full max-w-xl rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-0)] p-6">
+      <div className="mx-auto my-auto w-full max-w-xl rounded-[var(--r-md)] border border-[var(--border-strong)] bg-[var(--surface-0)] p-6">
         <div className="flex items-center gap-2 text-[var(--verdict-critical)]">
           <IconOctagonAlert size={18} />
           <h1
@@ -35,7 +35,7 @@ export default function RootError({
         <p className="mt-2 text-[0.875rem] leading-[1.55] text-[var(--muted-strong)]">
           {id.errors.crashBody}
         </p>
-        <pre className="vk-mono mt-3 overflow-x-auto rounded-[3px] border border-[var(--border)] bg-[var(--canvas)] p-3 text-[0.75rem] text-[var(--muted-strong)]">
+        <pre className="vk-mono mt-3 overflow-x-auto rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--canvas)] p-3 text-[0.75rem] text-[var(--muted-strong)]">
           {error.message}
         </pre>
         <button

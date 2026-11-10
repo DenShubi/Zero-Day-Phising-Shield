@@ -50,19 +50,19 @@ export function ScanProgress({
     <div
       role="status"
       aria-live="polite"
-      className="rounded-[4px] border border-[var(--accent-border)] bg-[var(--surface-0)] p-4"
+      className="vk-card-quiet p-3.5"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--accent-ink)]"
+            className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--accent)]"
           />
-          <span className="text-[0.875rem] font-semibold text-[var(--foreground)]">
+          <span className="text-[0.84rem] font-semibold text-[var(--foreground)]">
             {t.scan.scanning}
           </span>
-          <span className="vk-mono vk-tabular text-[0.78rem] text-[var(--accent-ink)]">
-            ({elapsed.toFixed(1)} {t.scan.elapsedUnit})
+          <span className="vk-tabular text-[0.78rem] text-[var(--muted)]">
+            {elapsed.toFixed(1)} {t.scan.elapsedUnit}
           </span>
         </div>
 
@@ -84,18 +84,18 @@ export function ScanProgress({
             <li
               key={stage.title}
               className={[
-                'flex items-center gap-1.5 rounded-[3px] border px-2.5 py-1.5 text-[0.75rem]',
+                'flex items-center gap-1.5 rounded-[var(--r-pill)] px-2.5 py-1.5 text-[0.75rem]',
                 isCurrent
-                  ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
+                  ? 'bg-[var(--accent-tint)] font-semibold text-[var(--accent-ink)]'
                   : isDone
-                    ? 'border-[var(--verdict-safe)]/40 bg-[var(--surface-1)] text-[var(--verdict-safe)]'
-                    : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--muted)]',
+                    ? 'bg-[var(--surface-1)] text-[var(--verdict-safe)]'
+                    : 'bg-[var(--surface-1)] text-[var(--muted)]',
               ].join(' ')}
             >
               {isDone ? (
                 <IconCheck size={12} className="shrink-0" />
               ) : (
-                <span className="vk-mono text-[0.6875rem]">{idx + 1}.</span>
+                <span className="vk-tabular text-[0.6875rem] opacity-70">{idx + 1}</span>
               )}
               <span className="truncate">{stage.title}</span>
             </li>

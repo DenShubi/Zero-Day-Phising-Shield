@@ -1,123 +1,175 @@
 ---
-version: "2.0"
-name: VisiKartika-Shield-Architectural-Security-Ledger
-archetype: Architectural Security Ledger (SecretX Endpoints Inventory + TasteSkill Anti-Slop)
-dial: "ENERGY=4, RHYTHM=7, MOTION=2"
+version: "3.0"
+name: VisiKartika-Shield-Soft-Console
+archetype: Soft Console (floating app window, product-dashboard density)
+dial: "ENERGY=3, RHYTHM=5, MOTION=2"
 pageType: software
 siteKind: software
-colorScheme: "dark light (Dual Theme: Dark Ops Carbon + Projector Paper Light)"
+colorScheme: "light dark (Soft Light default + Deep Dark)"
 ---
 
-# DESIGN.md: VisiKartika Shield Architectural Security Ledger
+# DESIGN.md: VisiKartika Shield - Soft Console
 
-Dial: `ENERGY=4, RHYTHM=7, MOTION=2`
+Dial: `ENERGY=3, RHYTHM=5, MOTION=2`
 
-Dokumen ini mengunci sistem desain generasi ke-2 untuk `frontend-soc/` pada platform **VisiKartika Shield**. Spesifikasi ini menggantikan tata letak kartu Bento sebelumnya dengan arsitektur **Architectural Security Ledger** (terinspirasi inventaris endpoint keamanan kelas produksi seperti *SecretX Endpoints Inventory*): bingkai struktural rata (*flush ruled panes*) berbatas garis tipis `1px`, tabel inventaris berdensitas tinggi, geometri sudut tajam `0px-4px`, dukungan nyata **Dual Theme (Dark Ops + Projector Light)**, dan disiplin warna monokrom teknikal dengan satu aksen sinyal tunggal.
+Dokumen ini mengunci sistem desain generasi ke-3 untuk `frontend-soc/`. Versi ini
+mengganti **Architectural Security Ledger** (v2.0) secara menyeluruh.
 
-## 1. Prinsip Utama Anti-Slop
+Referensi visualnya adalah dasbor produk modern (Sypher, Fulcrum, dan sejenisnya):
+satu jendela aplikasi melayang di atas kanvas bernuansa, sudut membulat, banyak
+ruang kosong, dan tipografi tenang. **Situs institusi/pemerintah tidak dipakai
+sebagai acuan tampilan.** Konten domainnya tetap: yang berubah hanya bahasa rupa.
 
-1. **Nol Kartu Bento Mengambang**: Seluruh layar disusun sebagai bidang struktural rata (*flush ledger grid*) yang dibagi oleh garis `1px` (`border-b`, `border-r`, `divide-x`, `divide-y`). Tidak ada mosaik kotak `rounded-xl` mengambang di atas ruang kosong.
-2. **Nol Garis Samping Berwarna (`R-01`)**: Dilarang memakai `border-l-2` atau `border-l-4` berwarna pada kartu, navigasi, *callout*, maupun baris aturan. Status ditunjukkan melalui permukaan struktural, garis `1px` utuh, ikon geometris `12px-16px`, dan label teks eksplisit.
-3. **Geometri Sudut Tajam (`0px-4px`) & Nol Pill Kapsul (`R-09`)**:
-   - Bingkai panel, strip metrik, dan pembagi ruang kerja: `0px` (rata tepi).
-   - Kontrol interaktif (`button`, `input`, `select`, blok kode): `4px` (`rounded-[4px]`).
-   - Tag status dan *verdict* (`VerdictBadge`, filter layer bukti): `3px` (`rounded-[3px]`) berbentuk tag teknis persegi panjang dengan tipografi *monospace* kapital. Kapsul `rounded-full` dilarang (kecuali titik indikator bundar `6px-8px`).
-4. **Disiplin Warna Ketat (`R-29`)**:
-   - **90% Monokrom Karbon / Kertas Teknikal**: Aksi primer memakai kontras tinta terbalik (*inverted monochrome ink*: `#EFECE6` di atas gelap, `#141619` di atas terang), bukan tombol biru SaaS (`#2563eb`).
-   - **1 Aksen Sinyal Teknis (*Mineral Petrol Teal*)**: Dipakai hemat (`<= 5%` area layar) untuk cincin fokus `:focus-visible`, garis bidik optik *visual diff*, dan indikator aktif.
-   - **Skala Semantik Verdict Terpusat**: Warna merah/amber/hijau hanya muncul ketika membawa makna status insiden nyata, selalu didampingi ikon SVG dan label teks.
-5. **Dual Theme Nyata untuk Operasi & Proyektor (`R-21`, `R-34`)**:
-   - **Dark Ops Mode (`data-theme="dark"`, bawaan)**: Dikalibrasi untuk ruang operasi SOC tanpa abu-abu kusam.
-   - **Projector Light Mode (`data-theme="light"`)**: Permukaan kertas batu hangat (`#F5F4F0` / `#FFFFFF`) ber-kontras tinggi (`18.13:1`) agar tetap tajam di proyektor ruang sidang terang.
-   - Sakelar tema bekerja instan tanpa *flash* (FOUC script sinkron + `<meta name="color-scheme">`).
+## 1. Prinsip
 
-## 2. Token Warna Terkunci & Rasio Kontras WCAG (Terverifikasi `contrast-check.py`)
+1. **Satu Jendela Aplikasi, Bukan Mozaik Kartu.** Seluruh konsol hidup di dalam
+   satu bingkai `.vk-app-window` (radius `18px`, 1px border, `--shadow-window`)
+   yang melayang di atas kanvas `--canvas`. Di dalamnya, bidang dipisah oleh
+   garis rambut 1px dan perbedaan permukaan - bukan oleh tumpukan kartu
+   mengambang.
+2. **Geometri Lembut.** Skala radius tunggal: `--r-xs 6` / `--r-sm 8` /
+   `--r-md 10` / `--r-lg 14` / `--r-xl 18` / `--r-pill`. Tag status dan chip
+   filter memakai bentuk kapsul (`--r-pill`); tidak ada lagi sudut tajam
+   `0px-4px`.
+3. **Elemen Dulu, Teks Belakangan.** Setiap panel tidak lagi punya `<h1>` +
+   kalimat penjelas: tab navigasi yang aktif sudah menamai panelnya, dan pita
+   metrik, kepala tabel, serta inspektur menamai dirinya sendiri. `<h1>` tetap
+   ada tetapi `visually-hidden` untuk pembaca layar dan target *skip link*.
+   Angka tidak diulang sebagai kalimat; ikon tidak diulang sebagai label.
+4. **Warna Hanya Saat Berarti.** Permukaan dan tinta netral; satu aksen merek
+   indigo (`--accent`) untuk aksi primer, tab aktif, dan cincin fokus. Merah /
+   amber / hijau **eksklusif** milik skala verdict, selalu berpasangan dengan
+   ikon dan label teks sehingga tetap terbaca tanpa warna.
+5. **Logo Masih Placeholder.** `src/components/ui/BrandMark.tsx` sengaja
+   menampilkan ubin bergaris putus-putus. Ganti isi berkas itu saja saat logo
+   asli siap; tidak ada tempat lain yang perlu disentuh.
+6. **Dua Tema Setara.** Soft Light adalah bawaan (`data-theme="light"`), Deep
+   Dark sepenuhnya selesai, bukan turunan. Pergantian instan tanpa FOUC (skrip
+   sinkron + `<meta name="color-scheme">`).
 
-Seluruh token didefinisikan satu kali di `src/app/globals.css`. Setiap pasangan teks dan latar telah diverifikasi lulus WCAG 2.2 AA (`>= 4.5:1` teks normal, `>= 3.0:1` teks besar) di kedua mode tema.
+## 2. Token Warna
 
-### 2.1 Dark Ops Mode (`:root`, `data-theme="dark"`)
+Semua token hidup satu kali di `src/app/globals.css`. `--surface-0` adalah pita
+tenang di belakang kepala panel, rel samping, dan kolom pendamping;
+`--surface-1` adalah bidang baca utama. Perbedaan keduanya yang memberi struktur
+setelah garis tebal ledger dihapus.
 
-| Token CSS | Hex | Kontras pada `#111317` | Peran Operasional |
+### 2.1 Soft Light (bawaan, `:root`)
+
+| Token | Hex | Peran |
+|---|---|---|
+| `--canvas` | `#eceef2` | Kanvas di luar jendela aplikasi |
+| `--surface-0` / `--surface-2` | `#f7f8fa` | Pita kepala, rel samping, baris *hover* |
+| `--surface-1` | `#ffffff` | Bidang baca utama, tabel, kartu |
+| `--surface-3` | `#eef0f4` | Trek navigasi, avatar baris, isian terpilih |
+| `--border-subtle` | `#f0f1f4` | Garis antar-baris tabel |
+| `--border` | `#e5e7ec` | Garis pembagi struktural + tepi kontrol |
+| `--border-strong` | `#d2d5dd` | Tepi *hover* kontrol, bingkai dropzone |
+| `--foreground` | `#16171c` | Teks utama (17.4:1 di `#ffffff`) |
+| `--muted-strong` | `#434652` | Teks isi sekunder (10.8:1) |
+| `--muted` | `#71747f` | Label kolom, stempel waktu (5.3:1) |
+| `--accent` | `#5b59d6` | Aksi primer; teks putih di atasnya 5.5:1 |
+| `--accent-ink` | `#4f4dcb` | Aksen sebagai teks (6.4:1) |
+| `--verdict-critical` | `#c02626` | `PHISHING` (+ ikon `OctagonAlert`) |
+| `--verdict-suspicious` | `#92540a` | `MENCURIGAKAN` (+ ikon `AlertTriangle`) |
+| `--verdict-safe` | `#157a47` | `AMAN` (+ ikon `ShieldCheck`) |
+
+### 2.2 Deep Dark (`:root[data-theme="dark"]`)
+
+| Token | Hex | Peran |
+|---|---|---|
+| `--canvas` | `#0f1012` | Kanvas di luar jendela |
+| `--surface-0` | `#1f2024` | Pita kepala dan rel samping |
+| `--surface-1` | `#1a1b1f` | Bidang baca utama |
+| `--surface-3` | `#292a30` | Trek navigasi, isian terpilih |
+| `--border` | `#2d2e35` | Garis pembagi struktural |
+| `--foreground` | `#f1f1f4` | Teks utama (15.4:1 di `#1a1b1f`) |
+| `--muted-strong` | `#c2c3cb` | Teks isi sekunder (9.2:1) |
+| `--muted` | `#8c8e99` | Label kolom (5.2:1) |
+| `--accent` | `#8886f5` | Aksi primer; tinta gelap di atasnya 6.0:1 |
+| `--accent-ink` | `#a5a3ff` | Aksen sebagai teks (7.7:1) |
+| `--verdict-critical` | `#ff7a7a` | `PHISHING` |
+| `--verdict-suspicious` | `#f7b955` | `MENCURIGAKAN` |
+| `--verdict-safe` | `#4ade80` | `AMAN` |
+
+### 2.3 Layer Anotasi Bukti (terkunci ke warna PNG dari backend OpenCV)
+
+`--layer-logo: #ed1c24` &middot; `--layer-qr: #d228d2` &middot;
+`--layer-form: #ffa500` &middot; `--layer-input: #ef4444`
+
+## 3. Tipografi
+
+- `Geist Sans` (`next/font/local`) untuk seluruh antarmuka.
+- `Geist Mono` **hanya** untuk alamat URL/host, blok aturan blokir, dan nomor
+  tiket - bukan untuk label kolom atau tag status. Label kolom kini kalimat
+  biasa 12px/500, bukan monospace kapital berspasi.
+- Angka memakai `font-variant-numeric: tabular-nums` (`.vk-tabular`).
+- Skala: `.vk-metric-lg` 40px/650, `.vk-metric` 28px/600,
+  `.vk-section-title` 15px/600, isi 13-13.5px, label 12px/500.
+
+## 4. Arsitektur Ruang Kerja
+
+### 4.1 Kerangka
+
+```
+canvas (padding 12-16px)
+└── .vk-app-window                       radius 18px, overflow hidden
+    ├── .vk-topbar                       logo placeholder | 4 tab | status + tema
+    ├── .vk-page-header  (opsional)      kontrol khusus panel, bukan judul
+    └── main                             panel aktif
+```
+
+`.vk-topbar` membungkus di bawah `768px`: identitas + status di baris pertama,
+trek navigasi mendapat barisnya sendiri yang dapat digeser.
+
+### 4.2 Empat Panel (sebelumnya enam)
+
+Enam tab lama membuat beberapa panel terasa kosong. Pekerjaan yang satu nafas
+kini satu tab:
+
+| Tab | `?view=` | Isi | Menyerap |
 |---|---|---|---|
-| `--canvas` / `--background` | `#0B0C0E` | - | Kanvas dasar & latar bingkai bukti |
-| `--surface-0` | `#0E1014` | - | Bilah navigasi kiri & bilah kepala panel |
-| `--surface-1` / `--surface` | `#111317` | - | Bidang utama buku besar (*ledger pane*) |
-| `--surface-2` / `--surface-raised` | `#171A20` | - | Kepala tabel *sticky*, baris *hover*, bilah sekunder |
-| `--surface-3` | `#1E222A` | - | Item navigasi aktif & kontrol terpilih |
-| `--surface-4` | `#242933` | - | Popover konfigurasi endpoint |
-| `--border-subtle` | `#1F242D` | - | Garis bagi baris tabel internal |
-| `--border` | `#2A303C` | - | Garis pembagi struktural `1px` antar-bidang |
-| `--border-strong` | `#3D4556` | - | Garis tepi kontrol input & bingkai aktif |
-| `--foreground` | `#EFECE6` | `15.77 : 1` (AAA) | Teks utama, angka metrik, nama host |
-| `--muted-strong` | `#C8C5BE` | `10.79 : 1` (AAA) | Teks deskripsi, isi temuan forensik |
-| `--muted` | `#98968F` | `6.28 : 1` (AA+) | Label kolom, indeks grup, stempel waktu |
-| `--accent` (CTA Primer) | `#EFECE6` | `16.16 : 1` dgn `#0E1013` | Tombol aksi primer monokrom kontras tinggi |
-| `--on-accent` | `#0E1013` | `16.16 : 1` | Teks/ikon di atas tombol primer |
-| `--accent-ink` (Signal Teal) | `#4FD1C5` | `9.97 : 1` (AAA) | Fokus `:focus-visible`, garis bidik diff, indikator tahap |
-| `--verdict-critical` | `#FF6B6B` | `6.70 : 1` (AA+) | Status `PHISHING KRITIS` (+ ikon `OctagonAlert`) |
-| `--verdict-suspicious` | `#F6AD3C` | `9.71 : 1` (AAA) | Status `MENCURIGAKAN` (+ ikon `AlertTriangle`) |
-| `--verdict-safe` | `#4ADE80` | `10.67 : 1` (AAA) | Status `AMAN` (+ ikon `ShieldCheck`) |
+| **Beranda** | `beranda` (bawaan) | Omnibar pindai + pita verdict + tabel riwayat (7 kol) + inspektur (5 kol) | `komando` + `pemindaian` |
+| **Bukti** | `forensik` | Panggung bukti visual / diff + dok telemetri bertab + rincian skor | `forensik` |
+| **Respons** | `respons` | *Segmented control*: `Daftar Blokir` \| `Lapor WhatsApp` | `mitigasi` + `lapor-cepat` |
+| **Akurasi** | `evaluasi` | Metrik, confusion matrix, latensi, ablasi | `audit` |
 
-### 2.2 Projector Light Mode (`:root[data-theme="light"]`)
+Seluruh id lama tetap jadi alias di `src/lib/panel-route.ts`, jadi tautan lama
+tidak mati; `?view=lapor-cepat` mendarat langsung di paruh WhatsApp, dan
+`?view=mitigasi&host=...` di paruh daftar blokir.
 
-| Token CSS | Hex | Kontras pada `#FFFFFF` | Peran Operasional |
-|---|---|---|---|
-| `--canvas` / `--background` | `#F5F4F0` | - | Kanvas kertas batu hangat |
-| `--surface-0` | `#EFECE6` | - | Bilah navigasi kiri & kepala panel |
-| `--surface-1` / `--surface` | `#FFFFFF` | - | Bidang utama buku besar & tabel |
-| `--surface-2` / `--surface-raised` | `#ECEAE4` | - | Kepala tabel *sticky*, baris *hover*, bilah pemberitahuan |
-| `--surface-3` | `#E3E0D8` | - | Item navigasi aktif & kontrol terpilih |
-| `--surface-4` | `#FFFFFF` | - | Popover konfigurasi endpoint |
-| `--border-subtle` | `#E2DFD7` | - | Garis bagi baris tabel internal |
-| `--border` | `#CFCBC0` | - | Garis pembagi struktural `1px` antar-bidang |
-| `--border-strong` | `#9E998D` | - | Garis tepi kontrol input & bingkai bukti |
-| `--foreground` | `#141619` | `18.13 : 1` (AAA) | Teks utama, angka metrik, nama host |
-| `--muted-strong` | `#32363D` | `12.13 : 1` (AAA) | Teks deskripsi, isi temuan forensik |
-| `--muted` | `#555B65` | `6.84 : 1` (AA+) | Label kolom, indeks grup, stempel waktu |
-| `--accent` (CTA Primer) | `#141619` | `16.76 : 1` dgn `#F7F6F2` | Tombol aksi primer tinta karbon |
-| `--on-accent` | `#F7F6F2` | `16.76 : 1` | Teks/ikon di atas tombol primer |
-| `--accent-ink` (Signal Teal) | `#0D6E66` | `6.11 : 1` (AA+) | Fokus `:focus-visible`, garis bidik diff, indikator tahap |
-| `--verdict-critical` | `#B91C1C` | `6.47 : 1` (AA+) | Status `PHISHING KRITIS` (+ ikon `OctagonAlert`) |
-| `--verdict-suspicious` | `#9A5200` | `5.86 : 1` (AA+) | Status `MENCURIGAKAN` (+ ikon `AlertTriangle`) |
-| `--verdict-safe` | `#156D3B` | `6.40 : 1` (AA+) | Status `AMAN` (+ ikon `ShieldCheck`) |
+### 4.3 Beranda
 
-### 2.3 Layer Anotasi Bukti Visual (Terkunci ke OpenCV Backend)
+1. **Omnibar** (`ScanOmnibar`): satu baris - kolom URL, tombol `Gambar` yang
+   membuka dropzone sebaris, tombol `Pindai`. Di bawahnya chip contoh uji satu
+   klik dan kolom satuan pelapor opsional. Pratinjau reputasi domain muncul
+   sendiri saat URL diketik; progres lima tahap muncul saat pemindaian jalan.
+2. **Pita Verdict**: empat sel (`Dipindai`, `Phishing`, `Mencurigakan`, `Aman`).
+   Sel total memakai batang bertumpuk yang menunjukkan komposisi; sel lain
+   memakai batang porsi + persentase. Tidak ada kalimat yang mengulang angka.
+3. **Tabel + Inspektur**: tabel riwayat (avatar inisial, target, status, skor,
+   usia) di kiri; ringkasan baris terpilih (verdict, tiket, target, tangkapan
+   layar, skor, temuan) di kanan.
 
-- `--layer-logo: #ed1c24` (Crimson)
-- `--layer-qr: #d228d2` (Magenta)
-- `--layer-form: #ffa500` (Amber)
-- `--layer-input: #ef4444` (Red)
+## 5. Komponen Bersama
 
-## 3. Tipografi & Hierarki Buku Besar
+| Kelas | Bentuk |
+|---|---|
+| `.vk-btn` + `-primary` / `-secondary` / `-ghost` | radius `10px`, bayangan halus |
+| `.vk-input` | radius `10px`, cincin fokus `3px` aksen. Padding-nya ada di `@layer components` agar utilitas Tailwind (`pl-9` untuk ikon di dalam kolom) tetap menang |
+| `.vk-chip` | kapsul filter; aktif = tinta penuh (`aria-pressed` / `data-active`) |
+| `.vk-pill` | tag status kapsul (verdict) |
+| `.vk-nav-track` + `.vk-nav-tab` | *segmented control*; aktif = permukaan terangkat (`aria-current="page"`) |
+| `.vk-card` / `.vk-card-quiet` | blok lunak radius `14px` |
 
-- **Keluarga Font Lokal (`next/font/local`)**: `Geist Sans` untuk antarmuka dan judul; `Geist Mono` untuk seluruh alamat URL/host, nomor tiket, skor risiko, persentase, latensi, dan tag teknis.
-- **Disiplin Numerik**: Seluruh angka metrik wajib `font-variant-numeric: tabular-nums`.
-- **Skala Ukuran**:
-  - `hero-metric`: `Geist Mono`, `44px` (`2.75rem`), `700`, `line-height: 1.0`, `tracking: -0.035em` (angka fokus utama seperti Insiden Kritis Aktif & sel Matriks Konfusi).
-  - `ledger-metric`: `Geist Mono`, `24px` (`1.5rem`), `600`, `line-height: 1.1`, `tracking: -0.02em` (sel metrik sebaris).
-  - `panel-title` (`h1`): `Geist Sans`, `18px-20px`, `600`, `tracking: -0.02em`.
-  - `pane-header` (`h2`/`h3`): `Geist Sans`, `13px`, `600`, `uppercase`, `tracking: 0.05em` atau `15px` `600` kalimat tegas.
-  - `table-cell` / `ui`: `13.5px-14px` (`0.84375rem-0.875rem`), `line-height: 1.45`.
-  - `body`: `15px-16px`, `line-height: 1.5`, lebar baca dibatasi `<= 68ch`.
-  - `tag-mono`: `Geist Mono`, `11.5px-12px`, `600`, `tracking: 0.04em`.
+## 6. Interaksi, Keyboard, Cetak
 
-## 4. Arsitektur Ruang Kerja (`1440x900` Desktop, Tablet `768px`, Mobile `390px`)
-
-1. **Kerangka Dek Komando Atas Dua Tingkat (`AppShell.tsx` pada `/`)**:
-   - **Nol Bilah Sisi Kiri (Zero Left Sidebar)**: Bilah navigasi vertikal `236px` dihapus sepenuhnya agar seluruh bidang kerja memperoleh lebar penuh `100vw`.
-   - **Tingkat 1 (Top Command Deck)**: Identitas sistem + node operasi `PUSSIBERAD // NODE-SOC-01` + telemetri mesin/basis data sebaris (`HealthStrip`) + sakelar tema instan (`ThemeToggle`: `Mode Gelap` / `Mode Proyektor`).
-   - **Tingkat 2 (Horizontal 6-Module Matrix Bar)**: Enam sel modul bernomor (`MOD-01` s.d. `MOD-06`) berbatas garis `1px` (`divide-x`) yang dapat diakses satu klik tanpa muat ulang halaman.
-   - Di layar `>= 1024px`: tinggi ruang kerja dikunci `100svh` dengan scroll terisolasi per lajur (`.vk-scroll`).
-2. **Enam Bidang Operasional Berstruktur Khusus**:
-   - **MOD-01 Inventaris & Triase (`?view=komando`)**: Pita telemetri kompak + **Omnibar Eksekusi Sandbox Sebaris** + **Master-Detail Split**: Tabel Inventaris Multi-Poros (`V / D / M`) di kiri (`7 kolom`) dan **Laci Inspektur Forensik Di-Tempat & Telemetri Satuan** di kanan (`5 kolom`).
-   - **MOD-02 Sandbox & QR (`?view=pemindaian`)**: Dek perintah terminal dua mode (`[01] URL Chromium` | `[02] Poster QR/OCR`) di atas **Matriks 3-Kolom (`4 | 4 | 4`)**: Katalog Target Simulasi Terisolasi (Kolom 01), Tabel Diagnostik 6-Bendera Domain (`FLG-01..06`) & Dropzone Citra (Kolom 02), serta Jejak Pipeline 5-Tahap Vertikal (Kolom 03).
-   - **MOD-03 IDE Forensik (`?view=forensik&insiden=<id>`)**: **Meja Kerja IDE 3-Lajur Tanpa Gulir Halaman (`15rem | minmax(0,1fr) | 21.5rem`)**: Antrean Tiket Insiden 1-Klik di lajur kiri, Panggung Bukti Visual/Diff di tengah atas + **Dok Telemetri Bertab Ala DevTools** (`DOM & Form`, `QR & OCR`, `Redirect HTTP`, `Waterfall SLA`) di tengah bawah, serta Rincian Skor Deterministik & Temuan Kunci di lajur kanan.
-   - **MOD-04 Kompiler Blokir (`?view=mitigasi&host=<host>`)**: **Pita Horizontal 9-Format Infrastruktur (`FMT-01..09`)** di bagian atas + belahan **Tabel Indikator IOC Tervalidasi RFC (6 kolom)** di kiri dan **Penampil Kode Aturan Terminal Penuh Bernomor Baris (`001..N`, 6 kolom)** di kanan.
-   - **MOD-05 Jembatan WA (`?view=lapor-cepat`)**: **Jembatan Triase Lapangan 3-Kolom (`3 | 5 | 4`)**: Dek Skenario & Dropzone Lampiran Prajurit di Kolom 01, Terminal Pesan Lapangan (`--wa-*`) di Kolom 02, dan Jejak Eksekusi Pipeline SOC 4-Tahap + Tiket Hasil Terakhir di Kolom 03.
-   - **MOD-06 Matriks Evaluasi (`?view=audit`)**: Belahan **Buku Besar Verifikasi Ambang Teknis (`MET-01..05`) & Tabel Distribusi Latensi SLA (4 kolom)** di kiri, dipasangkan dengan **Tabel Matriks Kebingungan Silang 2x2 (`Aktual \ Prediksi`) & Tabel Studi Ablasi Detektor (8 kolom)** di kanan.
-
-## 5. Aturan Interaksi, Keyboard & Cetak
-
-- **Fokus Keyboard (`R-32`)**: Seluruh elemen interaktif menggunakan `:focus-visible` dengan `outline: 2px solid var(--accent-ink)` dan `outline-offset: 2px`, didukung penuh pada High Contrast / Forced Colors Mode, dilengkapi tautan *Skip to main content* di awal dokumen.
-- **Gerak Minimal (`MOTION=2`)**: Hanya transisi warna permukaan/garis `120ms ease-out` dan umpan balik tekan tombol halus. Nol animasi gulir, nol *bounce*, dan patuh penuh terhadap `prefers-reduced-motion: reduce`.
-- **Mode Cetak (`@media print`)**: Menyembunyikan bilah sisi dan kontrol kerja (`.vk-no-print`), mencetak kop resmi laporan forensik di atas kertas putih `#FFFFFF`.
+- **Fokus**: `:focus-visible` dengan `outline: 2px solid var(--accent)` +
+  `outline-offset: 2px`, didukung `forced-colors`, plus *skip link*.
+- **Gerak (`MOTION=2`)**: hanya transisi warna/bayangan `130ms`, patuh penuh
+  pada `prefers-reduced-motion`.
+- **Hidrasi**: usia relatif dan blok aturan blokir dihitung dari jam masing-
+  masing sisi, jadi keduanya memakai `suppressHydrationWarning` alih-alih
+  menahan render sampai *mount* - tidak ada lagi kedipan "-" di kolom waktu.
+- **Cetak**: `.vk-no-print` disembunyikan, jendela diratakan ke kertas putih,
+  URL dibentangkan di belakang tautan.

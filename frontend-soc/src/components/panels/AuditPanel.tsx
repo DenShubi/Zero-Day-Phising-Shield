@@ -72,22 +72,16 @@ export function AuditPanel() {
   if (state.phase === 'loading') {
     return (
       <section className="vk-panel-section">
-        <header className="vk-page-header">
-          <h1
-            id="vk-main-heading"
-            tabIndex={-1}
-            className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
-          >
-            {t.audit.headline}
-          </h1>
-        </header>
+        <h1 id="vk-main-heading" tabIndex={-1} className="visually-hidden">
+          {t.audit.headline}
+        </h1>
         <div
           data-ui="console-workspace"
           className="flex flex-1 items-center justify-center gap-3 p-8 text-[0.875rem] text-[var(--muted-strong)]"
         >
           <span
             aria-hidden="true"
-            className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--accent-ink)]"
+            className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]"
           />
           <span>{t.common.loading}</span>
         </div>
@@ -102,19 +96,19 @@ export function AuditPanel() {
     const serverNote = state.phase === 'ready' ? state.data.message : null;
     return (
       <section className="vk-panel-section">
-        <header className="vk-page-header">
-          <h1
-            id="vk-main-heading"
-            tabIndex={-1}
-            className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
-          >
-            {t.audit.headline}
-          </h1>
+        <h1 id="vk-main-heading" tabIndex={-1} className="visually-hidden">
+          {t.audit.headline}
+        </h1>
+
+        <header className="vk-page-header vk-no-print">
+          <span className="text-[0.78rem] text-[var(--muted)]">
+            {t.audit.benchmarkFileNote}
+          </span>
 
           <button
             type="button"
             onClick={triggerReload}
-            className="vk-btn vk-btn-primary h-8 shrink-0 px-3 text-[0.78rem]"
+            className="vk-btn vk-btn-secondary h-8 shrink-0 px-3 text-[0.78rem]"
           >
             <IconRefresh size={13} />
             <span>{t.audit.ctaRefresh}</span>
@@ -123,9 +117,9 @@ export function AuditPanel() {
 
         <div
           data-ui="console-workspace"
-          className="flex flex-1 items-center justify-center p-6"
+          className="flex flex-1 items-center justify-center bg-[var(--surface-2)] p-6"
         >
-          <div className="max-w-lg rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] p-5">
+          <div className="vk-card max-w-lg p-6">
             <div className="flex items-center gap-2 text-[0.9375rem] font-semibold text-[var(--foreground)]">
               <span className="text-[var(--verdict-suspicious)]" aria-hidden="true">
                 <IconAlertTriangle size={16} />
@@ -136,11 +130,11 @@ export function AuditPanel() {
               {t.audit.unavailableBody}
             </p>
             {serverNote && (
-              <div className="mt-2.5 rounded-[3px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-[0.75rem] text-[var(--muted)]">
+              <div className="mt-2.5 rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-[0.75rem] text-[var(--muted)]">
                 {serverNote}
               </div>
             )}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[4px] border border-[var(--border-strong)] bg-[var(--canvas)] px-3.5 py-2">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-md)] border border-[var(--border-strong)] bg-[var(--canvas)] px-3.5 py-2">
               <code className="vk-mono break-all text-[0.78rem] text-[var(--accent-ink)]">
                 {t.audit.benchmarkCommand}
               </code>
@@ -215,26 +209,22 @@ export function AuditPanel() {
 
   return (
     <section className="vk-panel-section">
-      {/* Header Halaman */}
-      <header className="vk-page-header">
-        <div>
-          <h1
-            id="vk-main-heading"
-            tabIndex={-1}
-            className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
-          >
-            {t.audit.headline}
-          </h1>
-          <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">
-            {t.audit.subtitlePrefix} {m.total} {t.audit.subtitleSuffix}
-            {d.generated_at ? ` · ${t.audit.measuredAtPrefix} ${formatWib(d.generated_at)}` : ''}
-          </p>
-        </div>
+      <h1 id="vk-main-heading" tabIndex={-1} className="visually-hidden">
+        {t.audit.headline}
+      </h1>
+
+      {/* Strip konteks: cakupan dan waktu ukur saja; tab sudah menamai panel. */}
+      <header className="vk-page-header vk-no-print">
+        <p className="text-[0.78rem] text-[var(--muted)]">
+          <span className="vk-tabular font-medium text-[var(--foreground)]">{m.total}</span>{' '}
+          {t.audit.subtitleSuffix}
+          {d.generated_at ? ` · ${t.audit.measuredAtPrefix} ${formatWib(d.generated_at)}` : ''}
+        </p>
 
         <button
           type="button"
           onClick={triggerReload}
-          className="vk-btn vk-btn-primary h-8 shrink-0 px-3 text-[0.78rem]"
+          className="vk-btn vk-btn-secondary h-8 shrink-0 px-3 text-[0.78rem]"
         >
           <IconRefresh size={13} />
           <span>{t.audit.ctaRefresh}</span>
@@ -253,7 +243,7 @@ export function AuditPanel() {
               {t.audit.targetSpecTitle}
             </h2>
 
-            <div className="mt-2.5 overflow-x-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)]">
+            <div className="mt-2.5 overflow-x-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-1)]">
               <table className="w-full border-collapse text-[0.78rem]">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-left">
@@ -302,7 +292,7 @@ export function AuditPanel() {
               Kecepatan Pemindaian (Target &lt;= {slaSec} dtk)
             </h2>
 
-            <div className="mt-2.5 overflow-x-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)]">
+            <div className="mt-2.5 overflow-x-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-1)]">
               <table className="w-full border-collapse text-[0.75rem]">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-left">
@@ -370,12 +360,7 @@ export function AuditPanel() {
                       type="button"
                       onClick={() => setDetailTab('baseline')}
                       aria-pressed={detailTab === 'baseline'}
-                      className={[
-                        'vk-btn h-7 border px-2.5 text-[0.75rem]',
-                        detailTab === 'baseline'
-                          ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--surface-0)] text-[var(--muted-strong)]',
-                      ].join(' ')}
+                      className="vk-chip h-7 text-[0.75rem]"
                     >
                       {t.audit.colApproach}
                     </button>
@@ -383,12 +368,7 @@ export function AuditPanel() {
                       type="button"
                       onClick={() => setDetailTab('slices')}
                       aria-pressed={detailTab === 'slices'}
-                      className={[
-                        'vk-btn h-7 border px-2.5 text-[0.75rem]',
-                        detailTab === 'slices'
-                          ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
-                          : 'border-[var(--border)] bg-[var(--surface-0)] text-[var(--muted-strong)]',
-                      ].join(' ')}
+                      className="vk-chip h-7 text-[0.75rem]"
                     >
                       {t.audit.colSlice}
                     </button>
@@ -401,7 +381,7 @@ export function AuditPanel() {
                   role="region"
                   aria-label={t.audit.baselineTitle}
                   tabIndex={0}
-                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)]"
+                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-0)]"
                 >
                   <table className="w-full border-collapse text-[0.78rem]">
                     <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
@@ -469,7 +449,7 @@ export function AuditPanel() {
                   role="region"
                   aria-label={t.audit.sliceTitle}
                   tabIndex={0}
-                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)]"
+                  className="vk-scroll mt-2.5 min-h-0 flex-1 overflow-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-0)]"
                 >
                   <table className="w-full border-collapse text-[0.78rem]">
                     <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">

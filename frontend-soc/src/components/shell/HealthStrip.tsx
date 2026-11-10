@@ -48,19 +48,21 @@ export function HealthStrip() {
 
   const e = engineMeta[engine];
 
+  // The dot carries the state; the word next to it is the label, not a repeat
+  // of it, so there is no "Mesin: Aktif" prefix to read past.
   return (
     <div
       role="status"
-      aria-label={id.health.ariaLabel}
-      className="inline-flex h-8 items-center gap-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] px-2.5 text-[0.75rem]"
+      aria-label={`${id.health.ariaLabel}: ${e.label}`}
+      title={`${id.health.engine}: ${e.label}`}
+      className="inline-flex h-8 items-center gap-1.5 rounded-[var(--r-pill)] border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-[0.75rem]"
     >
       <span
         aria-hidden="true"
-        className="inline-block h-2 w-2 shrink-0 rounded-full"
+        className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
         style={{ background: e.color }}
       />
-      <span className="text-[var(--muted)]">{id.health.engine}:</span>
-      <span className="font-medium text-[var(--foreground)]">{e.label}</span>
+      <span className="font-medium text-[var(--muted-strong)]">{e.label}</span>
     </div>
   );
 }

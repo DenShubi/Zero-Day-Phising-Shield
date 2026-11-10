@@ -181,22 +181,10 @@ export function MitigationPanel({
     });
   };
 
+  // Rendered as the blocklist half of the Respons panel, so it carries no page
+  // header of its own - the segmented control above it already names it.
   return (
-    <section className="vk-panel-section">
-      {/* Header Halaman */}
-      <header className="vk-page-header">
-        <div>
-          <h1
-            id="vk-main-heading"
-            tabIndex={-1}
-            className="text-[1.125rem] leading-[1.25] font-semibold tracking-[-0.02em] text-[var(--foreground)] outline-none sm:text-[1.25rem]"
-          >
-            {t.mitigation.title}
-          </h1>
-          <p className="mt-0.5 text-[0.78rem] text-[var(--muted)]">{t.mitigation.subtitle}</p>
-        </div>
-      </header>
-
+    <div className="vk-panel-section">
       {/* 2-Kolom Utama: Daftar Domain (6 Kolom) | Kode Konfigurasi (6 Kolom) */}
       <div
         data-ui="console-workspace"
@@ -242,7 +230,7 @@ export function MitigationPanel({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t.mitigation.searchPlaceholder}
-                  className="h-8 w-full rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-1)] pr-2.5 pl-8 text-[0.78rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
+                  className="h-8 w-full rounded-[var(--r-md)] border border-[var(--border-strong)] bg-[var(--surface-1)] pr-2.5 pl-8 text-[0.78rem] text-[var(--foreground)] placeholder:text-[var(--muted)]"
                 />
               </div>
 
@@ -255,7 +243,7 @@ export function MitigationPanel({
                       type="button"
                       onClick={() => toggleVerdict(v)}
                       aria-pressed={on}
-                      className="rounded-[3px] border px-1.5 py-0.5 transition-colors"
+                      className="rounded-[var(--r-sm)] border px-1.5 py-0.5 transition-colors"
                       style={{
                         borderColor: on ? 'var(--border-strong)' : 'var(--border)',
                         borderStyle: on ? 'solid' : 'dashed',
@@ -278,7 +266,7 @@ export function MitigationPanel({
               </span>
               <button
                 type="button"
-                onClick={() => router.replace(buildPanelHref('mitigasi'), { scroll: false })}
+                onClick={() => router.replace(buildPanelHref('respons', { tab: 'blokir' }), { scroll: false })}
                 className="text-[0.75rem] font-medium text-[var(--accent-ink)] underline hover:text-[var(--foreground)]"
               >
                 {t.mitigation.clearFocusedHost}
@@ -392,7 +380,7 @@ export function MitigationPanel({
                 {rejected.length} {t.mitigation.rejectedToggleSuffix}
               </button>
               {showRejected && (
-                <ul className="vk-scroll mt-1.5 max-h-24 overflow-y-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-1)] p-2">
+                <ul className="vk-scroll mt-1.5 max-h-24 overflow-y-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-1)] p-2">
                   {rejected.slice(0, 40).map((r, idx) => (
                     <li
                       key={`${r.raw}-${idx}`}
@@ -463,12 +451,8 @@ export function MitigationPanel({
                     role="tab"
                     aria-selected={isActive}
                     onClick={() => setPreviewFormat(f.id)}
-                    className={[
-                      'vk-btn h-7 border px-2.5 text-[0.75rem]',
-                      isActive
-                        ? 'border-[var(--accent-border)] bg-[var(--accent-tint)] font-semibold text-[var(--foreground)]'
-                        : 'border-[var(--border)] bg-[var(--surface-0)] text-[var(--muted-strong)] hover:text-[var(--foreground)]',
-                    ].join(' ')}
+                    data-active={isActive ? 'true' : undefined}
+                    className="vk-chip h-7 text-[0.75rem]"
                   >
                     {f.label}
                   </button>
@@ -486,7 +470,12 @@ export function MitigationPanel({
                 {t.mitigation.emptyIocs}
               </div>
             ) : (
-              <pre className="vk-mono whitespace-pre-wrap break-all text-[0.75rem] leading-[1.45] text-[var(--foreground)]">
+              // The rule header stamps the time of generation, so the server
+              // and client copies differ by milliseconds.
+              <pre
+                suppressHydrationWarning
+                className="vk-mono whitespace-pre-wrap break-all text-[0.75rem] leading-[1.45] text-[var(--foreground)]"
+              >
                 {previewLines.join('\n')}
               </pre>
             )}
@@ -500,6 +489,6 @@ export function MitigationPanel({
           </div>
         </aside>
       </div>
-    </section>
+    </div>
   );
 }

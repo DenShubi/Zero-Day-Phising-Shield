@@ -68,7 +68,7 @@ export function DomainPreview({ url }: { url: string }) {
 
   if (isChecking) {
     return (
-      <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] px-3.5 py-2.5 text-[0.78rem] text-[var(--muted)]">
+      <div className="vk-card-quiet px-3.5 py-2.5 text-[0.78rem] text-[var(--muted)]">
         {t.scan.checkingDomain}
       </div>
     );
@@ -81,12 +81,12 @@ export function DomainPreview({ url }: { url: string }) {
   const activeFlags = RISK_FLAGS.filter((f) => result[f.key] === true);
 
   return (
-    <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)] p-3.5 text-[0.8125rem]">
+    <div className="vk-card-quiet p-3.5 text-[0.8125rem]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="vk-mono font-semibold text-[var(--foreground)]">{result.host}</span>
           {result.is_official && (
-            <span className="inline-flex items-center gap-1 rounded-[3px] border border-[var(--verdict-safe)]/40 bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] font-semibold text-[var(--verdict-safe)]">
+            <span className="vk-pill bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] text-[var(--verdict-safe)]">
               <IconShieldCheck size={12} />
               <span>{t.scan.officialWhitelist}</span>
             </span>
@@ -118,7 +118,7 @@ export function DomainPreview({ url }: { url: string }) {
               {activeFlags.map((flag) => (
                 <span
                   key={String(flag.key)}
-                  className="rounded-[3px] border border-[var(--verdict-critical)]/40 bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] text-[var(--verdict-critical)]"
+                  className="vk-pill bg-[var(--surface-1)] px-2 py-0.5 text-[0.72rem] font-medium text-[var(--verdict-critical)]"
                 >
                   {flag.label}
                 </span>

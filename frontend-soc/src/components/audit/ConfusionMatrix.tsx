@@ -24,7 +24,7 @@ export function ConfusionMatrix({ metrics }: { metrics: BenchmarkMetrics }) {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-[4px] border border-[var(--border)] bg-[var(--surface-0)]">
+      <div className="overflow-x-auto rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-0)]">
         <table className="w-full border-collapse text-[0.78rem]">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-left">

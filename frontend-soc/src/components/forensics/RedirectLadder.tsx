@@ -59,7 +59,7 @@ export function RedirectLadder({
         {t.forensics.redirectTitle} ({chain.length} {t.forensics.hopsSuffix})
       </h2>
 
-      <ol className="mt-2.5 divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]">
+      <ol className="mt-2.5 divide-y divide-[var(--border-subtle)] rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)]">
         {chain.map((hop, i) => {
           const a = hops[hop];
           const band = a ? bandOf(a.risk_score) : null;

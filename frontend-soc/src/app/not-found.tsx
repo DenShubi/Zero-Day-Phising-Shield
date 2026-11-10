@@ -4,7 +4,7 @@ import { id } from '@/lib/i18n/id';
 export default function NotFound() {
   return (
     <section className="vk-panel-section p-4 sm:p-6">
-      <div className="mx-auto my-auto w-full max-w-xl rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-0)] p-6">
+      <div className="mx-auto my-auto w-full max-w-xl rounded-[var(--r-md)] border border-[var(--border-strong)] bg-[var(--surface-0)] p-6">
         <h1
           id="vk-main-heading"
           tabIndex={-1}

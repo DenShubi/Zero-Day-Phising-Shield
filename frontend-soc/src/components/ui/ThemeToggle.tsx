@@ -18,8 +18,8 @@ const THEME_KEY = 'vk:theme';
 const THEME_EVENT = 'vk:theme-change';
 
 function readThemeSnapshot(): ThemeMode {
-  if (typeof document === 'undefined') return 'dark';
-  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  if (typeof document === 'undefined') return 'light';
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
 function subscribeTheme(onStoreChange: () => void): () => void {
@@ -45,11 +45,11 @@ function applyThemeDom(next: ThemeMode) {
   if (meta) meta.setAttribute('content', next);
 }
 
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export function ThemeToggle() {
   const theme = useSyncExternalStore<ThemeMode>(
     subscribeTheme,
     readThemeSnapshot,
-    () => 'dark',
+    () => 'light',
   );
 
   const toggle = useCallback(() => {
@@ -72,28 +72,9 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       onClick={toggle}
       aria-label={actionLabel}
       title={actionLabel}
-      className={[
-        'vk-btn vk-btn-secondary shrink-0',
-        compact ? 'h-8 w-8 p-0' : 'h-8 w-full justify-between px-2.5 text-[0.75rem]',
-      ].join(' ')}
+      className="vk-btn vk-btn-ghost h-8 w-8 shrink-0 p-0 text-[var(--muted)]"
     >
-      {compact ? (
-        isDark ? (
-          <IconSun size={14} />
-        ) : (
-          <IconMoon size={14} />
-        )
-      ) : (
-        <>
-          <span className="inline-flex items-center gap-1.5 text-[var(--foreground)]">
-            {isDark ? <IconMoon size={13} /> : <IconSun size={13} />}
-            <span>{isDark ? id.theme.dark : id.theme.light}</span>
-          </span>
-          <span className="vk-mono text-[0.6875rem] text-[var(--muted)]">
-            {isDark ? 'TERANG' : 'GELAP'}
-          </span>
-        </>
-      )}
+      {isDark ? <IconSun size={15} /> : <IconMoon size={15} />}
     </button>
   );
 }

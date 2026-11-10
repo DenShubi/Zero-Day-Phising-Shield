@@ -35,7 +35,7 @@ function TelemetryChip({
         : 'var(--muted-strong)';
   return (
     <span
-      className="vk-mono inline-flex items-center gap-1 rounded-[2px] border px-1.5 py-0.5 text-[0.72rem] font-semibold uppercase leading-none"
+      className="vk-mono inline-flex items-center gap-1 rounded-[var(--r-xs)] border px-1.5 py-0.5 text-[0.72rem] font-semibold uppercase leading-none"
       style={{
         color,
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
@@ -89,7 +89,7 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
                   key={boxId}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-[3px] border px-3 py-2 transition-colors"
+                  className="rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-form)' : 'var(--border)',
                     background: active
@@ -122,7 +122,7 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
             {t.forensics.inputsHeader} ({sensitiveCount} {t.forensics.sensitiveCountSuffix}{' '}
             {url.inputs.length})
           </h3>
-          <ul className="divide-y divide-[var(--border-subtle)] rounded-[3px] border border-[var(--border)] bg-[var(--surface-0)]">
+          <ul className="divide-y divide-[var(--border-subtle)] rounded-[var(--r-sm)] border border-[var(--border)] bg-[var(--surface-0)]">
             {url.inputs.map((input, i) => {
               const boxId = boxIdForInput(i);
               const active = highlightedId === boxId;
