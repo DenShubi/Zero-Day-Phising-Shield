@@ -152,7 +152,7 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
           {t.chart.title}{' '}
           <span className="text-[0.78rem] font-normal text-[var(--muted)]">
             {buckets.length > 0
-              ? `${buckets[0].label} – ${buckets[buckets.length - 1].label}`
+              ? `${buckets[0].label} - ${buckets[buckets.length - 1].label}`
               : t.chart.range}
           </span>
         </h2>
@@ -218,8 +218,22 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
                   return (
                     <div
                       key={bucket.index}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${bucket.fullLabel}: ${bucket.total}`}
                       onPointerEnter={() => setHovered(bucket.index)}
-                      className="group relative flex h-full min-w-0 flex-1 cursor-default flex-col justify-end"
+                      onFocus={() => setHovered(bucket.index)}
+                      onBlur={() => setHovered(null)}
+                      onClick={() =>
+                        setHovered((prev) => (prev === bucket.index ? null : bucket.index))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setHovered((prev) => (prev === bucket.index ? null : bucket.index));
+                        }
+                      }}
+                      className="group relative flex h-full min-w-0 flex-1 cursor-pointer flex-col justify-end rounded-[4px] outline-offset-1"
                     >
                       {/* Faint slot track, below gridline weight: rhythm, not data. */}
                       <span
@@ -255,7 +269,7 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
               {hoveredBucket && (
                 <div
                   className={[
-                    'pointer-events-none absolute top-1 z-20 w-max',
+                    'pointer-events-none absolute top-1 z-20 max-w-[calc(100%-0.5rem)] w-max',
                     'vk-card px-3 py-2 shadow-[var(--shadow-md)]',
                     hoveredPosition < buckets.length / 2 ? 'right-1' : 'left-1',
                   ].join(' ')}

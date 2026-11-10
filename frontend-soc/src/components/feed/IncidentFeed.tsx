@@ -17,7 +17,7 @@ function sanitizeTargetLabel(raw: string): string {
   const normalized = raw.startsWith('[IMAGE]')
     ? raw.replace(/^\[IMAGE\]\s*/, `${id.feed.imagePrefix}: `)
     : raw;
-  return normalized.replace(/\s*—\s*/g, ': ');
+  return normalized.replace(/\s*\u2014\s*/g, ': ');
 }
 
 /** First letter of the host, so each row has something to recognise it by. */
@@ -120,8 +120,8 @@ export function IncidentFeed({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="vk-section-title">{id.command.recentTitle}</h2>
 
-          <div className="flex items-center gap-1.5">
-            <div className="relative">
+          <div className="flex w-full items-center gap-1.5 sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:flex-initial">
               <label htmlFor="vk-feed-search" className="visually-hidden">
                 {id.feed.searchAria}
               </label>
@@ -137,7 +137,7 @@ export function IncidentFeed({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={id.feed.searchPlaceholder}
-                className="vk-input h-8 rounded-[var(--r-pill)] pl-8 text-[0.78rem] sm:w-56"
+                className="vk-input h-8 w-full rounded-[var(--r-pill)] pl-8 text-[0.78rem] sm:w-56"
               />
             </div>
             <button
@@ -190,7 +190,7 @@ export function IncidentFeed({
           role="region"
           aria-labelledby="vk-feed-caption"
           tabIndex={0}
-          className="vk-scroll vk-table-region min-h-0 min-w-0 flex-1 overflow-auto"
+          className="vk-scroll vk-table-region max-h-[26rem] min-h-0 min-w-0 flex-1 overflow-auto lg:max-h-none"
         >
           <table className="vk-ledger-table w-full border-collapse text-left">
             <caption id="vk-feed-caption" className="visually-hidden">
@@ -231,7 +231,20 @@ export function IncidentFeed({
                 return (
                   <tr
                     key={incident.scanId}
+                    tabIndex={0}
+                    aria-selected={isSelected}
                     onClick={(e) => handleRowSelect(e, href, targetId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (onSelectIncident) {
+                          onSelectIncident(targetId);
+                        } else {
+                          onOpenIncident?.(targetId);
+                          router.replace(href, { scroll: false });
+                        }
+                      }
+                    }}
                     className={[
                       'group cursor-pointer transition-colors duration-100',
                       isSelected
@@ -295,7 +308,7 @@ export function IncidentFeed({
                           onClick={(e) => openFullForensics(e, href, targetId)}
                           aria-label={`${id.feed.inspectRow}: ${rawTarget}`}
                           title={id.feed.inspectRow}
-                          className="vk-btn vk-btn-ghost h-7 w-7 p-0 text-[var(--muted)] no-underline opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                          className="vk-btn vk-btn-ghost h-7 w-7 p-0 text-[var(--muted)] no-underline opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                         >
                           <IconArrowRight size={13} />
                         </a>

@@ -215,7 +215,7 @@ export function SideBySide({
             }}
             onPointerUp={() => setDragging(false)}
             onPointerCancel={() => setDragging(false)}
-            className="relative cursor-ew-resize select-none overflow-hidden rounded-[var(--r-sm)] border border-[var(--border-strong)] bg-[var(--canvas)]"
+            className="relative cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-[var(--r-sm)] border border-[var(--border-strong)] bg-[var(--canvas)]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served from engine */}
             <img

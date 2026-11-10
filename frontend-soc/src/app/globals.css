@@ -596,6 +596,7 @@ select.vk-input {
 .vk-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  overscroll-behavior: contain;
 }
 
 @supports not (scrollbar-color: auto) {
@@ -614,6 +615,28 @@ select.vk-input {
   }
 }
 
+/* Ergonomi perangkat layar sentuh (HP & tablet) */
+@media (pointer: coarse) {
+  .vk-btn {
+    min-height: 2.375rem;
+  }
+
+  .vk-nav-tab {
+    min-height: 2.25rem;
+    padding: 0 0.5rem;
+  }
+
+  .vk-chip {
+    min-height: 2.125rem;
+    padding: 0 0.75rem;
+  }
+
+  .vk-overlay__legend-item {
+    min-height: 2.125rem;
+    padding: 0.3rem 0.7rem;
+  }
+}
+
 /* --------------------------- Data table behaviour -------------------------- */
 
 .vk-table-region {
@@ -627,8 +650,7 @@ select.vk-input {
 @container (width < 560px) {
   .vk-ledger-table,
   .vk-ledger-table tbody,
-  .vk-ledger-table tr,
-  .vk-ledger-table td {
+  .vk-ledger-table tr {
     display: block;
     width: 100%;
   }
@@ -640,19 +662,36 @@ select.vk-input {
   .vk-ledger-table tr {
     padding: 0.75rem 0.875rem;
     border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
   }
 
   .vk-ledger-table td {
-    padding: 0.2rem 0 !important;
-    text-align: left !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.125rem 0 !important;
+    text-align: right !important;
     border: 0 !important;
   }
 
+  .vk-ledger-table td:first-child {
+    display: block;
+    max-width: none !important;
+    text-align: left !important;
+    padding-bottom: 0.25rem !important;
+  }
+
   .vk-ledger-table td[data-label]::before {
-    content: attr(data-label) ": ";
+    content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 500;
     color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
   }
 }
 

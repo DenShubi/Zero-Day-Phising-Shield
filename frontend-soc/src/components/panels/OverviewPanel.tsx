@@ -9,7 +9,7 @@
  * the strip, the table header and the inspector each label themselves.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VerdictTrend } from '@/components/charts/VerdictTrend';
 import { IncidentFeed } from '@/components/feed/IncidentFeed';
@@ -34,7 +34,7 @@ function extractHost(raw: string | null | undefined): string | null {
 }
 
 function cleanTarget(raw: string): string {
-  return raw.replace(/\s*—\s*/g, ': ');
+  return raw.replace(/\s*\u2014\s*/g, ': ');
 }
 
 /** One cell of the verdict strip: count, share bar, nothing else. */
@@ -121,6 +121,7 @@ export function OverviewPanel({
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const inspectorRef = useRef<HTMLElement>(null);
 
   const counts = useMemo(() => {
     const tally: Record<Verdict, number> = {
@@ -164,7 +165,7 @@ export function OverviewPanel({
       {/* Pita status: angka di kiri, tren harian di kanan. Keduanya membaca
           data yang sama, jadi tidak ada kalimat yang mengulang angkanya. */}
       <div className="grid shrink-0 border-b border-[var(--border)] bg-[var(--surface-1)] lg:grid-cols-12">
-        <div className="grid grid-cols-2 lg:col-span-5 [&>*:nth-child(2n)]:border-l [&>*:nth-child(n+3)]:border-t [&>*]:border-[var(--border-subtle)]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:col-span-5 lg:grid-cols-2 [&>*]:border-[var(--border-subtle)] [&>*:nth-child(2n)]:border-l sm:[&>*:nth-child(n+2)]:border-l lg:[&>*:nth-child(2n+1)]:border-l-0 [&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(n+3)]:border-t-0 lg:[&>*:nth-child(n+3)]:border-t">
           <StatCell
             label={id.command.statTotal}
             value={incidents.length}
@@ -215,12 +216,20 @@ export function OverviewPanel({
             error={error}
             onRefresh={onRefresh}
             selectedId={activeIncidentId}
-            onSelectIncident={(incId) => setSelectedId(incId)}
+            onSelectIncident={(incId) => {
+              setSelectedId(incId);
+              if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                requestAnimationFrame(() => {
+                  inspectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+              }
+            }}
             onOpenIncident={onOpenIncident}
           />
         </div>
 
         <aside
+          ref={inspectorRef}
           aria-label={id.command.inspectorTitle}
           className="vk-scroll flex min-h-0 min-w-0 flex-col overflow-y-auto bg-[var(--surface-2)] lg:col-span-5"
         >

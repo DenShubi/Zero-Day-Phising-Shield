@@ -87,9 +87,19 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
               return (
                 <li
                   key={boxId}
+                  tabIndex={0}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
+                  onFocus={() => onHighlight(boxId)}
+                  onBlur={() => onHighlight(null)}
+                  onClick={() => onHighlight(active ? null : boxId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onHighlight(active ? null : boxId);
+                    }
+                  }}
+                  className="cursor-pointer rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-form)' : 'var(--border)',
                     background: active
@@ -129,9 +139,19 @@ export function DomTelemetry({ url, highlightedId, onHighlight, defanged }: Prop
               return (
                 <li
                   key={boxId}
+                  tabIndex={0}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-3 py-1.5 text-[0.8125rem] transition-colors"
+                  onFocus={() => onHighlight(boxId)}
+                  onBlur={() => onHighlight(null)}
+                  onClick={() => onHighlight(active ? null : boxId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onHighlight(active ? null : boxId);
+                    }
+                  }}
+                  className="grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2.5 px-3 py-1.5 text-[0.8125rem] transition-colors"
                   style={{
                     background: active
                       ? 'color-mix(in srgb, var(--layer-input) 15%, transparent)'

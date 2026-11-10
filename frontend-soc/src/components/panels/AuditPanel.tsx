@@ -167,40 +167,40 @@ export function AuditPanel() {
     ci?: [number, number];
     suffix: '%' | '';
   }[] = [
-    {
-      label: t.audit.kpiAccuracy,
-      value: m.accuracy,
-      target: TARGETS.accuracy,
-      ci: ci.accuracy_ci95,
-      suffix: '%',
-    },
-    {
-      label: t.audit.kpiF1,
-      value: m.f1_score,
-      target: TARGETS.f1_score,
-      ci: ci.f1_ci95,
-      suffix: '%',
-    },
-    {
-      label: t.audit.kpiRecall,
-      value: m.recall,
-      target: TARGETS.recall,
-      ci: ci.recall_ci95,
-      suffix: '%',
-    },
-    {
-      label: t.audit.kpiSpecificity,
-      value: m.specificity,
-      target: TARGETS.specificity,
-      suffix: '%',
-    },
-    {
-      label: t.audit.kpiAuc,
-      value: m.roc_auc,
-      target: TARGETS.auc,
-      suffix: '',
-    },
-  ];
+      {
+        label: t.audit.kpiAccuracy,
+        value: m.accuracy,
+        target: TARGETS.accuracy,
+        ci: ci.accuracy_ci95,
+        suffix: '%',
+      },
+      {
+        label: t.audit.kpiF1,
+        value: m.f1_score,
+        target: TARGETS.f1_score,
+        ci: ci.f1_ci95,
+        suffix: '%',
+      },
+      {
+        label: t.audit.kpiRecall,
+        value: m.recall,
+        target: TARGETS.recall,
+        ci: ci.recall_ci95,
+        suffix: '%',
+      },
+      {
+        label: t.audit.kpiSpecificity,
+        value: m.specificity,
+        target: TARGETS.specificity,
+        suffix: '%',
+      },
+      {
+        label: t.audit.kpiAuc,
+        value: m.roc_auc,
+        target: TARGETS.auc,
+        suffix: '',
+      },
+    ];
 
   const latencyRows: { label: string; data: BenchmarkLatency | undefined }[] = [
     { label: t.audit.latencyUrlTitle, data: d.playwright_url_latency_sec },
@@ -237,7 +237,7 @@ export function AuditPanel() {
         className="grid min-h-0 flex-1 divide-y divide-[var(--border)] lg:grid-cols-12 lg:divide-x lg:divide-y-0"
       >
         {/* KIRI (4 Kolom): Ringkasan Metrik & Kecepatan */}
-        <aside className="vk-scroll flex min-h-0 min-w-0 flex-col divide-y divide-[var(--border)] overflow-y-auto bg-[var(--surface-0)] lg:col-span-4">
+        <aside className="vk-scroll grid min-h-0 min-w-0 grid-cols-1 divide-y divide-[var(--border)] overflow-y-auto bg-[var(--surface-0)] md:grid-cols-2 md:divide-x md:divide-y-0 lg:col-span-4 lg:flex lg:flex-col lg:divide-x-0 lg:divide-y">
           <div className="p-4">
             <h2 className="text-[0.875rem] font-semibold text-[var(--foreground)]">
               {t.audit.targetSpecTitle}

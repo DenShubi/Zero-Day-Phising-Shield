@@ -278,7 +278,7 @@ export function MitigationPanel({
             role="region"
             aria-labelledby="vk-ioc-caption"
             tabIndex={0}
-            className="vk-scroll min-h-0 flex-1 overflow-auto"
+            className="vk-scroll max-h-[22rem] min-h-0 flex-1 overflow-auto lg:max-h-none"
           >
             {visible.length === 0 ? (
               <div className="p-6 text-center text-[0.8125rem] text-[var(--muted)]">
@@ -297,7 +297,7 @@ export function MitigationPanel({
                     <th scope="col" className="vk-pane-label whitespace-nowrap px-3 py-2">
                       {t.mitigation.colHost}
                     </th>
-                    <th scope="col" className="vk-pane-label whitespace-nowrap px-2 py-2">
+                    <th scope="col" className="vk-pane-label hidden whitespace-nowrap px-2 py-2 min-[420px]:table-cell">
                       {t.mitigation.colVerdict}
                     </th>
                     <th
@@ -329,7 +329,7 @@ export function MitigationPanel({
                             checked={checked}
                             onChange={() => toggleHost(ioc.host)}
                             aria-label={`${t.mitigation.includeHostAriaPrefix} ${ioc.host}`}
-                            className="h-3.5 w-3.5 accent-[var(--accent-ink)]"
+                            className="h-4 w-4 cursor-pointer accent-[var(--accent-ink)]"
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -342,7 +342,7 @@ export function MitigationPanel({
                             </div>
                           )}
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="hidden px-2 py-2 min-[420px]:table-cell">
                           <VerdictBadge verdict={ioc.verdict} size="sm" />
                         </td>
                         <td className="vk-mono vk-tabular px-2 py-2 text-right font-semibold text-[var(--foreground)]">
@@ -463,7 +463,7 @@ export function MitigationPanel({
 
           <div
             aria-label={`${t.mitigation.previewHeaderPrefix} ${activeFormatMeta.filename}`}
-            className="vk-scroll min-h-0 flex-1 overflow-auto bg-[var(--canvas)] p-3"
+            className="vk-scroll max-h-[22rem] min-h-0 flex-1 overflow-auto bg-[var(--canvas)] p-3 lg:max-h-none"
           >
             {chosen.length === 0 ? (
               <div className="p-4 text-[0.78rem] text-[var(--muted)]">

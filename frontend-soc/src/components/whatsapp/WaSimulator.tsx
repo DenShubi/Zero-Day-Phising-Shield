@@ -444,7 +444,7 @@ export function WaSimulator({
 
         {/* Daftar Pesan */}
         <div
-          className="vk-scroll flex min-h-[16rem] flex-1 flex-col gap-3 overflow-y-auto p-4"
+          className="vk-scroll flex max-h-[28rem] min-h-[16rem] flex-1 flex-col gap-3 overflow-y-auto p-4 lg:max-h-none"
           onDragOver={(e) => {
             e.preventDefault();
             setDragging(true);

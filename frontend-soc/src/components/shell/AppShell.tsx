@@ -51,13 +51,13 @@ function NavTab({
       href={href}
       aria-current={active ? 'page' : undefined}
       onClick={onClick ? (e) => onClick(e, spec.view, href) : undefined}
-      className="vk-nav-tab"
+      className="vk-nav-tab justify-center"
     >
       <Icon
         size={14}
         className={active ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}
       />
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
     </a>
   );
 }
@@ -78,8 +78,8 @@ function NavTrack({ activeView }: { activeView: PanelId | null }) {
   );
 
   return (
-    <nav aria-label={id.nav.primaryAria} className="vk-scroll max-w-full overflow-x-auto">
-      <div className="vk-nav-track w-max">
+    <nav aria-label={id.nav.primaryAria} className="vk-scroll w-full max-w-full overflow-x-auto md:w-auto">
+      <div className="vk-nav-track grid w-full grid-cols-4 md:flex md:w-max">
         {NAV_ITEMS.map((spec) => (
           <NavTab
             key={spec.view}

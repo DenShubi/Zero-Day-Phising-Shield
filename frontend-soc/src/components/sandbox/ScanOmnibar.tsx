@@ -238,7 +238,7 @@ export function ScanOmnibar({
             />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
             <button
               type="button"
               disabled={scanning}
@@ -256,7 +256,7 @@ export function ScanOmnibar({
             <button
               type="submit"
               disabled={scanning || (mode === 'image' ? !image : !url.trim())}
-              className="vk-btn vk-btn-primary h-10 px-5 text-[0.8125rem]"
+              className="vk-btn vk-btn-primary h-10 flex-1 px-5 text-[0.8125rem] sm:flex-initial"
             >
               <IconScan size={15} />
               <span>
@@ -386,7 +386,7 @@ export function ScanOmnibar({
             </button>
           </div>
 
-          <div className="shrink-0">
+          <div className="w-full shrink-0 sm:w-auto">
             <label htmlFor={unitInputId} className="visually-hidden">
               {t.scan.unitLabel}
             </label>

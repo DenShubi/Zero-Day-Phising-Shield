@@ -166,7 +166,7 @@ function ForensicsDetailView({
         </div>
 
         {/* Bilah Alat */}
-        <div className="vk-no-print flex flex-wrap items-center gap-1.5">
+        <div className="vk-no-print flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
           {incidents.length > 1 && (
             <select
               aria-label={t.forensics.selectIncidentLabel}
@@ -176,7 +176,7 @@ function ForensicsDetailView({
                   scroll: false,
                 })
               }
-              className="vk-input h-8 max-w-[14rem] text-[0.75rem]"
+              className="vk-input h-8 w-full text-[0.75rem] sm:w-auto sm:max-w-[15rem]"
             >
               {incidents.slice(0, 30).map((item) => {
                 const idVal = item.incidentId ?? item.scanId;

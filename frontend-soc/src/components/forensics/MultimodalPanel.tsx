@@ -65,9 +65,19 @@ export function MultimodalPanel({
               return (
                 <li
                   key={boxId}
+                  tabIndex={0}
                   onMouseEnter={() => onHighlight(boxId)}
                   onMouseLeave={() => onHighlight(null)}
-                  className="rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
+                  onFocus={() => onHighlight(boxId)}
+                  onBlur={() => onHighlight(null)}
+                  onClick={() => onHighlight(active ? null : boxId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onHighlight(active ? null : boxId);
+                    }
+                  }}
+                  className="cursor-pointer rounded-[var(--r-sm)] border px-3 py-2 transition-colors"
                   style={{
                     borderColor: active ? 'var(--layer-qr)' : 'var(--border)',
                     background: active
