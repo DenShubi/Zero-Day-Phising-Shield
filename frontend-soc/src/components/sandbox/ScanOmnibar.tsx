@@ -57,11 +57,9 @@ export function ScanOmnibar({
   const router = useRouter();
   const fileInputId = useId();
   const urlInputId = useId();
-  const unitInputId = useId();
 
   const [mode, setMode] = useState<Mode>('url');
   const [url, setUrl] = useState('');
-  const [unit, setUnit] = useState('');
   const [image, setImage] = useState<PreparedImage | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -156,7 +154,7 @@ export function ScanOmnibar({
     try {
       const result = await scanUrl(
         target,
-        { scanId: newScanId(), reporterUnit: unit.trim() || undefined },
+        { scanId: newScanId() },
         ac.signal,
       );
       finish(result);
@@ -183,7 +181,6 @@ export function ScanOmnibar({
         image.file,
         {
           scanId: newScanId(),
-          reporterUnit: unit.trim() || undefined,
           measured: image.dimensions,
         },
         ac.signal,
@@ -284,7 +281,7 @@ export function ScanOmnibar({
               const file = imageFromDrop(e.nativeEvent);
               if (file) void acceptFile(file);
             }}
-            className="rounded-[var(--r-lg)] border border-dashed p-3 transition-colors"
+            className="vk-dropzone rounded-[var(--r-lg)] border border-dashed p-3 transition-colors"
             style={{
               borderColor: dragging ? 'var(--accent)' : 'var(--border-strong)',
               background: dragging ? 'var(--accent-tint)' : 'var(--surface-2)',
@@ -295,7 +292,7 @@ export function ScanOmnibar({
               type="file"
               accept="image/png,image/jpeg,image/webp"
               disabled={scanning}
-              className="visually-hidden"
+              className="vk-sr-only"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) void acceptFile(file);
@@ -356,7 +353,7 @@ export function ScanOmnibar({
 
         {mode === 'url' && <DomainPreview url={url} />}
 
-        {/* Contoh uji satu klik + satuan pelapor opsional. */}
+        {/* Contoh uji satu klik. */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             {decoys.slice(0, 4).map((d) => (
@@ -384,21 +381,6 @@ export function ScanOmnibar({
               </span>
               <span>{SAFE_PRESET.title}</span>
             </button>
-          </div>
-
-          <div className="w-full shrink-0 sm:w-auto">
-            <label htmlFor={unitInputId} className="visually-hidden">
-              {t.scan.unitLabel}
-            </label>
-            <input
-              id={unitInputId}
-              type="text"
-              disabled={scanning}
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder={t.scan.unitPlaceholder}
-              className="vk-input h-[1.875rem] w-full rounded-[var(--r-pill)] text-[0.78rem] sm:w-52"
-            />
           </div>
         </div>
 

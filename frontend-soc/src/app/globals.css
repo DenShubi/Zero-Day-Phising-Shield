@@ -230,6 +230,24 @@ pre,
   white-space: nowrap !important;
 }
 
+/* Always hidden, with no :focus-within escape hatch.
+   `.visually-hidden` deliberately reappears when focused, which is right for a
+   skip link and wrong for a control that stays focused after you use it: a
+   file input would pop its native "Browse... No file selected." widget back
+   into the layout the moment its label was clicked. Focus stays visible
+   because the surrounding dropzone styles itself on :focus-within. */
+.vk-sr-only {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
 .vk-skip-link:focus-visible {
   position: fixed;
   top: 0.75rem;
@@ -560,6 +578,12 @@ pre,
 select.vk-input {
   padding-right: 1.75rem;
   cursor: pointer;
+}
+
+/* The dropzone wears the focus ring on behalf of the file input it hides. */
+.vk-dropzone:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Pill filter chip */

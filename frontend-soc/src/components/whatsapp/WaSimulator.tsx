@@ -350,7 +350,7 @@ export function WaSimulator({
               id="vk-wa-file"
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="visually-hidden"
+              className="vk-sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void acceptFile(f);

@@ -19,7 +19,7 @@
  * appear after mount.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { id as t } from '@/lib/i18n/id';
 import type { NormalizedScan } from '@/lib/normalize';
 import { VERDICT_LABEL, type Verdict } from '@/lib/verdict';
@@ -71,6 +71,20 @@ function niceMax(value: number): number {
     if (candidate >= value) return Math.ceil(candidate);
   }
   return Math.ceil(value);
+}
+
+/**
+ * Places the hover card over the column it describes, clamped to the plot box.
+ * The outer two columns at each end anchor to the nearest edge, because a
+ * centred card there would hang outside the plot and get clipped.
+ */
+function edgeAnchor(position: number, count: number): CSSProperties {
+  if (position <= 1) return { left: '0.25rem' };
+  if (position >= count - 2) return { right: '0.25rem' };
+  return {
+    left: `${((position + 0.5) / count) * 100}%`,
+    transform: 'translateX(-50%)',
+  };
 }
 
 function EmptyPlot() {
@@ -267,15 +281,18 @@ export function VerdictTrend({ incidents }: { incidents: readonly NormalizedScan
                 })}
               </div>
 
-              {/* One card for the hovered day, kept inside the plot box so it
-                  never escapes over the composer above. Values lead, names
-                  follow - the reader already knows which day they aimed at. */}
+              {/* One card for the hovered day. It tracks the column the
+                  pointer is on - parking it on the far side of the plot made
+                  the reader look away from what they were pointing at - and
+                  stays inside the plot box so it never escapes over the
+                  composer above. The two columns at each end anchor to their
+                  edge instead of centring, which would overflow. */}
               {hoveredBucket && (
                 <div
+                  style={edgeAnchor(hoveredPosition, buckets.length)}
                   className={[
-                    'pointer-events-none absolute top-1 z-20 max-w-[calc(100%-0.5rem)] w-max',
-                    'vk-card px-3 py-2 shadow-[var(--shadow-md)]',
-                    hoveredPosition < buckets.length / 2 ? 'right-1' : 'left-1',
+                    'pointer-events-none absolute top-1 z-20 w-max',
+                    'max-w-[calc(100%-0.5rem)] vk-card px-3 py-2 shadow-[var(--shadow-md)]',
                   ].join(' ')}
                 >
                   <div className="text-[0.72rem] font-medium text-[var(--muted)]">

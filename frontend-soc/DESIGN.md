@@ -222,6 +222,8 @@ tugas datanya adalah "lihat komposisi berubah sepanjang waktu".
 | `.vk-card` / `.vk-card-quiet` | blok lunak radius `14px` |
 | `.vk-hero` | angka utama `48px`, **angka proporsional** (bukan `tabular-nums`, yang membuat `121` terbaca longgar di ukuran besar), sans yang sama dengan sisanya |
 | `.vk-plot` | kotak plot grafik; tingginya ikut lebar layar |
+| `.vk-sr-only` | sembunyi permanen, **tanpa** celah `:focus-within` milik `.visually-hidden`. Dipakai untuk `input[type=file]`: kalau tidak, widget bawaan "Browse... No file selected." muncul kembali begitu labelnya diklik |
+| `.vk-dropzone` | area jatuhkan berkas; memakai cincin fokus mewakili input berkas yang disembunyikannya |
 
 ## 7. Interaksi, Keyboard, Cetak
 

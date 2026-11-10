@@ -109,8 +109,6 @@ export const id = {
     modeImage: 'Gambar',
     urlLabel: 'Alamat URL',
     urlPlaceholder: 'Tempel tautan mencurigakan, atau pilih contoh uji di bawah',
-    unitLabel: 'Satuan pelapor (opsional)',
-    unitPlaceholder: 'Satuan pelapor (opsional)',
     submitUrl: 'Pindai',
     submitImage: 'Pindai',
     scanning: 'Memindai...',

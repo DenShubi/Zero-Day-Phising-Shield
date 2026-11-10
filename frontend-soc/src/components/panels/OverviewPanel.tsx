@@ -81,9 +81,17 @@ function MeterRow({
         />
       </span>
 
-      <span className="vk-tabular w-14 shrink-0 text-right text-[0.875rem] font-semibold tracking-[-0.01em]">
-        <span style={{ color: ink }}>{value}</span>
-        <span className="ml-1 text-[0.72rem] font-normal text-[var(--muted)]">{share}%</span>
+      {/* Two fixed columns, not one right-aligned run: sharing a box let the
+          count's right edge drift with the width of the percentage beside it,
+          so "7 14%" and "42 84%" never lined up down the list. */}
+      <span
+        className="vk-tabular w-7 shrink-0 text-right text-[0.875rem] font-semibold tracking-[-0.01em]"
+        style={{ color: ink }}
+      >
+        {value}
+      </span>
+      <span className="vk-tabular w-9 shrink-0 text-right text-[0.72rem] text-[var(--muted)]">
+        {share}%
       </span>
     </li>
   );
