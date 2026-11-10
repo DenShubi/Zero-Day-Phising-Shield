@@ -167,40 +167,40 @@ export function AuditPanel() {
     ci?: [number, number];
     suffix: '%' | '';
   }[] = [
-      {
-        label: t.audit.kpiAccuracy,
-        value: m.accuracy,
-        target: TARGETS.accuracy,
-        ci: ci.accuracy_ci95,
-        suffix: '%',
-      },
-      {
-        label: t.audit.kpiF1,
-        value: m.f1_score,
-        target: TARGETS.f1_score,
-        ci: ci.f1_ci95,
-        suffix: '%',
-      },
-      {
-        label: t.audit.kpiRecall,
-        value: m.recall,
-        target: TARGETS.recall,
-        ci: ci.recall_ci95,
-        suffix: '%',
-      },
-      {
-        label: t.audit.kpiSpecificity,
-        value: m.specificity,
-        target: TARGETS.specificity,
-        suffix: '%',
-      },
-      {
-        label: t.audit.kpiAuc,
-        value: m.roc_auc,
-        target: TARGETS.auc,
-        suffix: '',
-      },
-    ];
+    {
+      label: t.audit.kpiAccuracy,
+      value: m.accuracy,
+      target: TARGETS.accuracy,
+      ci: ci.accuracy_ci95,
+      suffix: '%',
+    },
+    {
+      label: t.audit.kpiF1,
+      value: m.f1_score,
+      target: TARGETS.f1_score,
+      ci: ci.f1_ci95,
+      suffix: '%',
+    },
+    {
+      label: t.audit.kpiRecall,
+      value: m.recall,
+      target: TARGETS.recall,
+      ci: ci.recall_ci95,
+      suffix: '%',
+    },
+    {
+      label: t.audit.kpiSpecificity,
+      value: m.specificity,
+      target: TARGETS.specificity,
+      suffix: '%',
+    },
+    {
+      label: t.audit.kpiAuc,
+      value: m.roc_auc,
+      target: TARGETS.auc,
+      suffix: '',
+    },
+  ];
 
   const latencyRows: { label: string; data: BenchmarkLatency | undefined }[] = [
     { label: t.audit.latencyUrlTitle, data: d.playwright_url_latency_sec },
