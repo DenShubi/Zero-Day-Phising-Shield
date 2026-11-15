@@ -63,27 +63,48 @@ function normalizeBase(raw: string): string {
   return raw.trim().replace(/\/+$/, '');
 }
 
+function isLocalOrDeadTunnel(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes('localhost') ||
+    lower.includes('127.0.0.1') ||
+    lower.includes('.trycloudflare.com') ||
+    lower.includes('.ngrok')
+  );
+}
+
 /**
- * Resolution order: operator override, then build-time env, then localhost.
+ * Resolution order: operator override, then build-time env, then Railway production / localhost.
  * Must only be called in the browser — `localStorage` does not exist during the
  * prerender pass, and reading it at module scope would break `next build`.
  */
 export function getBackendUrl(): string {
+  const envUrl = normalizeBase(process.env.NEXT_PUBLIC_BACKEND_URL || '');
+
   if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isRemoteSite = Boolean(host && host !== 'localhost' && host !== '127.0.0.1');
+
     try {
       const override = window.localStorage.getItem(STORAGE_KEY);
-      if (override && override.trim() !== '') return normalizeBase(override);
+      if (override && override.trim() !== '') {
+        const cleaned = normalizeBase(override);
+        if (!isRemoteSite || !isLocalOrDeadTunnel(cleaned)) {
+          return cleaned;
+        }
+      }
     } catch {
       // Private mode or blocked storage: fall through to the env default.
     }
-    if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
-      const host = window.location.hostname;
-      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+
+    if (isRemoteSite) {
+      if (!envUrl || isLocalOrDeadTunnel(envUrl)) {
         return PRODUCTION_RAILWAY_BASE;
       }
     }
   }
-  return normalizeBase(process.env.NEXT_PUBLIC_BACKEND_URL || DEFAULT_BASE);
+
+  return envUrl || DEFAULT_BASE;
 }
 
 export function setBackendUrl(url: string | null): void {
