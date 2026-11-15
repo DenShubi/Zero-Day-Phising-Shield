@@ -26,6 +26,7 @@ build/
 # Runtime debug dumps (may contain phone numbers) & WhatsApp gateway state
 storage/last_wa_payload.json
 storage/*.json
+!storage/phase3_benchmark_results.json
 openwa-gateway/data/
 openwa-gateway/.env
 **/__pycache__/
