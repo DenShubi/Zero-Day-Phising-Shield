@@ -84,7 +84,7 @@ export function WaSimulator({
 } = {}) {
   const router = useRouter();
   const mounted = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false,
   );
@@ -194,10 +194,10 @@ export function WaSimulator({
               prev.map((m) =>
                 m.id === ackId
                   ? {
-                      ...m,
-                      pending: false,
-                      text: `${t.whatsapp.refusalHeader}\n_${triage.refusal_reason ?? t.whatsapp.refusalFallback}_`,
-                    }
+                    ...m,
+                    pending: false,
+                    text: `${t.whatsapp.refusalHeader}\n_${triage.refusal_reason ?? t.whatsapp.refusalFallback}_`,
+                  }
                   : m,
               ),
             );
@@ -209,25 +209,25 @@ export function WaSimulator({
 
         const scan = sending
           ? await scanImage(
-              sending.file,
-              {
-                scanId,
-                reporterUnit: t.whatsapp.reporterUnitDefault,
-                reporterSource: 'WHATSAPP_BOT',
-                caption: text || undefined,
-                measured: sending.dimensions,
-              },
-              ac.signal,
-            )
+            sending.file,
+            {
+              scanId,
+              reporterUnit: t.whatsapp.reporterUnitDefault,
+              reporterSource: 'WHATSAPP_BOT',
+              caption: text || undefined,
+              measured: sending.dimensions,
+            },
+            ac.signal,
+          )
           : await scanUrl(
-              text,
-              {
-                scanId,
-                reporterUnit: t.whatsapp.reporterUnitDefault,
-                reporterSource: 'WHATSAPP_BOT',
-              },
-              ac.signal,
-            );
+            text,
+            {
+              scanId,
+              reporterUnit: t.whatsapp.reporterUnitDefault,
+              reporterSource: 'WHATSAPP_BOT',
+            },
+            ac.signal,
+          );
 
         cacheScan(scan);
         onScanComplete?.(scan);
@@ -350,7 +350,7 @@ export function WaSimulator({
               id="vk-wa-file"
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="vk-sr-only"
+              className="visually-hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void acceptFile(f);

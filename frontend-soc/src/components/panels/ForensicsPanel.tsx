@@ -348,7 +348,7 @@ function ForensicsDetailView({
                   type="button"
                   onClick={() => setDockTab('dom')}
                   data-active={dockTab === 'dom' ? 'true' : undefined}
-                className="vk-chip h-7 text-[0.75rem]"
+                  className="vk-chip h-7 text-[0.75rem]"
                 >
                   Formulir &amp; Halaman ({domFieldCount})
                 </button>
@@ -359,7 +359,7 @@ function ForensicsDetailView({
                   type="button"
                   onClick={() => setDockTab('multimodal')}
                   data-active={dockTab === 'multimodal' ? 'true' : undefined}
-                className="vk-chip h-7 text-[0.75rem]"
+                  className="vk-chip h-7 text-[0.75rem]"
                 >
                   Kode QR &amp; Teks ({qrCount})
                 </button>
@@ -370,7 +370,7 @@ function ForensicsDetailView({
                   type="button"
                   onClick={() => setDockTab('redirect')}
                   data-active={dockTab === 'redirect' ? 'true' : undefined}
-                className="vk-chip h-7 text-[0.75rem]"
+                  className="vk-chip h-7 text-[0.75rem]"
                 >
                   Pengalihan URL ({redirectCount})
                 </button>
@@ -470,7 +470,7 @@ export function ForensicsPanel({
 }) {
   const router = useRouter();
   const isClient = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false,
   );
