@@ -26,7 +26,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: `${id.app.name} | ${id.app.subtitle}`,
   description:
-    'Konsol inventaris SOC dan triase forensik phishing zero-day: sandbox URL terisolasi, bukti visual ber-bounding-box, ekstraksi QR/OCR, dan ekspor aturan DNS Sinkhole.',
+    'Jagabaya adalah sistem penangkal phishing zero-day untuk prajurit dan keluarga besar TNI AD melalui bot WhatsApp dan dashboard Security Operations Center (SOC).',
   other: {
     'page-type': 'software',
     'site-kind': 'software',

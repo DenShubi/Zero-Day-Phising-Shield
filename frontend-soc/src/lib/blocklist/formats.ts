@@ -44,68 +44,68 @@ export const FORMATS: readonly FormatSpec[] = [
     id: 'rpz',
     label: 'BIND RPZ',
     description: 'Zona Response Policy untuk resolver BIND — NXDOMAIN per indikator.',
-    filename: 'db.rpz.visikartika',
+    filename: 'db.rpz.jagabaya',
     mime: 'text/plain',
   },
   {
     id: 'dnsmasq',
     label: 'dnsmasq',
     description: 'Sinkhole A dan AAAA; bentuk /domain/ sudah mencakup subdomain.',
-    filename: 'visikartika-dnsmasq.conf',
+    filename: 'jagabaya-dnsmasq.conf',
     mime: 'text/plain',
   },
   {
     id: 'hosts',
     label: 'hosts',
     description: 'Berkas hosts klasik — tanpa wildcard, subdomain diperluas manual.',
-    filename: 'visikartika-hosts.txt',
+    filename: 'jagabaya-hosts.txt',
     mime: 'text/plain',
   },
   {
     id: 'pihole',
     label: 'Pi-hole (adlist)',
     description: 'Satu domain per baris untuk daftar blokir Pi-hole.',
-    filename: 'visikartika-pihole.txt',
+    filename: 'jagabaya-pihole.txt',
     mime: 'text/plain',
   },
   {
     id: 'pihole-regex',
     label: 'Pi-hole (regex)',
     description: 'Daftar regex Pi-hole — bentuk yang benar-benar mencakup subdomain.',
-    filename: 'visikartika-pihole-regex.txt',
+    filename: 'jagabaya-pihole-regex.txt',
     mime: 'text/plain',
   },
   {
     id: 'squid',
     label: 'Squid ACL',
     description: 'Daftar dstdomain untuk proxy Squid.',
-    filename: 'visikartika-squid-dstdomain.txt',
+    filename: 'jagabaya-squid-dstdomain.txt',
     mime: 'text/plain',
   },
   {
     id: 'suricata',
     label: 'Suricata',
     description: 'Aturan IDS berbasis http.host dan tls.sni.',
-    filename: 'visikartika.rules',
+    filename: 'jagabaya.rules',
     mime: 'text/plain',
   },
   {
     id: 'stix',
     label: 'STIX 2.1',
     description: 'Bundle indikator untuk pertukaran intelijen ancaman.',
-    filename: 'visikartika-stix.json',
+    filename: 'jagabaya-stix.json',
     mime: 'application/json',
   },
   {
     id: 'csv',
     label: 'CSV',
     description: 'Tabel indikator lengkap dengan skor, sumber, dan tiket SOC.',
-    filename: 'visikartika-ioc.csv',
+    filename: 'jagabaya-ioc.csv',
     mime: 'text/csv',
   },
 ] as const;
 
-const PRODUCT = 'VisiKartika Shield';
+const PRODUCT = 'Jagabaya';
 
 function headerLines(iocs: readonly Ioc[], comment: string): string[] {
   const now = new Date().toISOString();
@@ -327,7 +327,7 @@ export function renderStix(iocs: readonly Ioc[]): string {
       name: PRODUCT,
       identity_class: 'system',
       description:
-        'Mesin penangkalan phishing VisiKartika Shield. Indikator berasal dari lingkungan simulasi internal.',
+        'Mesin penangkalan phishing zero-day Jagabaya. Indikator berasal dari lingkungan simulasi internal.',
     },
   ];
 

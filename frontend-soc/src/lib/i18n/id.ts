@@ -4,8 +4,8 @@
 
 export const id = {
   app: {
-    name: 'VisiKartika Shield',
-    subtitle: 'Deteksi Phishing & Poster Penipuan',
+    name: 'Jagabaya',
+    subtitle: 'Sistem Penangkal Phishing Zero-Day TNI AD',
     unit: 'PUSSIBERAD',
     skipToMain: 'Langsung ke konten utama',
   },
@@ -316,13 +316,13 @@ export const id = {
   },
 
   whatsapp: {
-    botTitle: 'Bot Lapor Cepat VisiKartika',
+    botTitle: 'Bot Lapor Cepat Jagabaya',
     statusOnline: 'Online',
     statusTyping: 'Sedang memeriksa...',
     lanePrefix: 'Jalur:',
-    simulationBanner: 'Pesan di bawah ini diproses langsung oleh mesin pemindai VisiKartika.',
+    simulationBanner: 'Pesan di bawah ini diproses langsung oleh mesin pemindai Jagabaya.',
     greetingMessage:
-      '*VisiKartika Shield*\nKirimkan tautan (URL) atau foto poster/kode QR yang mencurigakan untuk diperiksa.',
+      '*Jagabaya | Pemeriksaan Tautan & Poster*\nTeruskan tautan atau gambar mencurigakan ke chat ini untuk diperiksa secara otomatis.',
     ackMessage: '_Memeriksa laporan Anda..._',
     refusalHeader: '*Laporan Ditolak*',
     refusalFallback: 'Format pesan tidak dapat diproses.',

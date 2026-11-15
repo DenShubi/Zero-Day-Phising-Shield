@@ -36,8 +36,8 @@ import {
   IconPaperclip,
   IconSend,
   IconShieldCheck,
-  VisiKartikaMark,
 } from '@/components/ui/icons';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { WaMarkup } from './WaMarkup';
 
 type Role = 'soldier' | 'bot';
@@ -429,7 +429,7 @@ export function WaSimulator({
               className="grid h-8 w-8 shrink-0 place-items-center rounded-[var(--r-md)] border text-[var(--foreground)]"
               style={{ borderColor: 'var(--wa-border)', background: 'var(--surface-1)' }}
             >
-              <VisiKartikaMark size={16} />
+              <BrandMark size={22} />
             </span>
             <div className="min-w-0 leading-tight">
               <div className="truncate text-[0.875rem] font-semibold text-[var(--wa-ink)]">

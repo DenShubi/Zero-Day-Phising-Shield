@@ -46,10 +46,10 @@ MOCK_TARGETS_DIR.mkdir(parents=True, exist_ok=True)
 REF_PORTALS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
-    title="VisiKartika Shield - Sandbox, Vision & SOC Integration API",
+    title="Jagabaya - Sandbox, Vision & SOC Integration API",
     description=(
-        "Defensive Cybersecurity Sandbox Engine (Kategori: Penangkalan) "
-        "for Kartika Cyber Hackathon 2026 (PUSSIBERAD TNI AD)."
+        "Jagabaya adalah sistem penangkal phishing zero-day untuk prajurit dan keluarga besar TNI AD "
+        "(Kategori: Penangkalan - Kartika Cyber Hackathon 2026 PUSSIBERAD TNI AD)."
     ),
     version="1.4.0",
 )

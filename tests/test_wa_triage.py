@@ -2,8 +2,13 @@ import pytest
 
 from app.wa_triage import (
     InboundMessage,
+    _ticket_line,
+    _verdict_block,
     classify_message,
     extract_target_url,
+    format_emergency_guide,
+    format_help_menu,
+    format_official_portals,
     validate_chat_target_url,
 )
 
@@ -55,3 +60,22 @@ def test_classification_lanes():
 )
 def test_chat_url_ssrf_guard(url, allowed):
     assert validate_chat_target_url(url)[0] is allowed
+
+
+def test_option2_formatting_clean_no_slop():
+    help_text = format_help_menu()
+    portals_text = format_official_portals()
+    emergency_text = format_emergency_guide()
+    header, status, advice = _verdict_block("CRITICAL_PHISHING", "URL", "MILITARY_PHISHING")
+
+    assert header == "*Putusan: BERBAHAYA (Phishing Terdeteksi)*"
+    assert status == "BERBAHAYA"
+    assert advice.startswith("Saran:\n")
+    assert _ticket_line("6dec7ab9-54de-49b9-bc93-f4f9b405ba16") == "Tiket SOC  : `#JB-6DEC7AB9`"
+
+    for msg in (help_text, portals_text, emergency_text, header, advice):
+        assert "━" not in msg
+        assert "—" not in msg
+        assert "🚨" not in msg
+        assert "🛡️" not in msg
+        assert "1️⃣" not in msg

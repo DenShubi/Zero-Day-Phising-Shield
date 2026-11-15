@@ -172,73 +172,61 @@ def classify_message(msg: InboundMessage) -> tuple[str, Optional[str]]:
 # --------------------------------------------------------------------------- #
 # Reply formatters (Bahasa Indonesia, WhatsApp markdown)
 # --------------------------------------------------------------------------- #
-SEP = "━━━━━━━━━━━━━━━━━━━━━━"
+LAYOUT_LABELS: dict[str, str] = {
+    "POSTER_OR_BANNER": "Poster / Selebaran",
+    "MOBILE_SCREENSHOT": "Tangkapan Layar HP",
+    "WEB_SCREENSHOT": "Tangkapan Layar Web",
+    "GENERAL_IMAGE": "Gambar Umum",
+}
 
 
 def format_help_menu() -> str:
     return (
-        "🛡️ *VISIKARTIKA SHIELD — PUSSIBERAD TNI AD*\n"
-        "_Sistem Lapor Cepat & Deteksi Dini Phishing Siber_\n"
-        f"{SEP}\n"
-        "Selamat datang di layanan analisis ancaman otomatis. Sistem ini memeriksa tautan, poster pengumuman, dan tangkapan layar menggunakan *Isolated Sandbox*, *Computer Vision*, & *OCR*.\n\n"
-        "📌 *CARA PENGGUNAAN & FITUR:*\n"
-        "1️⃣ *Cek Tautan / Pesan Berantai (URL)*\n"
-        "   Langsung kirim atau _forward_ pesan berisi tautan (`https://...`) ke chat ini untuk dipindai otomatis.\n\n"
-        "2️⃣ *Cek Poster / Screenshot Web / QR (Quishing)*\n"
-        "   Kirimkan poster rekrutmen, _screenshot_ situs web, atau gambar ber-QR Code untuk dianalisis keasliannya.\n\n"
-        "3️⃣ *Ketik `portal` atau `/portal`*\n"
-        "   Menampilkan daftar domain portal resmi TNI AD & Kemhan RI (`.mil.id` / `.go.id`).\n\n"
-        "4️⃣ *Ketik `status` atau `/status`*\n"
-        "   Melihat status operasional mesin pemindai & koneksi pusat komando SOC.\n\n"
-        "5️⃣ *Ketik `darurat` atau `/darurat`*\n"
-        "   Panduan langkah darurat jika terlanjur mengisi NRP / Kata Sandi / OTP di situs palsu.\n"
-        f"{SEP}\n"
-        "🔒 _Jaga kerahasiaan NRP, NIK, dan kredensial kedinasan Anda._"
+        "*Jagabaya | Pemeriksaan Tautan & Poster*\n"
+        "Teruskan tautan atau gambar mencurigakan ke chat ini untuk diperiksa secara otomatis.\n\n"
+        "Perintah yang tersedia:\n"
+        "- *portal* : Daftar domain resmi .mil.id dan .go.id\n"
+        "- *status* : Status koneksi mesin pemindai dan SOC\n"
+        "- *darurat*: Langkah penanganan jika kredensial bocor"
     )
 
 
 def format_official_portals() -> str:
-    domain_lines = "\n".join(f"  • `https://{d}`" for d in sorted(OFFICIAL_MIL_DOMAINS))
+    domain_lines = "\n".join(f"- `https://{d}`" for d in sorted(OFFICIAL_MIL_DOMAINS))
     return (
-        "🏛️ *DAFTAR DOMAIN RESMI TNI AD & KEMHAN RI*\n"
-        "_VisiKartika Shield — Protected Brand Whitelist_\n"
-        f"{SEP}\n"
-        "Pastikan alamat situs kedinasan atau rekrutmen yang Anda akses berakhiran *`.mil.id`* atau *`.go.id`* resmi berikut:\n\n"
+        "*Daftar Domain Resmi TNI AD & Kemhan RI*\n"
+        "Pastikan halaman kedinasan atau rekrutmen yang diakses menggunakan domain resmi berikut:\n\n"
         f"{domain_lines}\n\n"
-        "⚠️ *PERINGATAN KEAMANAN:*\n"
-        "Institusi TNI AD *tidak pernah* memungut biaya rekrutmen dan *tidak pernah* menggunakan domain komersial bebas (`.com`, `.xyz`, `.net`, `.id` non-militer) untuk login SSO/Sisfopers."
+        "Catatan:\n"
+        "TNI AD tidak memungut biaya rekrutmen dan tidak menggunakan domain komersial (`.com`, `.xyz`, `.net`, atau `.id` non-militer) untuk login SSO maupun Sisfopers."
     )
 
 
 def format_emergency_guide() -> str:
     return (
-        "🚨 *PROTOKOL DARURAT KEBOCORAN KREDENSIAL*\n"
-        "_PUSSIBERAD TNI AD — Tanggap Insiden Siber_\n"
-        f"{SEP}\n"
-        "Jika Anda atau rekan satuan terlanjur memasukkan *NRP, NIK, Kata Sandi, atau OTP* pada tautan mencurigakan:\n\n"
-        "1. *Ganti Kata Sandi Segera*: Ubah password akun SSO / Sisfopers / Email Militer melalui perangkat lain yang aman.\n"
-        "2. *Cabut Sesi Aktif*: Keluar (_logout_) dari seluruh sesi perangkat yang tidak dikenal.\n"
-        "3. *Periksa Aplikasi Asing*: Hapus file `.apk` di luar Play Store jika sempat terunduh, lalu matikan koneksi data sementara.\n"
-        "4. *Lapor Pejabat Siber / Sandi Satuan*: Teruskan bukti tautan atau gambar ke chat ini agar domain penyerang segera masuk daftar *Blocklist DNS/Firewall* Komando."
+        "*Penanganan Darurat Kebocoran Kredensial*\n"
+        "Jika NRP, NIK, kata sandi, atau kode OTP sudah terlanjur dimasukkan ke situs mencurigakan:\n\n"
+        "1. *Ganti kata sandi segera*: Ubah kata sandi akun SSO, Sisfopers, atau email kedinasan melalui perangkat lain yang aman.\n"
+        "2. *Cabut sesi aktif*: Keluar (logout) dari semua sesi perangkat yang tidak dikenal.\n"
+        "3. *Periksa aplikasi asing*: Hapus file `.apk` di luar Play Store jika sempat terunduh, lalu matikan koneksi data sementara.\n"
+        "4. *Lapor ke pejabat siber satuan*: Teruskan tautan atau gambar ke chat ini agar domain penyerang dapat segera diblokir."
     )
 
 
 async def format_system_status() -> str:
     sb_info = await SupabaseService.check_connection()
-    sb_status = "🟢 Terhubung (Realtime Aktif)" if sb_info.get("connected") else "🟡 Mode Lokal / Fallback"
+    sb_status = "Terhubung (Realtime Aktif)" if sb_info.get("connected") else "Mode Lokal"
     inc_count = sb_info.get("incidents_count_sample", 0)
     portal_count = sb_info.get("portals_count_sample") or len(OFFICIAL_MIL_DOMAINS)
     return (
-        "📊 *STATUS OPERASIONAL VISIKARTIKA SHIELD*\n"
-        f"{SEP}\n"
-        "• *Headless Chromium Sandbox*: 🟢 Aktif (Terisolasi)\n"
-        "• *Mesin Vision + OCR Poster*: 🟢 Aktif (SSIM + Logo + QR + OCR)\n"
-        "• *Analisis Telemetri DOM*: 🟢 Aktif\n"
-        f"• *Koneksi SOC Supabase*: {sb_status}\n"
-        f"• *Database Portal Resmi*: {portal_count} Portal Terlindungi\n"
-        f"• *Log Insiden Terkini*: {inc_count} Rekaman Analisis\n"
-        f"{SEP}\n"
-        "Kirimkan tautan, poster, atau tangkapan layar kapan saja untuk memulai pemindaian forensik."
+        "*Status Operasional Jagabaya*\n"
+        "Sandbox Browser : Aktif\n"
+        "Deteksi Visual  : Aktif (SSIM, Logo, QR, OCR)\n"
+        "Analisis Halaman: Aktif\n"
+        f"Koneksi SOC     : {sb_status}\n"
+        f"Portal Resmi    : {portal_count} domain terdaftar\n"
+        f"Arsip Insiden   : {inc_count} rekaman\n\n"
+        "Kirimkan tautan atau gambar kapan saja untuk diperiksa."
     )
 
 
@@ -247,80 +235,70 @@ def _verdict_block(verdict: str, kind: str, content_category: str = "UNKNOWN") -
         if kind == "IMAGE":
             if content_category == "GENERIC_PHISHING":
                 return (
-                    "🚨 *PERINGATAN KRITIS: GAMBAR / POSTER PENIPUAN SIBER TERDETEKSI!*",
-                    "BERBAHAYA (CRITICAL PHISHING / SCAM)",
-                    "⛔ *INSTRUKSI TAKTIS*:\n"
-                    "• *JANGAN* memindai QR Code, mengunduh file `.apk`, atau mengisi PIN/OTP/kata sandi!\n"
-                    "• Gambar ini mengandung tautan atau pola penipuan siber berisiko tinggi.\n"
-                    "• Bukti visual ber-anotasi telah diteruskan ke *Dashboard SOC PUSSIBERAD*.",
+                    "*Putusan: BERBAHAYA (Gambar Penipuan Terdeteksi)*",
+                    "BERBAHAYA",
+                    "Saran:\n"
+                    "Jangan memindai kode QR, mengunduh file `.apk`, atau mengisi PIN, OTP, maupun kata sandi dari gambar ini. Bukti temuan telah diteruskan ke SOC untuk ditindaklanjuti.",
                 )
             return (
-                "🚨 *PERINGATAN KRITIS: POSTER / GAMBAR PHISHING MILITER TERDETEKSI!*",
-                "BERBAHAYA (CRITICAL PHISHING / QUISHING)",
-                "⛔ *INSTRUKSI TAKTIS*:\n"
-                "• *JANGAN* memindai (_scan_) QR Code, menghubungi nomor calo, atau membuka tautan pada gambar ini!\n"
-                "• Gambar ini mencatut atribut militer resmi untuk penipuan/pencurian data di luar `.mil.id`.\n"
-                "• Bukti visual ber-anotasi telah diteruskan ke *Dashboard SOC PUSSIBERAD*.",
+                "*Putusan: BERBAHAYA (Poster / QR Palsu Terdeteksi)*",
+                "BERBAHAYA",
+                "Saran:\n"
+                "Jangan memindai kode QR, menghubungi nomor pada gambar, atau membuka tautan di luar domain resmi `.mil.id`. Bukti temuan telah diteruskan ke SOC untuk pemblokiran.",
             )
         if content_category == "GENERIC_PHISHING":
             return (
-                "🚨 *PERINGATAN KRITIS: SITUS PHISHING BERBAHAYA TERDETEKSI!*",
-                "BERBAHAYA (CRITICAL PHISHING)",
-                "⛔ *INSTRUKSI TAKTIS*:\n"
-                "• *JANGAN* masukkan kata sandi, PIN, kode OTP, atau data pribadi pada tautan ini!\n"
-                "• Tautan menggunakan infrastruktur mencurigakan yang berpotensi mencuri kredensial Anda.",
+                "*Putusan: BERBAHAYA (Situs Phishing Terdeteksi)*",
+                "BERBAHAYA",
+                "Saran:\n"
+                "Jangan mengisi kata sandi, PIN, kode OTP, atau data pribadi pada halaman ini.",
             )
         return (
-            "🚨 *PERINGATAN KRITIS: PHISHING TERDETEKSI!*",
-            "BERBAHAYA (CRITICAL PHISHING)",
-            "⛔ *INSTRUKSI TAKTIS*:\n"
-            "• *JANGAN* masukkan NRP, NIK, kata sandi, PIN, atau kode OTP!\n"
-            "• *JANGAN* menyebarkan tautan ini ke grup satuan/keluarga.\n"
-            "• Bukti forensik telah dikirim otomatis ke *Dashboard SOC PUSSIBERAD* untuk pemblokiran domain.",
+            "*Putusan: BERBAHAYA (Phishing Terdeteksi)*",
+            "BERBAHAYA",
+            "Saran:\n"
+            "Jangan mengisi NRP, NIK, kata sandi, atau kode OTP pada halaman ini, dan jangan meneruskan tautan ke grup satuan atau keluarga. Domain telah diteruskan ke SOC untuk pemblokiran.",
         )
     if verdict == "SUSPICIOUS":
         if kind == "IMAGE":
             return (
-                "⚠️ *WASPADA: GAMBAR / POSTER MENCURIGAKAN*",
-                "MENCURIGAKAN (SUSPICIOUS)",
-                "⚠️ *INSTRUKSI TAKTIS*:\n"
-                "• Gambar memiliki indikator anomali atau atribut tanpa verifikasi domain resmi `.mil.id`.\n"
-                "• Pastikan Anda hanya mengakses portal resmi melalui daftar ketik `portal`.",
+                "*Putusan: WASPADA (Gambar Mencurigakan)*",
+                "MENCURIGAKAN",
+                "Saran:\n"
+                "Gambar ini memuat atribut atau tautan yang belum terverifikasi. Pastikan informasi hanya berasal dari domain resmi `.mil.id` (ketik *portal* untuk melihat daftar).",
             )
         return (
-            "⚠️ *WASPADA: TAUTAN MENCURIGAKAN*",
-            "MENCURIGAKAN (SUSPICIOUS)",
-            "⚠️ *INSTRUKSI TAKTIS*:\n"
-            "• Tautan ini memiliki anomali keamanan dan bukan portal resmi `.mil.id`.\n"
-            "• Hindari mengisi data pribadi atau kredensial kedinasan sebelum diverifikasi petugas siber satuan.",
+            "*Putusan: WASPADA (Tautan Mencurigakan)*",
+            "MENCURIGAKAN",
+            "Saran:\n"
+            "Tautan ini memiliki anomali keamanan dan bukan portal resmi `.mil.id`. Hindari mengisi data pribadi atau kredensial kedinasan sebelum diverifikasi petugas siber satuan.",
         )
     if kind == "IMAGE":
         if content_category in ("OFFICIAL_MILITARY", "POSTER_OFFICIAL_MILITARY"):
             return (
-                "✅ *AMAN: PUBLIKASI / ATRIBUT MILITER RESMI*",
-                "AMAN (VERIFIED SAFE — KONTEN MILITER)",
-                "✅ *INFORMASI*:\n"
-                "• Konten memuat atribut/informasi resmi tanpa tautan phishing, QR palsu, maupun indikasi pungutan calo.",
+                "*Putusan: AMAN (Publikasi Militer Resmi)*",
+                "AMAN (Publikasi Resmi)",
+                "Catatan:\n"
+                "Gambar memuat informasi resmi tanpa tautan mencurigakan maupun kode QR palsu.",
             )
         return (
-            "✅ *AMAN: GAMBAR / SCREENSHOT UMUM (BUKAN PHISHING & BUKAN TNI)*",
-            "AMAN (VERIFIED SAFE — KONTEN UMUM NON-TNI)",
-            "✅ *INFORMASI*:\n"
-            "• Gambar ini merupakan tangkapan layar web atau poster umum non-militer dan tidak mengandung indikasi phishing maupun penyalahgunaan atribut TNI AD.",
+            "*Putusan: AMAN (Gambar Umum)*",
+            "AMAN (Konten Umum)",
+            "Catatan:\n"
+            "Tidak ditemukan indikasi phishing, kode QR berbahaya, maupun penyalahgunaan atribut TNI AD pada gambar ini.",
         )
     if content_category == "OFFICIAL_MILITARY":
         return (
-            "✅ *AMAN: PORTAL RESMI TERVERIFIKASI*",
-            "AMAN (VERIFIED SAFE — PORTAL RESMI .MIL.ID)",
-            "✅ *INFORMASI*:\n"
-            "• Domain terkonfirmasi sebagai portal resmi dalam daftar putih (*Whitelist*) TNI AD / Kemhan RI.",
+            "*Putusan: AMAN (Portal Resmi)*",
+            "AMAN (Portal Resmi .mil.id)",
+            "Catatan:\n"
+            "Domain terdaftar sebagai portal resmi TNI AD / Kemhan RI.",
         )
     return (
-        "✅ *AMAN: SITUS WEB UMUM NON-MILITER (BUKAN PHISHING)*",
-        "AMAN (VERIFIED SAFE — SITUS UMUM NON-TNI)",
-        "✅ *INFORMASI*:\n"
-        "• Situs ini bukan portal kedinasan TNI AD, namun terkonfirmasi aman dan tidak ditemukan pencurian kredensial maupun pemalsuan identitas militer.\n"
-        "• Gunakan kredensial kedinasan (NRP/Sisfopers) *hanya* pada domain resmi `.mil.id`.",
+        "*Putusan: AMAN (Situs Umum)*",
+        "AMAN (Situs Umum Non-Kedinasan)",
+        "Catatan:\n"
+        "Tidak ditemukan indikasi pencurian kredensial atau pemalsuan identitas militer. Tetap gunakan NRP dan akun Sisfopers hanya pada domain resmi `.mil.id`.",
     )
 
 
@@ -331,106 +309,110 @@ def _is_public_evidence_url(url: Optional[str]) -> bool:
 def _ticket_line(incident_id: Optional[str]) -> Optional[str]:
     if not incident_id:
         return None
-    return f"🆔 *ID Tiket SOC*: `#VK-{str(incident_id).split('-')[0].upper()}`"
+    return f"Tiket SOC  : `#JB-{str(incident_id).split('-')[0].upper()}`"
 
 
 def format_url_report(scan_res, include_evidence_link: bool = True) -> str:
     is_off = bool(getattr(getattr(scan_res, "risk_analysis", None), "is_official_mil_domain", False))
     cat = getattr(scan_res, "content_category", "") or ("OFFICIAL_MILITARY" if is_off else "UNKNOWN")
     header, status_label, advice = _verdict_block(scan_res.verdict, "URL", cat)
-    lines = [
-        header,
-        "_VisiKartika Shield — Hasil Analisis Forensik URL_",
-        SEP,
-        f"🔗 *Tautan Target*: {scan_res.final_url}",
-        f"🛡️ *Status Putusan*: *{status_label}*",
-        f"📈 *Skor Risiko Total*: *{scan_res.total_risk_score:.1f} / 100*",
-        f"   ├─ Kemiripan Visual: `{scan_res.visual_similarity_score:.1f}%`",
-        f"   ├─ Anomali Struktur DOM: `{scan_res.risk_analysis.dom_anomaly_score:.1f}%`",
-        f"   └─ Telemetri Domain: `{scan_res.risk_analysis.domain_telemetry_score:.1f}%`",
-    ]
-    if scan_res.impersonated_target and scan_res.verdict != "SAFE":
-        lines.append(f"🎭 *Indikasi Penyamaran*: {scan_res.impersonated_target}")
-    if scan_res.detected_logos:
-        brands = ", ".join(f"{lg.brand_name} ({lg.confidence:.0f}%)" for lg in scan_res.detected_logos[:2])
-        lines.append(f"🎖️ *Atribut Militer Terdeteksi*: {brands}")
-    if scan_res.risk_analysis.forensic_reasons:
-        lines.append("\n🔍 *Temuan Forensik Utama*:")
-        lines.extend(f"  • {r}" for r in scan_res.risk_analysis.forensic_reasons[:3])
-    if include_evidence_link and _is_public_evidence_url(scan_res.annotated_bbox_url):
-        lines.append(f"\n🖼️ *Bukti Visual*: {scan_res.annotated_bbox_url}")
+    lines = [header]
     ticket = _ticket_line(scan_res.supabase_incident_id)
     if ticket:
         lines.append(ticket)
-    lines.extend([SEP, advice])
+    lines.extend([
+        "",
+        f"Target     : {scan_res.final_url}",
+        f"Status     : {status_label}",
+    ])
+    if scan_res.impersonated_target and scan_res.verdict != "SAFE":
+        lines.append(f"Meniru     : {scan_res.impersonated_target}")
+    if scan_res.detected_logos:
+        brands = ", ".join(f"{lg.brand_name} ({lg.confidence:.0f}%)" for lg in scan_res.detected_logos[:2])
+        lines.append(f"Atribut    : {brands}")
+    lines.extend([
+        f"Skor Risiko: {scan_res.total_risk_score:.1f} / 100",
+        f"- Kemiripan tampilan : {scan_res.visual_similarity_score:.1f}%",
+        f"- Perilaku halaman   : {scan_res.risk_analysis.dom_anomaly_score:.1f}%",
+        f"- Reputasi domain    : {scan_res.risk_analysis.domain_telemetry_score:.1f}%",
+    ])
+    if scan_res.risk_analysis.forensic_reasons:
+        lines.append("\nAlasan:")
+        lines.extend(f"- {r}" for r in scan_res.risk_analysis.forensic_reasons[:3])
+    if include_evidence_link and _is_public_evidence_url(scan_res.annotated_bbox_url):
+        lines.append(f"\nBukti visual: {scan_res.annotated_bbox_url}")
+    lines.extend(["", advice])
     return "\n".join(lines)
 
 
 def format_image_report(img_res, include_evidence_link: bool = True) -> str:
     cat = getattr(img_res, "content_category", "UNKNOWN") or "UNKNOWN"
-    layout_type = getattr(img_res, "layout_type", "GENERAL_IMAGE")
+    raw_layout = getattr(img_res, "layout_type", "GENERAL_IMAGE") or "GENERAL_IMAGE"
+    layout_label = LAYOUT_LABELS.get(raw_layout, raw_layout)
     header, status_label, advice = _verdict_block(img_res.verdict, "IMAGE", cat)
-    lines = [
-        header,
-        "_VisiKartika Shield — Forensik Poster, Screenshot & QR_",
-        SEP,
-        f"🛡️ *Status Putusan*: *{status_label}*",
-        f"🗂️ *Jenis Konten*: `{layout_type}`",
-        f"📈 *Skor Risiko Total*: *{img_res.total_risk_score:.1f} / 100*",
-        f"   ├─ Kemiripan Visual: `{img_res.visual_similarity_score:.1f}%`",
-        f"   ├─ Anomali Konten/OCR/QR: `{img_res.dom_anomaly_score:.1f}%`",
-        f"   └─ Telemetri Domain: `{img_res.domain_telemetry_score:.1f}%`",
-    ]
-    if img_res.impersonated_target and img_res.verdict != "SAFE":
-        lines.append(f"🎭 *Indikasi Penyamaran*: {img_res.impersonated_target}")
-    if img_res.detected_logos:
-        brands = ", ".join(f"{lg.brand_name} ({lg.confidence:.0f}%)" for lg in img_res.detected_logos[:2])
-        lines.append(f"🎖️ *Atribut Militer Terdeteksi*: {brands}")
-    if img_res.decoded_qr_codes:
-        qr_list = ", ".join(f"`{q.payload}`" for q in img_res.decoded_qr_codes[:2])
-        lines.append(f"📷 *Isi QR Code*: {qr_list}")
-    elif img_res.extracted_urls:
-        url_list = ", ".join(f"`{u}`" for u in img_res.extracted_urls[:2])
-        lines.append(f"🔗 *Tautan Terbaca (OCR)*: {url_list}")
-    if img_res.forensic_reasons:
-        lines.append("\n🔍 *Temuan Forensik Utama*:")
-        lines.extend(f"  • {r}" for r in img_res.forensic_reasons[:3])
-    if include_evidence_link and _is_public_evidence_url(img_res.annotated_bbox_url):
-        lines.append(f"\n🖼️ *Bukti Bounding Box*: {img_res.annotated_bbox_url}")
+    lines = [header]
     ticket = _ticket_line(img_res.supabase_incident_id)
     if ticket:
         lines.append(ticket)
-    lines.extend([SEP, advice])
+    lines.extend([
+        "",
+        f"Jenis      : {layout_label}",
+        f"Status     : {status_label}",
+    ])
+    if img_res.impersonated_target and img_res.verdict != "SAFE":
+        lines.append(f"Meniru     : {img_res.impersonated_target}")
+    if img_res.detected_logos:
+        brands = ", ".join(f"{lg.brand_name} ({lg.confidence:.0f}%)" for lg in img_res.detected_logos[:2])
+        lines.append(f"Atribut    : {brands}")
+    if img_res.decoded_qr_codes:
+        qr_list = ", ".join(f"`{q.payload}`" for q in img_res.decoded_qr_codes[:2])
+        lines.append(f"Isi QR     : {qr_list}")
+    elif img_res.extracted_urls:
+        url_list = ", ".join(f"`{u}`" for u in img_res.extracted_urls[:2])
+        lines.append(f"Tautan OCR : {url_list}")
+    lines.extend([
+        f"Skor Risiko: {img_res.total_risk_score:.1f} / 100",
+        f"- Kemiripan tampilan : {img_res.visual_similarity_score:.1f}%",
+        f"- Konten & kode QR   : {img_res.dom_anomaly_score:.1f}%",
+        f"- Reputasi domain    : {img_res.domain_telemetry_score:.1f}%",
+    ])
+    if img_res.forensic_reasons:
+        lines.append("\nAlasan:")
+        lines.extend(f"- {r}" for r in img_res.forensic_reasons[:3])
+    if include_evidence_link and _is_public_evidence_url(img_res.annotated_bbox_url):
+        lines.append(f"\nBukti visual: {img_res.annotated_bbox_url}")
+    lines.extend(["", advice])
     return "\n".join(lines)
 
 
 def format_evidence_caption(verdict: str, score: float, kind: str) -> str:
     """Short caption (<1024 chars, WhatsApp media limit) for the annotated evidence image."""
-    icon = {"CRITICAL_PHISHING": "🚨", "SUSPICIOUS": "⚠️"}.get(verdict, "✅")
+    verdict_label = {
+        "CRITICAL_PHISHING": "BERBAHAYA",
+        "SUSPICIOUS": "MENCURIGAKAN",
+    }.get(verdict, "AMAN")
     what = "poster/gambar" if kind == "IMAGE" else "halaman"
     return (
-        f"{icon} *Bukti Forensik VisiKartika Shield*\n"
-        f"Putusan: *{verdict}* — Skor {score:.1f}/100\n"
-        f"Kotak merah = logo militer, kotak oranye/ungu = form kredensial / QR pada {what}."
+        f"*Bukti Pemeriksaan Jagabaya*\n"
+        f"Putusan: {verdict_label} ({score:.1f}/100)\n"
+        f"Kotak merah menandai atribut militer, kotak oranye/ungu menandai form login atau kode QR pada {what}."
     )
 
 
 def format_refused(reason: str, url: str) -> str:
     return (
-        "⛔ *VISIKARTIKA SHIELD — TAUTAN DITOLAK*\n"
-        f"{SEP}\n"
-        f"🔗 *Tautan*: `{url}`\n\n"
+        "*Jagabaya | Tautan Ditolak*\n"
+        f"Target: `{url}`\n\n"
         f"{reason}\n\n"
-        "Kirimkan tautan situs publik (https://…) atau tangkapan layarnya."
+        "Kirimkan tautan situs publik (https://...) atau tangkapan layarnya."
     )
 
 
 def format_unreadable_media() -> str:
     return (
-        "⚠️ *VISIKARTIKA SHIELD — LAMPIRAN TIDAK TERBACA*\n"
-        f"{SEP}\n"
-        "Lampiran diterima, tetapi bukan gambar yang dapat dianalisis (atau gagal diunduh dari gateway).\n"
-        "Kirim ulang sebagai *foto* (JPG/PNG), atau kirimkan tautan situsnya secara langsung."
+        "*Jagabaya | Lampiran Tidak Terbaca*\n"
+        "Lampiran diterima, namun bukan format gambar yang dapat diperiksa.\n"
+        "Kirim ulang sebagai foto (JPG/PNG), atau kirimkan tautan situsnya secara langsung."
     )
 
 
@@ -475,9 +457,8 @@ async def process_inbound(
             return TriageResult(
                 kind="ERROR",
                 reply_text=(
-                    "⚠️ *VISIKARTIKA SHIELD — GAGAL MEMPROSES GAMBAR*\n"
-                    f"{SEP}\n"
-                    "Mesin Computer Vision tidak dapat membaca lampiran gambar tersebut. "
+                    "*Jagabaya | Gagal Memproses Gambar*\n"
+                    "Lampiran gambar tidak dapat dibaca oleh sistem pemeriksa. "
                     "Pastikan gambar berformat JPG/PNG yang jelas atau kirimkan tautan situsnya secara langsung."
                 ),
             )
@@ -522,11 +503,10 @@ async def process_inbound(
                 kind="ERROR",
                 target=url,
                 reply_text=(
-                    "⚠️ *VISIKARTIKA SHIELD — GAGAL MENGAKSES TARGET*\n"
-                    f"{SEP}\n"
-                    f"🔗 *Tautan*: `{url}`\n\n"
-                    "Mesin Sandbox tidak dapat menjangkau alamat tersebut (kemungkinan situs sudah dinonaktifkan, koneksi ditolak, atau domain tidak valid).\n\n"
-                    "🔒 _Tetap waspada dan jangan membuka tautan tersebut di browser ponsel Anda._"
+                    "*Jagabaya | Gagal Mengakses Target*\n"
+                    f"Target: `{url}`\n\n"
+                    "Alamat tersebut tidak dapat dijangkau oleh sandbox (kemungkinan situs sudah tidak aktif, koneksi ditolak, atau domain tidak valid).\n\n"
+                    "Saran: Tetap waspada dan jangan membuka tautan tersebut di browser ponsel Anda."
                 ),
             )
         return TriageResult(
@@ -569,7 +549,7 @@ async def process_inbound(
 def scanning_ack(kind: str) -> Optional[str]:
     """Short acknowledgement sent before a multi-second scan starts."""
     if kind == "IMAGE":
-        return "⏳ _Gambar diterima. Menganalisis poster/screenshot, logo, teks OCR & QR Code…_"
+        return "_Memeriksa gambar (logo, teks OCR, dan kode QR)..._"
     if kind == "URL":
-        return "⏳ _Tautan diterima. Membuka di sandbox terisolasi & menganalisis…_"
+        return "_Memeriksa tautan di sandbox terisolasi..._"
     return None

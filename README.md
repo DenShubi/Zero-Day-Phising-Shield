@@ -1,6 +1,6 @@
-# 🛡️ VisiKartika Shield (`Zero-Day-Phising-Shield`)
+# 🛡️ Jagabaya (`Zero-Day-Phising-Shield`)
 
-**Zero-Day Visual Phishing & Military Portal Impersonation Defense System**  
+**Sistem Penangkal Phishing Zero-Day untuk Prajurit dan Keluarga Besar TNI AD**  
 *Kartika Cyber Hackathon 2026 — Kategori: **Penangkalan** (PUSSIBERAD TNI AD)*
 
 [![Kategori](https://img.shields.io/badge/Kategori-Penangkalan-183923?style=flat-square)](#1-deskripsi-produk--skenario-taktis-tni-ad)
@@ -12,13 +12,17 @@
 
 ## 1. Deskripsi Produk & Skenario Taktis TNI AD
 
-**VisiKartika Shield** adalah platform pertahanan siber *multi-modal* yang dirancang khusus untuk menangkal serangan *zero-day phishing*, kloning visual portal resmi `.mil.id`, penipuan berbasis QR Code (*Quishing*), serta mendeteksi eksfiltrasi kredensial prajurit ke server *Command & Control* (C2) eksternal.
+**Jagabaya** adalah sistem penangkal phishing zero-day untuk prajurit dan keluarga besar TNI AD. Ancaman siber sekarang paling sering masuk lewat tautan palsu di WhatsApp, misalnya undian, info mutasi, atau formulir data palsu. Tautan seperti ini sering lolos dari daftar hitam (*blacklist*) karena domainnya baru dibuat.
 
-### Masalah Nyata di Satuan
-Penyerang membuat situs tiruan yang secara visual identik dengan portal resmi TNI AD (seperti **Portal Seleksi Bintara/Tamtama Siber**, halaman **Single Sign-On (SSO)** internal, atau sistem **Sisfopers / E-Militer**), lalu menyebarkan tautan maupun poster ber-QR Code melalui pesan berantai WhatsApp atau SMS kepada prajurit dan keluarganya. Pendekatan *blacklist* tradisional gagal mendeteksi situs-situs ini pada jam-jam pertama (*zero-day*) karena domain baru didaftarkan dan struktur HTML/JS-nya diacak (*obfuscated*).
+Dengan Jagabaya, pengguna cukup meneruskan pesan atau tautan yang mencurigakan ke bot WhatsApp Jagabaya. Sistem lalu menganalisis tautan tersebut secara otomatis, termasuk karakteristik domain, perilaku halaman, dan tangkapan layar situsnya. Dalam hitungan detik pengguna menerima balasan berisi putusan (aman, mencurigakan, atau berbahaya) beserta buktinya. Setiap temuan tercatat di dashboard Security Operations Center (SOC). Dari sana satuan siber bisa memantau insiden secara langsung, melihat pola serangan yang menyasar personel, dan segera mengambil tindakan.
 
-### Solusi Taktis VisiKartika Shield
-Sistem bekerja melalui dua kanal terpadu: **WhatsApp Bot Lapor Cepat** (untuk prajurit di lapangan) dan **Dashboard SOC Komando** (untuk operator PUSSIBERAD). Saat tautan atau tangkapan layar dikirimkan:
+### Tiga Manfaat Utama Jagabaya
+1. **Mencegah kebocoran data pribadi dan data satuan** sebelum korban sempat mengisi atau mengklik apa pun.
+2. **Meningkatkan kesadaran keamanan siber personel tanpa perlu memasang aplikasi baru**, karena cukup lewat WhatsApp yang sudah dipakai sehari-hari.
+3. **Memberi pimpinan gambaran ancaman yang nyata dan terukur**. Jagabaya menutup celah yang paling sering dimanfaatkan penyerang, yaitu manusia, dengan cara yang mudah dipakai siapa saja.
+
+### Cara Kerja Teknis Jagabaya
+Sistem bekerja melalui dua kanal terpadu: **WhatsApp Bot Lapor Cepat Jagabaya** (untuk prajurit di lapangan) dan **Dashboard SOC Jagabaya** (untuk operator PUSSIBERAD). Saat tautan atau tangkapan layar dikirimkan:
 1. Sistem membuka URL di dalam **Headless Chromium Sandbox** terisolasi (memblokir *drive-by download* `.apk`/`.exe`).
 2. Mengekstrak pohon struktur **DOM/HTML**, koordinat *bounding box* elemen `<form>` dan `<input>` sensitif (NRP, NIK, Kata Sandi, PIN, OTP), serta merekam lalu lintas jaringan lintas-domain (*cross-origin exfiltration*).
 3. Membandingkan kemiripan visual halaman (**SSIM / ViT Embedding**) dan mendeteksi pencatutan lambang resmi (**Kartika Eka Paksi**, **PUSSIBERAD**, lambang **Kodam/Satuan**) menggunakan **Computer Vision (YOLOv8 / OpenCV)**.
