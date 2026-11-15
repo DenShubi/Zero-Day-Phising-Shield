@@ -13,6 +13,7 @@
 
 const STORAGE_KEY = 'vk.backendUrl';
 const DEFAULT_BASE = 'http://localhost:8000';
+const PRODUCTION_RAILWAY_BASE = 'https://zero-day-phising-shield-production.up.railway.app';
 
 /** Reads above the SLA deliberately — see the latency note on SCAN_TIMEOUT_MS. */
 export const READ_TIMEOUT_MS = 15_000;
@@ -74,6 +75,12 @@ export function getBackendUrl(): string {
       if (override && override.trim() !== '') return normalizeBase(override);
     } catch {
       // Private mode or blocked storage: fall through to the env default.
+    }
+    if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
+      const host = window.location.hostname;
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return PRODUCTION_RAILWAY_BASE;
+      }
     }
   }
   return normalizeBase(process.env.NEXT_PUBLIC_BACKEND_URL || DEFAULT_BASE);
