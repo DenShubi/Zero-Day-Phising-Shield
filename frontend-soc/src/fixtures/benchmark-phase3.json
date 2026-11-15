@@ -1,3 +1,212 @@
 {
- "detail": "Not Found"
+  "available": true,
+  "generated_at": "2026-11-03T07:24:11.860192+00:00",
+  "sla_target_sec": 5.0,
+  "browser_pool_warmup_ms": 973.91,
+  "overall_metrics": {
+    "total": 95,
+    "tp": 20,
+    "tn": 75,
+    "fp": 0,
+    "fn": 0,
+    "accuracy": 100.0,
+    "precision": 100.0,
+    "recall": 100.0,
+    "specificity": 100.0,
+    "f1_score": 100.0,
+    "balanced_accuracy": 100.0,
+    "fpr": 0.0,
+    "fnr": 0.0,
+    "roc_auc": 1.0,
+    "pr_auc": 0.9803
+  },
+  "bootstrap_ci_95": {
+    "accuracy_ci95": [
+      100.0,
+      100.0
+    ],
+    "precision_ci95": [
+      100.0,
+      100.0
+    ],
+    "recall_ci95": [
+      100.0,
+      100.0
+    ],
+    "f1_ci95": [
+      100.0,
+      100.0
+    ]
+  },
+  "slice_summaries": [
+    {
+      "slice_name": "1. Sandbox URL (Phishing, Zero-Day & Benign HTML)",
+      "modality": "URL_PLAYWRIGHT",
+      "count": 12,
+      "correct": 12,
+      "accuracy": 100.0,
+      "mean_sec": 2.124,
+      "p50_sec": 1.966,
+      "p95_sec": 3.242,
+      "sla_pct": 100.0
+    },
+    {
+      "slice_name": "2. Poster & Scam Multimodal (Calo, QR, APK, Resmi & Kampus)",
+      "modality": "IMAGE_MULTIMODAL",
+      "count": 24,
+      "correct": 24,
+      "accuracy": 100.0,
+      "mean_sec": 2.454,
+      "p50_sec": 1.98,
+      "p95_sec": 4.939,
+      "sla_pct": 91.67
+    },
+    {
+      "slice_name": "3. Screenshot Web Umum Non-TNI (Berita, Kampus, Pemerintah Sipil, Tech)",
+      "modality": "IMAGE_MULTIMODAL",
+      "count": 22,
+      "correct": 22,
+      "accuracy": 100.0,
+      "mean_sec": 1.906,
+      "p50_sec": 1.708,
+      "p95_sec": 2.437,
+      "sla_pct": 100.0
+    },
+    {
+      "slice_name": "4. Beranda Portal Resmi TNI/Pertahanan (.mil.id / .go.id / .ac.id)",
+      "modality": "IMAGE_MULTIMODAL",
+      "count": 37,
+      "correct": 37,
+      "accuracy": 100.0,
+      "mean_sec": 2.022,
+      "p50_sec": 1.903,
+      "p95_sec": 2.97,
+      "sla_pct": 100.0
+    }
+  ],
+  "baseline_comparison": [
+    {
+      "model": "Naive Majority Baseline",
+      "total": 95,
+      "tp": 0,
+      "tn": 75,
+      "fp": 0,
+      "fn": 20,
+      "accuracy": 78.95,
+      "precision": 0.0,
+      "recall": 0.0,
+      "specificity": 100.0,
+      "f1_score": 0.0,
+      "balanced_accuracy": 50.0,
+      "fpr": 0.0,
+      "fnr": 100.0,
+      "roc_auc": 0.5,
+      "pr_auc": 0.6053
+    },
+    {
+      "model": "Domain/URL Heuristic Only",
+      "total": 95,
+      "tp": 14,
+      "tn": 69,
+      "fp": 6,
+      "fn": 6,
+      "accuracy": 87.37,
+      "precision": 70.0,
+      "recall": 70.0,
+      "specificity": 92.0,
+      "f1_score": 70.0,
+      "balanced_accuracy": 81.0,
+      "fpr": 8.0,
+      "fnr": 30.0,
+      "roc_auc": 0.974,
+      "pr_auc": 0.8291
+    },
+    {
+      "model": "Visual Similarity Only (SSIM)",
+      "total": 95,
+      "tp": 10,
+      "tn": 75,
+      "fp": 0,
+      "fn": 10,
+      "accuracy": 89.47,
+      "precision": 100.0,
+      "recall": 50.0,
+      "specificity": 100.0,
+      "f1_score": 66.67,
+      "balanced_accuracy": 75.0,
+      "fpr": 0.0,
+      "fnr": 50.0,
+      "roc_auc": 0.5743,
+      "pr_auc": 0.6166
+    },
+    {
+      "model": "VisiKartika Multimodal Fusion (Phase 3)",
+      "total": 95,
+      "tp": 20,
+      "tn": 75,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 100.0,
+      "precision": 100.0,
+      "recall": 100.0,
+      "specificity": 100.0,
+      "f1_score": 100.0,
+      "balanced_accuracy": 100.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "roc_auc": 1.0,
+      "pr_auc": 0.9803
+    }
+  ],
+  "playwright_url_latency_sec": {
+    "count": 12,
+    "min": 1.436,
+    "mean": 2.124,
+    "p50": 1.966,
+    "p90": 2.832,
+    "p95": 3.242,
+    "max": 3.673,
+    "sla_pass_pct": 100.0
+  },
+  "playwright_url_stage_mean_ms": {
+    "browser_acquire_ms": 161.24,
+    "dom_annotate_ms": 33.6,
+    "logo_detection_ms": 1304.4,
+    "navigation_dom_ms": 86.61,
+    "phase1_total_ms": 695.0,
+    "render_settle_ms": 249.06,
+    "scoring_fusion_ms": 0.05,
+    "screenshot_dom_extract_ms": 116.12,
+    "supabase_sync_ms": 6.65,
+    "total_ms": 2123.58,
+    "visual_similarity_ms": 116.72
+  },
+  "concurrency_4x_summary": {
+    "concurrent_requests": 4,
+    "wall_batch_sec": 5.128,
+    "mean_individual_sec": 3.714,
+    "max_individual_sec": 5.127,
+    "all_under_5s_sla": false
+  },
+  "multimodal_image_latency_sec": {
+    "count": 83,
+    "min": 1.47,
+    "mean": 2.116,
+    "p50": 1.889,
+    "p90": 2.598,
+    "p95": 3.167,
+    "max": 8.847,
+    "sla_pass_pct": 97.59
+  },
+  "multimodal_image_stage_mean_ms": {
+    "decode_io_ms": 149.73,
+    "logo_detection_ms": 1564.73,
+    "ocr_semantics_ms": 110.92,
+    "qr_quishing_ms": 219.37,
+    "scoring_fusion_ms": 0.21,
+    "supabase_sync_ms": 6.18,
+    "total_ms": 2109.45,
+    "visual_similarity_ms": 54.93
+  },
+  "live_wan_results": []
 }

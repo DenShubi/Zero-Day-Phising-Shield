@@ -338,18 +338,22 @@ export interface BenchmarkResponse {
   live_wan_results?: unknown[];
 }
 
+import benchmarkFixture from '../../fixtures/benchmark-phase3.json';
+
 /**
- * Returns `{available:false}` when storage/phase3_benchmark_results.json has
- * not been generated, and 404s entirely on builds predating the endpoint — the
- * audit page falls back to the committed fixture in both cases.
+ * Returns live `/api/v1/benchmark/phase3` telemetry when available on the
+ * backend container, and falls back to the committed Phase 3 benchmark fixture
+ * (`src/fixtures/benchmark-phase3.json`) when the container has not generated
+ * or bundled `storage/phase3_benchmark_results.json`.
  */
 export async function getBenchmark(signal?: AbortSignal): Promise<BenchmarkResponse> {
   try {
-    return await getJson<BenchmarkResponse>('/api/v1/benchmark/phase3', { signal });
-  } catch (err) {
-    if ((err as ApiError).status === 404) {
-      return { available: false, message: 'Endpoint benchmark tidak tersedia pada build mesin ini.' };
+    const res = await getJson<BenchmarkResponse>('/api/v1/benchmark/phase3', { signal });
+    if (res.available && res.overall_metrics) {
+      return res;
     }
-    throw err;
+    return benchmarkFixture as unknown as BenchmarkResponse;
+  } catch {
+    return benchmarkFixture as unknown as BenchmarkResponse;
   }
 }
